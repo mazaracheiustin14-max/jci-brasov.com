@@ -68,27 +68,39 @@ header{position:sticky;top:0;z-index:20;background:rgba(19,15,45,.96);backdrop-f
 .mobile-menu .btn{margin-top:16px}
 
 /* Hero */
-.hero{position:relative;overflow:hidden;background:var(--ink);color:#fff;padding:88px 0 96px}
-.hero .ripple{position:absolute;right:-220px;top:50%;transform:translateY(-50%);width:820px;height:820px;opacity:.95;pointer-events:none}
-.hero-grid{position:relative;display:grid;grid-template-columns:1.25fr .75fr;gap:56px;align-items:center}
-.eyebrow{font-size:14px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--teal)}
-.hero h1{font-size:clamp(40px,6.2vw,76px);font-weight:600;letter-spacing:-.025em;margin-top:18px}
+.hero{position:relative;overflow:hidden;color:#fff;padding:64px 0 72px;
+  background:radial-gradient(55% 75% at 78% 50%,rgba(0,151,215,.22),rgba(19,15,45,0) 70%),
+             linear-gradient(180deg,#130F2D 0%,#17123A 100%)}
+.hero-grid{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;align-items:center}
+.hero-copy{position:relative;z-index:2;max-width:560px}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--teal)}
+.hero h1{font-size:clamp(38px,5vw,66px);font-weight:600;letter-spacing:-.025em;margin-top:16px}
 .hero h1 em{font-style:normal;color:var(--blue)}
-.hero .lead{color:#D5D7EA;margin-top:24px}
-.hero-ctas{display:flex;flex-wrap:wrap;gap:14px;margin-top:36px}
-.areas{display:flex;flex-wrap:wrap;gap:10px;margin-top:44px;padding:0;list-style:none}
+.hero .lead{color:#D5D7EA;margin-top:22px;font-size:clamp(17px,1.4vw,19px)}
+.hero-ctas{display:flex;flex-wrap:wrap;gap:14px;margin-top:32px}
+.areas{display:flex;flex-wrap:wrap;gap:10px;margin-top:36px;padding:0;list-style:none}
 .areas li{border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:8px 16px;font-size:14px;color:#E6E7F3}
-.ticket{background:#fff;color:var(--ink);border-radius:20px;padding:30px;box-shadow:0 30px 60px -20px rgba(0,0,0,.5);position:relative}
-.ticket .tag{margin-bottom:16px}
+.hero-visual{position:relative;display:grid;place-items:center;aspect-ratio:1;width:100%;max-width:560px;justify-self:end}
+.hero-visual .ripple{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;
+  -webkit-mask-image:radial-gradient(circle at 50% 50%,#000 58%,rgba(0,0,0,.35) 68%,transparent 72%);
+          mask-image:radial-gradient(circle at 50% 50%,#000 58%,rgba(0,0,0,.35) 68%,transparent 72%)}
+.ticket{position:relative;z-index:1;width:min(330px,62%);background:#fff;color:var(--ink);border-radius:20px;padding:26px;box-shadow:0 30px 60px -20px rgba(0,0,0,.6)}
+.ticket .tag{margin-bottom:14px}
 .ticket .date{display:flex;align-items:baseline;gap:12px}
-.ticket .date b{font-size:64px;line-height:1;font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums}
-.ticket .date span{font-size:18px;font-weight:600;line-height:1.2}
-.ticket h3{font-size:22px;margin-top:18px}
-.ticket dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:18px 0 22px;font-size:15px}
+.ticket .date b{font-size:56px;line-height:1;font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums}
+.ticket .date span{font-size:16px;font-weight:600;line-height:1.2}
+.ticket h3{font-size:19px;margin-top:16px}
+.ticket dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:16px 0 20px;font-size:14px}
 .ticket dt{color:var(--muted)}
 .ticket dd{margin:0;font-weight:600}
-.ticket .btn{width:100%;justify-content:center}
-@media (max-width:900px){.hero-grid{grid-template-columns:1fr}.hero .ripple{width:560px;height:560px;right:-260px;top:8%;transform:none;opacity:.5}}
+.ticket .btn{width:100%;justify-content:center;font-size:15px;padding:14px 18px}
+@media (max-width:1024px){.ticket{width:min(320px,72%)}}
+@media (max-width:900px){
+  .hero-grid{grid-template-columns:1fr;gap:40px}
+  .hero-visual{justify-self:center;max-width:460px}
+  .ticket{width:min(320px,78%)}
+}
+@media (max-width:420px){.ticket{width:86%;padding:22px}.ticket .date b{font-size:46px}}
 
 /* Despre */
 .two{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
