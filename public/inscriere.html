@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Formular de înscriere · JCI Brașov</title>
+<meta name="description" content="Formularul de înscriere în JCI Brașov.">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Arvo&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<header>
+  <input type="checkbox" id="menu-toggle" aria-hidden="true">
+  <div class="wrap nav">
+    <a class="logo" href="index.html" aria-label="JCI Brașov, prima pagină"><img src="assets/img/logo-jci-brasov-invers.png" alt="JCI Brașov" width="640" height="312"></a>
+    <ul>
+      <li><a href="despre.html">Despre</a></li><li><a href="eveniment.html">Eveniment</a></li><li><a href="proiecte.html">Proiecte</a></li><li><a href="echipa.html">Echipa</a></li><li><a href="contact.html">Contact</a></li>
+    </ul>
+    <a class="btn btn-blue" href="implica-te.html">Devino membru</a>
+    <label class="burger" for="menu-toggle" aria-label="Deschide meniul"><span></span></label>
+  </div>
+  <nav class="mobile-menu" aria-label="Meniu mobil">
+    <ul>
+      <li><a href="index.html">Acasă</a></li><li><a href="despre.html">Despre</a></li><li><a href="eveniment.html">Eveniment</a></li><li><a href="proiecte.html">Proiecte</a></li><li><a href="echipa.html">Echipa</a></li><li><a href="implica-te.html">Devino membru</a></li><li><a href="contact.html">Contact</a></li>
+    </ul>
+  </nav>
+</header>
+<main>
+<section class="page-intro"><svg viewBox="0 0 460 460" aria-hidden="true"><g fill="none" stroke-width="22"><circle cx="230" cy="230" r="210" stroke="#57BCBC" stroke-dasharray="160 50 300 60 240 40"/><circle cx="230" cy="230" r="162" stroke="#0097D7" stroke-dasharray="220 40 180 60 200 40"/><circle cx="230" cy="230" r="114" stroke="#1F4789" stroke-dasharray="140 40 200 50 120 30"/></g></svg><div class="wrap"><div class="crumb"><a href="index.html">Acasă</a> / <a href="implica-te.html">Devino membru</a> / Înscriere</div><h1>Formular de înscriere</h1><p>Completează cererea și te contactăm pentru o discuție de cunoaștere.</p></div></section><section class="section">
+  <div class="wrap form-wrap">
+    <form class="signup" id="signup" method="POST" action="" novalidate>
+      <input type="hidden" name="_subject" value="Cerere nouă de înscriere JCI Brașov">
+      <input type="hidden" name="_template" value="table">
+      <input type="hidden" name="_captcha" value="false">
+      <input type="text" name="_honey" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <div class="row2">
+        <div class="field"><label for="f-nume">Nume și prenume</label><input id="f-nume" name="Nume" required autocomplete="name"></div>
+        <div class="field"><label for="f-varsta">Vârsta</label><input id="f-varsta" name="Varsta" type="number" min="18" max="40" required inputmode="numeric"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="f-email">Email</label><input id="f-email" name="email" type="email" required autocomplete="email"></div>
+        <div class="field"><label for="f-tel">Telefon</label><input id="f-tel" name="Telefon" type="tel" required autocomplete="tel"></div>
+      </div>
+      <div class="field"><label for="f-ocupatie">Ocupație sau domeniu de activitate</label><input id="f-ocupatie" name="Ocupatie" required></div>
+      <div class="field"><label for="f-arie">Ce te interesează cel mai mult</label>
+        <select id="f-arie" name="Arie de interes"><option>Dezvoltare personală</option><option>Afaceri și antreprenoriat</option><option>Proiecte pentru comunitate</option><option>Oportunități internaționale</option></select></div>
+      <div class="field"><label for="f-motiv">De ce vrei să te alături JCI Brașov?</label><textarea id="f-motiv" name="Motivatie"></textarea></div>
+      <div class="field"><label for="f-sursa">Cum ai aflat de noi</label>
+        <select id="f-sursa" name="Sursa"><option>Recomandarea unui membru</option><option>Instagram sau Facebook</option><option>Comunitatea WhatsApp</option><option>Un eveniment JCI</option><option>Altă sursă</option></select></div>
+      <label class="check" for="f-cotizatie"><input id="f-cotizatie" name="Accept cotizatie" type="checkbox" value="da" required><span>Am luat la cunoștință cotizația anuală de 300 lei și contribuția de 15 lei pe lună pentru sediul social.</span></label>
+      <label class="check" for="f-gdpr"><input id="f-gdpr" name="Acord date" type="checkbox" value="da" required><span>Sunt de acord ca JCI Brașov să folosească datele mele doar pentru procesul de înscriere și pentru a mă contacta în legătură cu activitatea organizației.</span></label>
+      <div class="form-msg" id="form-msg" role="status"></div>
+      <button class="btn btn-blue" type="submit" style="justify-content:center">Trimite cererea</button>
+      <p class="form-note">Te contactăm în câteva zile pentru o discuție de cunoaștere.</p>
+    </form>
+    <aside>
+      <h2 style="font-size:clamp(24px,2.6vw,32px)">Ce urmează după ce trimiți</h2>
+      <ol class="steps" style="grid-template-columns:1fr;margin-top:24px">
+        <li><h3>Discuție de cunoaștere</h3><p>Un membru al echipei te sună sau te invită la o cafea.</p></li>
+        <li><h3>Primul eveniment</h3><p>Participi la o întâlnire și vezi cum lucrăm.</p></li>
+        <li><h3>Devii membru</h3><p>Achiți cotizația și te alături unui proiect.</p></li>
+      </ol>
+      <div class="fees" style="grid-template-columns:1fr;margin-top:24px">
+        <div class="fee"><small>Cotizație anuală</small><div class="amt">300 <span>lei / an</span></div></div>
+        <div class="fee"><small>Contribuție sediu social</small><div class="amt">15 <span>lei / lună</span></div></div>
+      </div>
+    </aside>
+  </div>
+</section>
+<script>
+(function(){
+  var f=document.getElementById('signup'),m=document.getElementById('form-msg');
+  function say(t,c){m.textContent=t;m.className='form-msg show '+c;}
+  f.addEventListener('submit',function(e){
+    if(!f.checkValidity()){e.preventDefault();say('Completează toate câmpurile obligatorii și bifează cele două acorduri.','info');f.reportValidity();return;}
+    if(!f.getAttribute('action')){e.preventDefault();say('Formularul se activează în curând. Până atunci, sună-ne la 0790 827 426 sau intră în comunitatea noastră de WhatsApp.','info');}
+  });
+})();
+</script>
+</main>
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <img src="assets/img/logo-jci-brasov-invers.png" alt="JCI Brașov" width="640" height="312">
+        <p>JCI Brașov face parte din JCI România și din Junior Chamber International, rețeaua globală a tinerilor lideri între 18 și 40 de ani.</p>
+      </div>
+      <ul>
+        <li><a href="despre.html">Despre</a></li>
+        <li><a href="despre.html#istoric">Istoric</a></li>
+        <li><a href="eveniment.html">Evenimentul din 26 noiembrie</a></li>
+        <li><a href="eveniment.html#parteneri">Parteneri</a></li>
+      </ul>
+      <ul>
+        <li><a href="https://jciromania.ro" target="_blank" rel="noopener">JCI România</a></li>
+        <li><a href="https://jci.cc" target="_blank" rel="noopener">JCI Internațional</a></li>
+        <li><a href="https://www.instagram.com/jcibrasov" target="_blank" rel="noopener">Instagram</a></li>
+        <li><a href="https://www.facebook.com/share/1G4xX5D4Mi/" target="_blank" rel="noopener">Facebook</a></li>
+        <li><a href="tel:+40790827426">0790 827 426</a></li>
+      </ul>
+    </div>
+    <div class="legal"><span>© 2026 JCI Brașov</span><span>Lead Connect Evolve</span></div>
+  </div>
+</footer>
+<script>
+  // închide meniul mobil după alegerea unei secțiuni
+  document.querySelectorAll('.mobile-menu a').forEach(function(a){
+    a.addEventListener('click',function(){document.getElementById('menu-toggle').checked=false;});
+  });
+</script>
+</body>
+</html>

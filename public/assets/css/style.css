@@ -268,3 +268,29 @@ footer{background:#0B0920;color:#A9ABC8;padding:48px 0 40px;font-size:14px}
 .page-intro h1{font-size:clamp(34px,5vw,56px);font-weight:600;letter-spacing:-.02em;margin-top:12px;position:relative}
 .page-intro p{color:#D5D7EA;margin-top:14px;max-width:60ch;font-size:19px;font-weight:300;position:relative}
 .person img{object-fit:cover;height:auto}
+/* înscriere */
+.fees{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:28px;max-width:720px}
+@media (max-width:620px){.fees{grid-template-columns:1fr}}
+.fee{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px 24px}
+.fee small{font-weight:700;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--navy)}
+.fee .amt{font-size:34px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.fee .amt span{font-size:16px;font-weight:600;color:var(--muted)}
+.fee p{font-size:14px;color:var(--muted);margin-top:4px}
+.form-wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:start}
+@media (max-width:900px){.form-wrap{grid-template-columns:1fr;gap:36px}}
+form.signup{background:#fff;border:1px solid var(--line);border-radius:20px;padding:30px;display:grid;gap:18px}
+.field{display:grid;gap:6px}
+.field label{font-weight:600;font-size:15px}
+.field input,.field select,.field textarea{font:400 16px/1.4 var(--font);color:var(--ink);padding:13px 14px;border:1px solid #C6D2DE;border-radius:12px;background:#fff;width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{outline:3px solid rgba(0,151,215,.25);border-color:var(--blue)}
+.field textarea{min-height:110px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:560px){.row2{grid-template-columns:1fr}}
+.check{display:grid;grid-template-columns:22px 1fr;gap:10px;font-size:14px;color:var(--muted);align-items:start}
+.check input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--blue)}
+.form-note{font-size:14px;color:var(--muted)}
+.form-msg{display:none;border-radius:12px;padding:14px 16px;font-size:15px}
+.form-msg.show{display:block}
+.form-msg.ok{background:#E3F6F6;color:#1B5E5E}
+.form-msg.info{background:#FFF7D1;color:#6A5300}
+.hp{position:absolute;left:-9999px}
