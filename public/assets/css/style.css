@@ -166,7 +166,9 @@ header{position:sticky;top:0;z-index:20;background:rgba(19,15,45,.96);backdrop-f
 .speaker b{display:block;font-size:17px;margin-top:4px}
 .speaker span{font-size:14px;color:#BFC1DA}
 .speaker.tba b{color:#BFC1DA;font-weight:500}
-.speaker .plus{font-size:30px;line-height:1;color:var(--teal)!important;font-weight:600}
+.speaker img,.speaker .ph{width:100%;height:auto;aspect-ratio:1;object-fit:cover;border-radius:10px;margin-bottom:12px;display:block}
+.speaker small,.speaker span{display:block}
+.speaker .ph{display:grid;place-items:center;background:#262058;border:1px dashed rgba(87,188,188,.5);font-size:44px;color:var(--teal);font-weight:300}
 .reg{margin-top:56px;display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between;border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:28px 32px}
 .reg p{color:#D5D7EA;max-width:60ch}
 .reg b{color:#fff}
