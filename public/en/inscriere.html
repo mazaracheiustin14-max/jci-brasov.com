@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Application form | JCI Brașov</title>
+<meta name="description" content="Apply to join JCI Brașov.">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Arvo&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<header>
+  <input type="checkbox" id="menu-toggle" aria-hidden="true">
+  <div class="wrap nav">
+    <a class="logo" href="index.html" aria-label="JCI Brașov, home page"><img src="../assets/img/logo-jci-brasov-invers.png" alt="JCI Brașov" width="640" height="312"></a>
+    <ul>
+      <li><a href="despre.html">About</a></li><li><a href="eveniment.html">Event</a></li><li><a href="proiecte.html">Projects</a></li><li><a href="echipa.html">Team</a></li><li><a href="contact.html">Contact</a></li>
+    </ul>
+    <div class="nav-actions"><a class="lang" href="../inscriere.html" hreflang="ro" aria-label="Versiunea în română">RO</a>
+    <a class="btn btn-blue" href="implica-te.html">Become a member</a></div>
+    <label class="burger" for="menu-toggle" aria-label="Open menu"><span></span></label>
+  </div>
+  <nav class="mobile-menu" aria-label="Mobile menu">
+    <ul>
+      <li><a href="index.html">Home</a></li><li><a href="despre.html">About</a></li><li><a href="eveniment.html">Event</a></li><li><a href="proiecte.html">Projects</a></li><li><a href="echipa.html">Team</a></li><li><a href="implica-te.html">Become a member</a></li><li><a href="contact.html">Contact</a></li>
+      <li><a href="../inscriere.html" hreflang="ro">Versiunea în română</a></li>
+    </ul>
+  </nav>
+</header>
+<main>
+<section class="page-intro"><div class="wrap"><div class="crumb"><a href="index.html">Home</a> / <a href="implica-te.html">Become a member</a> / Application</div><h1>Application form</h1><p>Complete the form and we'll get in touch for an introductory chat.</p></div></section><section class="section">
+  <div class="wrap form-wrap">
+    <form class="signup" id="signup" method="POST" action="https://formsubmit.co/contact@jci-brasov.com" novalidate>
+      <input type="hidden" name="_subject" value="New membership application JCI Brașov (EN)">
+      <input type="hidden" name="_template" value="table">
+      <input type="hidden" name="_captcha" value="false">
+      <input type="hidden" name="_next" value="https://jci-brasov.com/en/multumim.html">
+      <input type="text" name="_honey" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <div class="row2">
+        <div class="field"><label for="f-nume">Full name</label><input id="f-nume" name="Nume" required autocomplete="name"></div>
+        <div class="field"><label for="f-varsta">Age</label><input id="f-varsta" name="Varsta" type="number" min="18" max="40" required inputmode="numeric"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="f-email">Email</label><input id="f-email" name="email" type="email" required autocomplete="email"></div>
+        <div class="field"><label for="f-tel">Phone</label><input id="f-tel" name="Telefon" type="tel" required autocomplete="tel"></div>
+      </div>
+      <div class="field"><label for="f-ocupatie">Occupation or field</label><input id="f-ocupatie" name="Ocupatie" required></div>
+      <div class="field"><label for="f-arie">What interests you most</label>
+        <select id="f-arie" name="Arie de interes"><option>Personal growth</option><option>Business and entrepreneurship</option><option>Community projects</option><option>International opportunities</option></select></div>
+      <div class="field"><label for="f-motiv">Why do you want to join JCI Brașov?</label><textarea id="f-motiv" name="Motivatie"></textarea></div>
+      <div class="field"><label for="f-sursa">How did you hear about us</label>
+        <select id="f-sursa" name="Sursa"><option>Referral from a member</option><option>Instagram or Facebook</option><option>WhatsApp community</option><option>A JCI event</option><option>Other</option></select></div>
+      <label class="check" for="f-cotizatie"><input id="f-cotizatie" name="Accept cotizatie" type="checkbox" value="da" required><span>I understand the annual fee of 300 RON and the office contribution of 15 RON per month.</span></label>
+      <label class="check" for="f-gdpr"><input id="f-gdpr" name="Acord date" type="checkbox" value="da" required><span>I agree that JCI Brașov may use my data solely for the application process and to contact me about the organisation's activities.</span></label>
+      <div class="form-msg" role="status"></div>
+      <button class="btn btn-blue" type="submit" style="justify-content:center">Submit application</button>
+      <p class="form-note">We'll be in touch within a few days for an introductory chat.</p>
+    </form>
+    <aside>
+      <h2 style="font-size:clamp(24px,2.6vw,32px)">What happens next</h2>
+      <ol class="steps" style="grid-template-columns:1fr;margin-top:24px">
+        <li><h3>Introductory chat</h3><p>A team member calls you or invites you for a coffee.</p></li>
+        <li><h3>Your first event</h3><p>Join a meeting and see how we work.</p></li>
+        <li><h3>You become a member</h3><p>Pay the fee and join a project.</p></li>
+      </ol>
+      <div class="fees" style="grid-template-columns:1fr;margin-top:24px">
+        <div class="fee"><small>Annual fee</small><div class="amt">300 <span>RON / year</span></div></div>
+        <div class="fee"><small>Office contribution</small><div class="amt">15 <span>RON / month</span></div></div>
+      </div>
+    </aside>
+  </div>
+</section>
+<script>
+document.querySelectorAll('form.signup').forEach(function(f){
+  var m=f.querySelector('.form-msg');
+  function say(t,c){m.textContent=t;m.className='form-msg show '+c;}
+  f.addEventListener('submit',function(e){
+    if(!f.checkValidity()){e.preventDefault();say('Please complete the required fields and tick both boxes.','info');f.reportValidity();return;}
+    if(!f.getAttribute('action')){e.preventDefault();say('The form will be live soon. In the meantime, call us on +40 790 827 426.','info');return;}
+    say('Sending…','ok');
+  });
+});
+</script>
+</main>
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <img src="../assets/img/logo-jci-brasov-invers.png" alt="JCI Brașov" width="640" height="312">
+        <p>JCI Brașov is part of JCI Romania and Junior Chamber International, the global network of young leaders aged 18 to 40.</p>
+      </div>
+      <ul>
+        <li><a href="despre.html">About</a></li>
+        <li><a href="despre.html#istoric">History</a></li>
+        <li><a href="eveniment.html">The 26 November event</a></li>
+        <li><a href="eveniment.html#parteneri">Partners</a></li>
+      </ul>
+      <ul>
+        <li><a href="https://jciromania.ro" target="_blank" rel="noopener">JCI Romania</a></li>
+        <li><a href="https://jci.cc" target="_blank" rel="noopener">JCI International</a></li>
+        <li><a href="https://www.instagram.com/jcibrasov" target="_blank" rel="noopener">Instagram</a></li>
+        <li><a href="https://www.facebook.com/share/1G4xX5D4Mi/" target="_blank" rel="noopener">Facebook</a></li>
+        <li><a href="tel:+40790827426">+40 790 827 426</a></li>
+        <li><a href="mailto:contact@jci-brasov.com">contact@jci-brasov.com</a></li>
+      </ul>
+    </div>
+    <div class="legal"><span>© 2026 JCI Brașov</span><span>Lead Connect Grow</span></div>
+  </div>
+</footer>
+<script>
+  document.querySelectorAll('.mobile-menu a').forEach(function(a){
+    a.addEventListener('click',function(){document.getElementById('menu-toggle').checked=false;});
+  });
+</script>
+</body>
+</html>

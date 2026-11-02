@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JCI Brașov Projects</title>
+<meta name="description" content="JCI Brașov, the local Junior Chamber International chapter for young leaders aged 18 to 40.">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Arvo&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<header>
+  <input type="checkbox" id="menu-toggle" aria-hidden="true">
+  <div class="wrap nav">
+    <a class="logo" href="index.html" aria-label="JCI Brașov, home page"><img src="../assets/img/logo-jci-brasov-invers.png" alt="JCI Brașov" width="640" height="312"></a>
+    <ul>
+      <li><a href="despre.html">About</a></li><li><a href="eveniment.html">Event</a></li><li><a href="proiecte.html" aria-current="page">Projects</a></li><li><a href="echipa.html">Team</a></li><li><a href="contact.html">Contact</a></li>
+    </ul>
+    <div class="nav-actions"><a class="lang" href="../proiecte.html" hreflang="ro" aria-label="Versiunea în română">RO</a>
+    <a class="btn btn-blue" href="implica-te.html">Become a member</a></div>
+    <label class="burger" for="menu-toggle" aria-label="Open menu"><span></span></label>
+  </div>
+  <nav class="mobile-menu" aria-label="Mobile menu">
+    <ul>
+      <li><a href="index.html">Home</a></li><li><a href="despre.html">About</a></li><li><a href="eveniment.html">Event</a></li><li><a href="proiecte.html" aria-current="page">Projects</a></li><li><a href="echipa.html">Team</a></li><li><a href="implica-te.html">Become a member</a></li><li><a href="contact.html">Contact</a></li>
+      <li><a href="../proiecte.html" hreflang="ro">Versiunea în română</a></li>
+    </ul>
+  </nav>
+</header>
+<main>
+<section class="page-intro"><div class="wrap"><div class="crumb"><a href="index.html">Home</a> / Projects</div><h1>What we're building</h1><p>Projects that start from real community needs, linked to the Sustainable Development Goals.</p></div></section><section class="section" id="proiecte">
+  <div class="wrap">
+    <p class="lead">Every JCI project starts from a real community need and is linked to the UN Sustainable Development Goals.</p>
+    <div class="projects">
+      <article class="proj">
+        <div class="art a1">
+          <b>Toy Story</b>
+        </div>
+        <div class="body">
+          <span class="status">Community project</span>
+          <p>We collect toys that can be reused and refurbish them. The proceeds go to children in oncology wards and to families in need.</p>
+          <div class="sdg"><span class="g1">SDG 1 No Poverty</span><span class="g12">SDG 12 Responsible Consumption</span></div>
+        </div>
+      </article>
+      <article class="proj">
+        <div class="art a2">
+          <b>La un pahar<br>de poveste</b>
+        </div>
+        <div class="body">
+          <span class="status">JCI Brașov podcast, in preparation</span>
+          <p>Conversations with the people shaping the city: entrepreneurs, local leaders and people whose stories are worth hearing. 16 episodes per season, filmed in a studio.</p>
+          <div class="sdg"><span class="g4">SDG 4 Quality Education</span><span class="g17">SDG 17 Partnerships</span></div>
+        </div>
+      </article>
+      <article class="proj next">
+        <h3>Projects for 2027</h3>
+        <p>We are preparing a new programme of community, education and entrepreneurship initiatives. We'll announce them soon, and each one needs people ready to take it forward.</p>
+        <p><a href="implica-te.html">I want to get involved</a></p>
+      </article>
+    </div>
+  </div>
+</section>
+</main>
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <img src="../assets/img/logo-jci-brasov-invers.png" alt="JCI Brașov" width="640" height="312">
+        <p>JCI Brașov is part of JCI Romania and Junior Chamber International, the global network of young leaders aged 18 to 40.</p>
+      </div>
+      <ul>
+        <li><a href="despre.html">About</a></li>
+        <li><a href="despre.html#istoric">History</a></li>
+        <li><a href="eveniment.html">The 26 November event</a></li>
+        <li><a href="eveniment.html#parteneri">Partners</a></li>
+      </ul>
+      <ul>
+        <li><a href="https://jciromania.ro" target="_blank" rel="noopener">JCI Romania</a></li>
+        <li><a href="https://jci.cc" target="_blank" rel="noopener">JCI International</a></li>
+        <li><a href="https://www.instagram.com/jcibrasov" target="_blank" rel="noopener">Instagram</a></li>
+        <li><a href="https://www.facebook.com/share/1G4xX5D4Mi/" target="_blank" rel="noopener">Facebook</a></li>
+        <li><a href="tel:+40790827426">+40 790 827 426</a></li>
+        <li><a href="mailto:contact@jci-brasov.com">contact@jci-brasov.com</a></li>
+      </ul>
+    </div>
+    <div class="legal"><span>© 2026 JCI Brașov</span><span>Lead Connect Grow</span></div>
+  </div>
+</footer>
+<script>
+  document.querySelectorAll('.mobile-menu a').forEach(function(a){
+    a.addEventListener('click',function(){document.getElementById('menu-toggle').checked=false;});
+  });
+</script>
+</body>
+</html>
