@@ -294,3 +294,4 @@ form.signup{background:#fff;border:1px solid var(--line);border-radius:20px;padd
 .form-msg.ok{background:#E3F6F6;color:#1B5E5E}
 .form-msg.info{background:#FFF7D1;color:#6A5300}
 .hp{position:absolute;left:-9999px}
+section[id]{scroll-margin-top:84px}
