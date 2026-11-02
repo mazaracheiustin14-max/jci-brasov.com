@@ -157,7 +157,8 @@ header{position:sticky;top:0;z-index:20;background:rgba(19,15,45,.96);backdrop-f
 .side h3{font-size:22px;margin-bottom:14px}
 .blitz{background:var(--blue);color:#fff;border-radius:20px;padding:28px}
 .blitz .big{font-size:56px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-.blitz p{margin-top:10px;color:#EAF7FD}
+.blitz p{margin-top:10px;color:#EAF7FD;font-size:16px}
+.blitz .blitz-lead{font-size:22px;font-weight:600;color:#fff;margin-top:6px;line-height:1.25}
 .blitz ul{margin:18px 0 0;padding-left:18px;color:#EAF7FD;font-size:15px}
 .speakers{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
 .speaker{background:#1C1840;border-radius:14px;padding:18px}
