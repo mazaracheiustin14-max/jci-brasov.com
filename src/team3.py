@@ -18,7 +18,9 @@ src={'iustin-mazarache':('/home/claude/foto/v2/iustin-clean.jpg',None),
  'alexandra-vacaretiu':('/home/claude/site-assets/echipa/alexandra-vacaretiu.jpg',None),
  'daria-bica':('/home/claude/site-assets/echipa/daria-vica.jpg',(300,1040,1300,2048)),
  'mircea-voicu':('/home/claude/site-assets/echipa/mircea-voicu.jpg',(430,0,1230,900)),
- 'julia':('/home/claude/site-assets/echipa/julia.jpg',None)}
+ 'julia':('/home/claude/site-assets/echipa/julia.jpg',None),
+ 'patricia':('/home/claude/site-assets/echipa/patricia.jpg',None),
+ 'andreea':('/home/claude/site-assets/echipa/andreea.jpg',None)}
 ONLY=__import__('sys').argv[1:]
 for n,(p,box) in src.items():
     if ONLY and n not in ONLY: continue
