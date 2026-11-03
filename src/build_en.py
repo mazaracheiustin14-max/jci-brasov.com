@@ -97,6 +97,51 @@ def intro(crumb,title,text):
     return f'''<section class="page-intro">{RIP}<div class="wrap"><div class="crumb"><a href="index.html">Home</a> / {crumb}</div><h1>{title}</h1><p>{text}</p></div></section>'''
 
 DESC='JCI Brașov, the local Junior Chamber International chapter for young leaders aged 18 to 40.'
+
+import json as _json
+SITE='https://jci-brasov.com/'
+def seo(fn,title,desc):
+    en=bool(PFX)
+    path='' if fn=='index.html' else fn[:-5]
+    ro_url=SITE+path; en_url=SITE+'en/'+path
+    url=en_url if en else ro_url
+    img=SITE+('assets/img/og-jci-brasov-en.jpg' if en else 'assets/img/og-jci-brasov.jpg')
+    t=title.replace('"','&quot;'); d=desc.replace('"','&quot;')
+    out=f"""<link rel="canonical" href="{url}">
+<link rel="alternate" hreflang="ro" href="{ro_url}">
+<link rel="alternate" hreflang="en" href="{en_url}">
+<link rel="alternate" hreflang="x-default" href="{ro_url}">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="96x96" href="/assets/img/favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/img/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#130F2D">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="JCI Brașov">
+<meta property="og:title" content="{t}">
+<meta property="og:description" content="{d}">
+<meta property="og:url" content="{url}">
+<meta property="og:image" content="{img}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="JCI Brașov">
+<meta property="og:locale" content="{'en_GB' if en else 'ro_RO'}">
+<meta property="og:locale:alternate" content="{'ro_RO' if en else 'en_GB'}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{t}">
+<meta name="twitter:description" content="{d}">
+<meta name="twitter:image" content="{img}">"""
+    if fn=='index.html':
+        org={"@context":"https://schema.org","@type":"Organization","name":"JCI Brașov","alternateName":"Junior Chamber International Brașov",
+             "url":SITE,"logo":SITE+"assets/img/icon-512.png","image":img,"email":"contact@jci-brasov.com","telephone":"+40790827426",
+             "address":{"@type":"PostalAddress","addressLocality":"Brașov","addressCountry":"RO"},
+             "parentOrganization":{"@type":"Organization","name":"JCI România"},
+             "sameAs":["https://www.instagram.com/jcibrasov","https://www.facebook.com/share/1G4xX5D4Mi/"]}
+        site={"@context":"https://schema.org","@type":"WebSite","name":"JCI Brașov","url":SITE,"inLanguage":"en" if en else "ro"}
+        out+='\n<script type="application/ld+json">'+_json.dumps([org,site],ensure_ascii=False)+'</script>'
+    return out
+
 def page(fn,title,desc,body,cur):
     html=f'''<!DOCTYPE html>
 <html lang="en">
@@ -105,7 +150,7 @@ def page(fn,title,desc,body,cur):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title>
 <meta name="description" content="{desc}">
-<link rel="icon" type="image/png" href="{PFX}assets/img/favicon.png">
+{seo(fn,title,desc)}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Arvo&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -168,14 +213,14 @@ FEES='''<section class="section mist" id="cotizatie">
 </section>'''
 
 FORM_EMAIL='contact@jci-brasov.com'   # adresa Gmail JCI Brașov; formularul se activează când e completată
-form_action=f'https://formsubmit.co/{FORM_EMAIL}' if FORM_EMAIL else ''
+form_action='/api/form'
 FORM=f'''<section class="section">
   <div class="wrap form-wrap">
     <form class="signup" id="signup" method="POST" action="{form_action}" novalidate>
       <input type="hidden" name="_subject" value="New membership application JCI Brașov (EN)">
       <input type="hidden" name="_template" value="table">
       <input type="hidden" name="_captcha" value="false">
-      <input type="hidden" name="_next" value="https://jci-brasov.com/en/multumim.html">
+      <input type="hidden" name="_next" value="/en/multumim.html">
       <input type="text" name="_honey" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
       <div class="row2">
         <div class="field"><label for="f-nume">Full name</label><input id="f-nume" name="Nume" required autocomplete="name"></div>
@@ -238,7 +283,7 @@ SPONSOR=f'''<section class="section" id="formular-sponsor">
       <input type="hidden" name="_subject" value="New partnership request JCI Brașov Beyond the Initiative (EN)">
       <input type="hidden" name="_template" value="table">
       <input type="hidden" name="_captcha" value="false">
-      <input type="hidden" name="_next" value="https://jci-brasov.com/en/multumim.html">
+      <input type="hidden" name="_next" value="/en/multumim.html">
       <input type="text" name="_honey" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
       <div class="field"><label for="s-firma">Company or organisation</label><input id="s-firma" name="Companie" required autocomplete="organization"></div>
       <div class="row2">
@@ -250,7 +295,7 @@ SPONSOR=f'''<section class="section" id="formular-sponsor">
         <div class="field"><label for="s-tel">Phone</label><input id="s-tel" name="Telefon" type="tel" required autocomplete="tel"></div>
       </div>
       <div class="field"><label for="s-pachet">Package of interest</label>
-        <select id="s-pachet" name="Pachet"><option>Sponsor, 1,000 RON</option><option>Premium Sponsor, 2,000 RON</option><option>VIP Access, 200 RON</option><option>In-kind partnership</option><option>I would like more details</option></select></div>
+        <select id="s-pachet" name="Pachet"><option>Sponsor, 1,000 RON</option><option>Premium Sponsor, 2,000 RON</option><option>VIP Access, 200 RON</option><option>Barter partnership</option><option>I would like more details</option></select></div>
       <div class="field"><label for="s-mesaj">Message</label><textarea id="s-mesaj" name="Mesaj" placeholder="The products or services you would like to promote"></textarea></div>
       <label class="check" for="s-gdpr"><input id="s-gdpr" name="Acord date" type="checkbox" value="da" required><span>I agree that JCI Brașov may use this data solely to contact me about the partnership.</span></label>
       <div class="form-msg" role="status"></div>
@@ -265,7 +310,7 @@ THANKS='''<section class="section"><div class="wrap" style="max-width:720px">
   <div class="cta-row"><a class="btn btn-blue" href="https://chat.whatsapp.com/KAzFP6u8oMZDeslr1SfsNs" target="_blank" rel="noopener">Join the community</a><a class="btn btn-ghost on-light" href="index.html">Back to home page</a></div>
 </div></section>'''
 
-page('index.html','JCI Brașov','The JCI community for young leaders in Brașov. Launch event: 26 November 2026, CATTIA Brașov.',
+page('index.html','JCI Brașov | The young leaders community in Brașov','The JCI community for young leaders in Brașov. Launch event: 26 November 2026, CATTIA Brașov.',
      sec('acasa')+'\n'+home_about+'\n'+teasers+'\n'+sec('implica-te'),'index.html')
 page('despre.html','About JCI Brașov',DESC,
      intro('About','About JCI Brașov','A global movement of young leaders, rooted in Brașov since 2003.')+strip_tag_h2(despre).replace('<p class="lead">','<h2>Not just another network. A movement.</h2><p class="lead">',1)+sec('istoric'),'despre.html')

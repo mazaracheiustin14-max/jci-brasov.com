@@ -1,0 +1,4 @@
+Contact: mailto:contact@jci-brasov.com
+Expires: 2027-12-31T23:00:00.000Z
+Preferred-Languages: ro, en
+Canonical: https://jci-brasov.com/.well-known/security.txt

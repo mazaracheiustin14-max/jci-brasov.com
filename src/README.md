@@ -16,3 +16,10 @@ la reluare se copiază `src/` în `/home/claude/tools` și `public/` în `/home/
 Reguli: fără „·”, fără coduri ODD colorate, cercul din hero rămâne în spatele cardului,
 poze netăiate pe același fundal, numele „Iustin Mazarache” fără diacritice.
 Nu se publică: cursa de bărcuțe (2028), proiectul de depozitare bagaje, acțiunile inspirate de JCE Laval.
+
+## Ordinea de build (actualizat 3 nov 2026)
+1. `python3 build.py && python3 build_en.py && python3 post.py` (post.py: 404 cu linkuri absolute, noindex pe 404/mulțumim)
+2. `icons.py` generează favicon, iconițe și imaginile de previzualizare (og-jci-brasov*.jpg); fontul Plus Jakarta Sans din @fontsource (npm)
+3. Fișierele fixe din public/: `_headers` (antete de securitate), `robots.txt`, `sitemap.xml`, `site.webmanifest`, `.well-known/security.txt`, `favicon.ico`
+4. Formularele trimit la `/api/form`, tratat de `worker/index.js` (același domeniu). Trimite prin Email Routing dacă variabila `DEST`
+   e setată în Cloudflare (Worker → Settings → Variables), altfel prin FormSubmit, de pe server.

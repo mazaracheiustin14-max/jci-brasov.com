@@ -1,9 +1,16 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "jci-brasov-com",
+  "main": "worker/index.js",
   "compatibility_date": "2026-10-01",
+  "keep_vars": true,
   "assets": {
     "directory": "./public",
-    "not_found_handling": "single-page-application"
-  }
+    "binding": "ASSETS",
+    "not_found_handling": "404-page"
+  },
+  "send_email": [
+    { "name": "MAIL" }
+  ],
+  "observability": { "enabled": true }
 }
