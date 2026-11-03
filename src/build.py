@@ -134,13 +134,36 @@ def seo(fn,title,desc):
 <meta name="twitter:description" content="{d}">
 <meta name="twitter:image" content="{img}">"""
     if fn=='index.html':
-        org={"@context":"https://schema.org","@type":"Organization","name":"JCI Brașov","alternateName":"Junior Chamber International Brașov",
+        org={"@context":"https://schema.org","@type":["Organization","NGO"],"name":"JCI Brașov","alternateName":"Junior Chamber International Brașov",
              "url":SITE,"logo":SITE+"assets/img/icon-512.png","image":img,"email":"contact@jci-brasov.com","telephone":"+40790827426",
              "address":{"@type":"PostalAddress","addressLocality":"Brașov","addressCountry":"RO"},
              "parentOrganization":{"@type":"Organization","name":"JCI România"},
              "sameAs":["https://www.instagram.com/jcibrasov","https://www.facebook.com/share/1G4xX5D4Mi/"]}
         site={"@context":"https://schema.org","@type":"WebSite","name":"JCI Brașov","url":SITE,"inLanguage":"en" if en else "ro"}
         out+='\n<script type="application/ld+json">'+_json.dumps([org,site],ensure_ascii=False)+'</script>'
+    names={'despre':('Despre','About'),'eveniment':('Eveniment','Event'),'proiecte':('Proiecte','Projects'),'echipa':('Echipa','Team'),
+           'implica-te':('Devino membru','Become a member'),'inscriere':('Înscriere','Application'),'contact':('Contact','Contact')}
+    key=fn[:-5]
+    if key in names:
+        home=SITE+('en/' if en else '')
+        bc={"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[
+            {"@type":"ListItem","position":1,"name":"JCI Brașov","item":home},
+            {"@type":"ListItem","position":2,"name":names[key][1 if en else 0],"item":url}]}
+        out+='\n<script type="application/ld+json">'+_json.dumps(bc,ensure_ascii=False)+'</script>'
+    if key=='eveniment':
+        ev={"@context":"https://schema.org","@type":"Event",
+            "name":"JCI Brașov Beyond the Initiative",
+            "description":desc,
+            "startDate":"2026-11-26T17:00:00+02:00","endDate":"2026-11-26T22:30:00+02:00",
+            "eventStatus":"https://schema.org/EventScheduled",
+            "eventAttendanceMode":"https://schema.org/OfflineEventAttendanceMode",
+            "isAccessibleForFree":True,"inLanguage":"ro",
+            "location":{"@type":"Place","name":"CATTIA Brașov","address":{"@type":"PostalAddress","streetAddress":"Str. Institutului 35","addressLocality":"Brașov","addressCountry":"RO"}},
+            "image":[img],
+            "organizer":{"@type":"Organization","name":"JCI Brașov","url":SITE},
+            "performer":[{"@type":"Person","name":n} for n in ("Ioana Ceaușu","Bogdan Costaș","Rareș Zlătaru","Ciprian Văcaru")],
+            "offers":{"@type":"Offer","price":"0","priceCurrency":"RON","availability":"https://schema.org/InStock","url":url,"validFrom":"2026-11-01T00:00:00+02:00"}}
+        out+='\n<script type="application/ld+json">'+_json.dumps(ev,ensure_ascii=False)+'</script>'
     return out
 
 def page(fn,title,desc,body,cur):
@@ -269,7 +292,7 @@ document.querySelectorAll('form.signup').forEach(function(f){{
 }});
 </script>'''
 
-page('inscriere.html','Formular de înscriere | JCI Brașov','Formularul de înscriere în JCI Brașov.',
+page('inscriere.html','Formular de înscriere | JCI Brașov','Completează formularul de înscriere în JCI Brașov, organizația tinerilor lideri între 18 și 40 de ani. Te contactăm pentru o discuție de cunoaștere.',
      intro('<a href="implica-te.html">Devino membru</a> / Înscriere','Formular de înscriere','Completează cererea și te contactăm pentru o discuție de cunoaștere.')+FORM,'')
 
 SPONSOR=f'''<section class="section" id="formular-sponsor">
@@ -311,21 +334,21 @@ THANKS='''<section class="section"><div class="wrap" style="max-width:720px">
   <div class="cta-row"><a class="btn btn-blue" href="https://chat.whatsapp.com/KAzFP6u8oMZDeslr1SfsNs" target="_blank" rel="noopener">Intră în comunitate</a><a class="btn btn-ghost on-light" href="index.html">Înapoi la prima pagină</a></div>
 </div></section>'''
 
-page('index.html','JCI Brașov | Comunitatea tinerilor lideri din Brașov','Comunitatea JCI pentru tineri lideri din Brașov. Evenimentul de lansare: 26 noiembrie 2026, CATTIA Brașov.',
+page('index.html','JCI Brașov | Comunitatea tinerilor lideri din Brașov','JCI Brașov este comunitatea Junior Chamber International pentru tineri între 18 și 40 de ani: dezvoltare personală, afaceri, networking și proiecte locale.',
      sec('acasa')+'\n'+home_about+'\n'+teasers+'\n'+sec('implica-te'),'index.html')
-page('despre.html','Despre JCI Brașov',DESC,
+page('despre.html','Despre JCI Brașov | Tineri lideri din 2003','JCI Brașov face parte din Junior Chamber International, rețeaua globală a tinerilor lideri între 18 și 40 de ani. Misiunea, valorile și istoria noastră.',
      intro('Despre','Despre JCI Brașov','O mișcare globală a tinerilor lideri, cu rădăcini la Brașov din 2003.')+strip_tag_h2(despre).replace('<p class="lead">','<h2>Nu intri într-o rețea. Intri într-o mișcare.</h2><p class="lead">',1)+sec('istoric'),'despre.html')
-page('eveniment.html','Beyond the Initiative, 26 noiembrie | JCI Brașov','Evenimentul de lansare JCI Brașov, 26 noiembrie 2026, ora 17:00, CATTIA Brașov. Acces gratuit cu înscriere.',
+page('eveniment.html','Beyond the Initiative, 26 noiembrie | JCI Brașov','Evenimentul de lansare JCI Brașov: 26 noiembrie 2026, ora 17:00, CATTIA Brașov. Paneluri cu invitați din business, Blitz Networking, acces gratuit.',
      sec('eveniment')+sec('parteneri')+SPONSOR,'eveniment.html')
-page('proiecte.html','Proiecte JCI Brașov',DESC,
+page('proiecte.html','Proiecte JCI Brașov | Comunitate, educație, antreprenoriat','Proiectele JCI Brașov pentru comunitate: Toy Story, podcastul La un pahar de poveste și proiectele din 2027 dedicate educației și antreprenoriatului.',
      intro('Proiecte','Ce construim','Proiecte care pornesc de la nevoi reale ale comunității, legate de Obiectivele de Dezvoltare Durabilă.')+strip_tag_h2(sec('proiecte')),'proiecte.html')
-page('echipa.html','Echipa JCI Brașov',DESC,
+page('echipa.html','Echipa JCI Brașov | Conducere, membri și senatori','Cunoaște echipa JCI Brașov: președintele, vicepreședinții, membrii și senatorii JCI care susțin noua generație de tineri lideri din Brașov.',
      intro('Echipa','Oamenii JCI Brașov','Echipa de conducere, senatorii și membrii de onoare.')+strip_tag_h2(sec('echipa')),'echipa.html')
-page('implica-te.html','Devino membru | JCI Brașov',DESC,
+page('implica-te.html','Devino membru JCI Brașov | Tineri între 18 și 40 de ani','Ai între 18 și 40 de ani? Află cum devii membru JCI Brașov: traininguri, proiecte pentru comunitate, networking și oportunități internaționale.',
      intro('Devino membru','Devino membru','Patru pași de la curiozitate la implicare.')+sec('implica-te')+FEES,'implica-te.html')
 
 page('multumim.html','Mulțumim | JCI Brașov',DESC,THANKS,'')
-page('contact.html','Contact | JCI Brașov',DESC,sec('contact'),'contact.html')
+page('contact.html','Contact JCI Brașov | Telefon, email, rețele sociale','Contactează JCI Brașov pentru înscrieri, parteneriate, sponsorizări sau presă: +40 790 827 426, contact@jci-brasov.com, Instagram și comunitatea WhatsApp.',sec('contact'),'contact.html')
 NF='''<section class="section"><div class="wrap" style="max-width:720px">
   <span class="tag teal">Eroare 404</span>
   <h2>Pagina nu a fost găsită</h2>
