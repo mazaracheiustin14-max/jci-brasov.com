@@ -59,4 +59,12 @@ h2.as-h3{font-size:20px;font-weight:600;letter-spacing:0}
 h2.as-h3t{font-size:19px;font-weight:600;letter-spacing:0;margin-top:16px}
 """)
 print('a11y ok')
+# versiune pe CSS ca browserele să nu folosească stilul vechi din memorie
+import hashlib
+v=hashlib.md5(open(S+'assets/css/style.css','rb').read()).hexdigest()[:8]
+for p in _g.glob(S+'*.html')+_g.glob(S+'en/*.html'):
+    t=open(p,encoding='utf-8').read()
+    t=re.sub(r'(assets/css/style\.css)(\?v=[0-9a-f]+)?"',r'\1?v='+v+'"',t)
+    t=t.replace('<span class="sr-only">','<span class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap">')
+    open(p,'w',encoding='utf-8').write(t)
 print('post ok')
