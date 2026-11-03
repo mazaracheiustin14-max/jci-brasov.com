@@ -27,4 +27,36 @@ for p in [S+f for f in ('index.html','despre.html','eveniment.html','proiecte.ht
 css=S+'assets/css/style.css'; c=open(css,encoding='utf-8').read()
 if '.as-h2' not in c:
     open(css,'a',encoding='utf-8').write('\nh1.as-h2{font-size:clamp(28px,3.6vw,42px);font-weight:500;letter-spacing:-.01em}\n')
+
+# --- accesibilitate (Lighthouse) ---
+import glob as _g
+for p in _g.glob(S+'*.html')+_g.glob(S+'en/*.html'):
+    t=open(p,encoding='utf-8').read()
+    # meniul mobil: text ascuns pentru cititoare de ecran în loc de aria-label pe <label>
+    t=re.sub(r'<label class="burger" for="menu-toggle" aria-label="([^"]+)"><span></span></label>',
+             r'<label class="burger" for="menu-toggle"><span></span><span class="sr-only">\1</span></label>',t)
+    # butonul de limbă: numele accesibil include textul vizibil
+    t=t.replace('aria-label="English version">EN<','aria-label="EN, English version">EN<')
+    t=t.replace('aria-label="Versiunea în română">RO<','aria-label="RO, versiunea în română">RO<')
+    # ordinea titlurilor
+    t=t.replace('<h3>JCI Brașov Beyond the Initiative','<h2 class="as-h3t">JCI Brașov Beyond the Initiative',1)
+    t=re.sub(r'(<h2 class="as-h3t">JCI Brașov Beyond the Initiative[^<]*(?:<br>[^<]*)*)</h3>',r'\1</h2>',t,count=1)
+    t=t.replace('<h3>Proiecte 2027</h3>','<h2 class="as-h3">Proiecte 2027</h2>').replace('<h3>2027 Projects</h3>','<h2 class="as-h3">2027 Projects</h2>')
+    for title in ('Programul serii','Invitați','Evening programme','Programme','Speakers'):
+        t=re.sub(r'<h3( style="[^"]*")?>'+title+'</h3>',lambda m:'<h2 class="as-h3"'+(m.group(1) or '')+'>'+title+'</h2>',t)
+    open(p,'w',encoding='utf-8').write(t)
+css=S+'assets/css/style.css'; c=open(css,encoding='utf-8').read()
+if '--blue-ink' not in c:
+    open(css,'a',encoding='utf-8').write("""
+/* contrast AA: nuanță mai închisă a albastrului JCI doar unde e text pe albastru sau text albastru */
+:root{--blue-ink:#0073A6}
+.btn-blue,.tag.blue,.blitz{background:var(--blue-ink)}
+.btn-blue:hover{background:#00628D}
+.teaser .go,.person.lead-role span{color:var(--blue-ink)}
+.blitz p,.blitz ul{color:#fff}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+h2.as-h3{font-size:20px;font-weight:600;letter-spacing:0}
+h2.as-h3t{font-size:19px;font-weight:600;letter-spacing:0;margin-top:16px}
+""")
+print('a11y ok')
 print('post ok')
