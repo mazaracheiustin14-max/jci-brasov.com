@@ -57,11 +57,11 @@ for n,(p,box) in src.items():
     hr=a[top:top+int((bot-top)*0.22)]>128
     cx=int(np.mean(np.where(hr)[1]))
     headw=np.where(hr.any(0))[0]; hw=headw.max()-headw.min()
-    side=int(min(hw*(2.0 if n=='alexandra-vacaretiu' else 2.6),(bot-top)/0.92))   # head ~38% of frame width; person reaches the bottom edge
+    side=int(min(hw*(2.0 if n=='alexandra-vacaretiu' else 2.05 if n=='andreea' else 2.6),(bot-top)/0.92))   # head ~38% of frame width; person reaches the bottom edge
     if n=='iustin-mazarache':
         side=int(side*2.4/2.6); x0=cx-side//2-int(side*0.045); y0=top-int(side*0.07)
     else:
-        x0=cx-side//2; y0=top-int(side*(0.08 if n=='alexandra-vacaretiu' else 0.10))
+        x0=cx-side//2; y0=top-int(side*(0.08 if n in ('alexandra-vacaretiu','andreea') else 0.10))
     canvas=Image.new('RGBA',(side,side),(0,0,0,0)); canvas.paste(fg,(-x0,-y0))
     canvas=canvas.resize((S,S),Image.LANCZOS)
     if n=='iustin-OLD':
