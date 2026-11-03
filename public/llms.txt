@@ -1,0 +1,15 @@
+# JCI Brașov
+
+> JCI Brașov este filiala locală a Junior Chamber International (JCI) din Brașov, România: o organizație non-profit pentru tineri între 18 și 40 de ani, afiliată JCI România. Activează la Brașov din 2003. Site oficial: https://jci-brasov.com
+
+## Pagini principale
+- [Acasă](https://jci-brasov.com/): prezentarea JCI Brașov
+- [Despre și istoric](https://jci-brasov.com/despre): misiune, viziune, istoria JCI Brașov din 2003
+- [Eveniment Beyond the Initiative](https://jci-brasov.com/eveniment): evenimentul de lansare din 26 noiembrie 2026, ora 17:00, CATTIA Brașov (Str. Institutului 35); acces gratuit cu înscriere; pachete de sponsorizare
+- [Proiecte](https://jci-brasov.com/proiecte): Toy Story, podcastul „La un pahar de poveste”, proiectele din 2027
+- [Echipa](https://jci-brasov.com/echipa): conducerea, membrii și senatorii JCI
+- [Devino membru](https://jci-brasov.com/implica-te): pașii de înscriere și cotizația
+- [Contact](https://jci-brasov.com/contact): +40 790 827 426, contact@jci-brasov.com
+
+## English
+- [English version](https://jci-brasov.com/en/): JCI Brașov, the Junior Chamber International chapter in Brașov, Romania, for young leaders aged 18 to 40
