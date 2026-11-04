@@ -8,8 +8,8 @@
 <meta name="description" content="Dachkraft: Trockenbau, Bodenbeläge, Malerarbeiten und Wohnungsrenovierung in Dortmund und im Ruhrgebiet. Festpreis, fester Termin, vollständige Unterlagen.">
 <style>
 :root{
-  --anthrazit:#1F2326;--corten:#A6461A;--corten-hell:#D9733F;--stahl:#6B7378;
-  --kalk:#F3F1EC;--weiss:#FFFFFF;--text:#2A2F33;--text-2:#4A5258;
+  --anthrazit:#15263F;--corten:#A8322A;--corten-hell:#E8786D;--stahl:#3C4A5C;
+  --kalk:#E9ECEF;--weiss:#FFFFFF;--text:#1C2A3D;--text-2:#435166;
   --wrap:1180px;
 }
 *{box-sizing:border-box}
@@ -17,21 +17,21 @@ html{scroll-behavior:smooth}
 body{margin:0;font-family:"Archivo","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--text);background:var(--weiss);line-height:1.55;font-size:17px}
 img,svg{display:block}
 a{color:var(--corten)}
-a:hover{color:#7E3412}
+a:hover{color:#7E241E}
 .wrap{max-width:var(--wrap);margin:0 auto;padding:0 24px}
 .skip{position:absolute;left:-999px}
 .skip:focus{left:16px;top:16px;background:#fff;padding:8px 12px;z-index:100}
 
 /* Header */
-header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);border-bottom:1px solid #E4E2DD;backdrop-filter:saturate(1.2) blur(6px)}
+header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);border-bottom:1px solid #D3D8DE;backdrop-filter:saturate(1.2) blur(6px)}
 .nav{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:72px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--anthrazit)}
-.brand span{font-weight:800;font-size:22px;letter-spacing:2px}
+.brand span{font-weight:800;font-size:24px;letter-spacing:.3px}
 .menu{display:flex;gap:28px;align-items:center;flex-wrap:wrap}
 .menu a{color:var(--text);text-decoration:none;font-weight:600;font-size:15px}
 .menu a:hover{color:var(--corten)}
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 24px;background:var(--corten);color:#fff !important;text-decoration:none;font-weight:700;border:0;border-radius:2px;font-size:16px;cursor:pointer;font-family:inherit}
-.btn:hover{background:#8A3913}
+.btn:hover{background:#8C2922}
 .btn-ghost{background:transparent;border:2px solid var(--kalk);color:var(--kalk) !important}
 .btn-ghost:hover{background:rgba(243,241,236,.12)}
 
@@ -54,8 +54,8 @@ section{padding:88px 0}
 h2{margin:0 0 14px;font-size:clamp(28px,3.4vw,40px);line-height:1.15;font-weight:800;color:var(--anthrazit)}
 .lead{margin:0 0 44px;max-width:680px;color:var(--text-2);font-size:18px}
 .grid{display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
-.card{background:#fff;border:1px solid #E4E2DD;padding:28px;display:flex;flex-direction:column;gap:12px}
-.alt .card{border-color:#DDD9D1}
+.card{background:#fff;border:1px solid #D3D8DE;padding:28px;display:flex;flex-direction:column;gap:12px}
+.alt .card{border-color:#D3D8DE}
 .card h3{margin:0;font-size:20px;color:var(--anthrazit)}
 .card p{margin:0;color:var(--text-2);font-size:16px}
 .icon{width:48px;height:48px;background:var(--anthrazit);display:flex;align-items:center;justify-content:center}
@@ -71,7 +71,7 @@ h2{margin:0 0 14px;font-size:clamp(28px,3.4vw,40px);line-height:1.15;font-weight
 .docs h3{margin:0 0 6px;font-size:20px}
 .docs p{margin:0 0 20px;color:#C9CED1;font-size:15px}
 .docs ul{list-style:none;margin:0;padding:0;display:grid;gap:12px}
-.docs li{display:flex;gap:12px;align-items:center;font-size:16px;border-top:1px solid #3A4045;padding-top:12px}
+.docs li{display:flex;gap:12px;align-items:center;font-size:16px;border-top:1px solid #2A3B55;padding-top:12px}
 
 .steps{counter-reset:s;display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));list-style:none;margin:0;padding:0}
 .steps li{counter-increment:s;border-top:4px solid var(--anthrazit);padding-top:18px}
@@ -90,16 +90,16 @@ form{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(240px,1f
 .field{display:flex;flex-direction:column;gap:6px}
 .field.full{grid-column:1/-1}
 label{font-size:14px;font-weight:600;color:#DADDDF}
-input,select,textarea{font:inherit;font-size:16px;padding:12px 14px;border:1px solid #4A5258;background:#2A2F33;color:#fff;border-radius:2px;min-height:48px}
+input,select,textarea{font:inherit;font-size:16px;padding:12px 14px;border:1px solid #3C4A5C;background:#1E3350;color:#fff;border-radius:2px;min-height:48px}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--corten-hell);outline-offset:1px}
 textarea{min-height:120px;resize:vertical}
 .contact-info{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px;font-size:17px}
 .contact-info b{display:block;font-size:14px;color:#9AA2A7;font-weight:600;letter-spacing:1px;text-transform:uppercase}
 .contact-info a{color:var(--kalk)}
 .note{font-size:13px;color:#9AA2A7;grid-column:1/-1;margin:0}
-.ok{grid-column:1/-1;background:#2F3A2F;border-left:0;padding:14px;color:#DDEBDD;display:none}
+.ok{grid-column:1/-1;background:#1E3350;border-left:0;padding:14px;color:#DDEBDD;display:none}
 
-footer{background:#16191B;color:#9AA2A7;font-size:14px;padding:32px 0}
+footer{background:#0E1A2C;color:#9AA2A7;font-size:14px;padding:32px 0}
 footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center}
 footer a{color:#C9CED1;text-decoration:none;margin-left:20px}
 footer a:hover{color:#fff}
@@ -111,7 +111,7 @@ footer a:hover{color:#fff}
   .hero .wrap{padding-top:56px;padding-bottom:64px}
   footer a{margin:0 16px 0 0}
 }
-.hero{position:relative}.hero .wrap{position:relative;z-index:1}.hero-bg{position:absolute;right:-60px;top:50%;transform:translateY(-50%);opacity:.10;pointer-events:none}@media (max-width:720px){.hero-bg{right:-140px;top:150px;transform:none;opacity:.08}.hero-bg svg{width:420px;height:336px}}
+.hero{position:relative}.hero .wrap{position:relative;z-index:1}.hero-bg{position:absolute;right:-60px;top:50%;transform:translateY(-50%);opacity:.12;pointer-events:none}@media (max-width:720px){.hero-bg{right:-140px;top:150px;transform:none;opacity:.08}.hero-bg svg{width:380px;height:380px}}
 </style>
 </head>
 <body>
@@ -120,8 +120,8 @@ footer a:hover{color:#fff}
 <header>
   <div class="wrap nav">
     <a class="brand" href="#" aria-label="Dachkraft – Startseite">
-      <svg width="44" height="36" viewBox="0 0 150 120" aria-hidden="true"><polyline points="10,62 75,12 140,62" fill="none" stroke="#1F2326" stroke-width="14" stroke-linecap="square"/><rect x="34" y="74" width="82" height="10" fill="#A6461A"/><rect x="34" y="90" width="82" height="10" fill="#1F2326"/><rect x="34" y="106" width="82" height="10" fill="#6B7378"/></svg>
-      <span>DACHKRAFT</span>
+      <svg width="44" height="44" viewBox="0 0 140 140" aria-hidden="true"><rect width="140" height="140" fill="#15263F"/><polyline points="20,58 70,22 120,58" fill="none" stroke="#C9473B" stroke-width="11" stroke-linecap="square"/><text x="70" y="114" text-anchor="middle" font-family="Archivo, Segoe UI, Arial, sans-serif" font-weight="800" font-size="50" fill="#FFFFFF">DK</text></svg>
+      <span>Dachkraft</span>
     </a>
     <nav class="menu" aria-label="Hauptnavigation">
       <a href="#leistungen">Leistungen</a>
@@ -145,12 +145,12 @@ footer a:hover{color:#fff}
         <a class="btn btn-ghost" href="#leistungen">Leistungen ansehen</a>
       </div>
       <ul class="facts">
-        <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>Festpreis pro m²</li>
-        <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>Termin vertraglich zugesichert</li>
-        <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>Deutschsprachige Bauleitung</li>
+        <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#E8786D" stroke-width="3"/></svg>Festpreis pro m²</li>
+        <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#E8786D" stroke-width="3"/></svg>Termin vertraglich zugesichert</li>
+        <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#E8786D" stroke-width="3"/></svg>Deutschsprachige Bauleitung</li>
       </ul>
     </div>
-    <div class="hero-bg" aria-hidden="true"><svg width="620" height="496" viewBox="0 0 150 120" aria-hidden="true" style="margin:0"><polyline points="10,62 75,12 140,62" fill="none" stroke="#F3F1EC" stroke-width="14" stroke-linecap="square"/><rect x="34" y="74" width="82" height="10" fill="#D9733F"/><rect x="34" y="90" width="82" height="10" fill="#F3F1EC"/><rect x="34" y="106" width="82" height="10" fill="#9AA2A7"/></svg></div>
+    <div class="hero-bg" aria-hidden="true"><svg width="560" height="560" viewBox="0 0 140 140"><rect x="4" y="4" width="132" height="132" fill="none" stroke="#FFFFFF" stroke-width="4"/><polyline points="20,58 70,22 120,58" fill="none" stroke="#C9473B" stroke-width="11" stroke-linecap="square"/><text x="70" y="114" text-anchor="middle" font-family="Archivo, Segoe UI, Arial, sans-serif" font-weight="800" font-size="50" fill="#FFFFFF">DK</text></svg></div>
   </div>
 </div>
 
@@ -189,10 +189,10 @@ footer a:hover{color:#fff}
       <h2>Ihr verlässlicher Nachunternehmer</h2>
       <p class="lead" style="margin-bottom:32px">Wir arbeiten für Wohnungsunternehmen, Hausverwaltungen, Bauträger und Generalunternehmer im gesamten Ruhrgebiet.</p>
       <ul class="list">
-        <li><svg class="check" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#A6461A" stroke-width="3"/></svg><div><b>Festpreis und fester Termin</b><span>Klare Preise pro m² oder pro Wohnung, Termine verbindlich im Vertrag.</span></div></li>
-        <li><svg class="check" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#A6461A" stroke-width="3"/></svg><div><b>Ein Ansprechpartner auf Deutsch</b><span>Auf jeder Baustelle eine deutschsprachige Bauleitung – erreichbar für Sie und Ihre Bauleiter.</span></div></li>
-        <li><svg class="check" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#A6461A" stroke-width="3"/></svg><div><b>Wöchentlicher Fotobericht</b><span>Sie sehen den Baufortschritt, ohne vor Ort sein zu müssen.</span></div></li>
-        <li><svg class="check" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#A6461A" stroke-width="3"/></svg><div><b>Eingespielte Teams</b><span>Feste Kolonnen, die ab Auftragsbestätigung kurzfristig verfügbar sind.</span></div></li>
+        <li><svg class="check" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#A8322A" stroke-width="3"/></svg><div><b>Festpreis und fester Termin</b><span>Klare Preise pro m² oder pro Wohnung, Termine verbindlich im Vertrag.</span></div></li>
+        <li><svg class="check" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#A8322A" stroke-width="3"/></svg><div><b>Ein Ansprechpartner auf Deutsch</b><span>Auf jeder Baustelle eine deutschsprachige Bauleitung – erreichbar für Sie und Ihre Bauleiter.</span></div></li>
+        <li><svg class="check" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#A8322A" stroke-width="3"/></svg><div><b>Wöchentlicher Fotobericht</b><span>Sie sehen den Baufortschritt, ohne vor Ort sein zu müssen.</span></div></li>
+        <li><svg class="check" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#A8322A" stroke-width="3"/></svg><div><b>Eingespielte Teams</b><span>Feste Kolonnen, die ab Auftragsbestätigung kurzfristig verfügbar sind.</span></div></li>
       </ul>
     </div>
     <div>
@@ -200,11 +200,11 @@ footer a:hover{color:#fff}
         <h3>Unterlagen vollständig – vor Vertragsbeginn</h3>
         <p>Für Ihre Nachunternehmerprüfung erhalten Sie alle Nachweise gesammelt vorab.</p>
         <ul>
-          <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>Freistellungsbescheinigung nach § 48b EStG</li>
-          <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>A1-Bescheinigungen aller Mitarbeiter</li>
-          <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>Teilnahme am SOKA-BAU-Urlaubsverfahren</li>
-          <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>Meldung beim Zoll (Mindestlohn)</li>
-          <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>Betriebshaftpflichtversicherung</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#E8786D" stroke-width="3"/></svg>Freistellungsbescheinigung nach § 48b EStG</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#E8786D" stroke-width="3"/></svg>A1-Bescheinigungen aller Mitarbeiter</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#E8786D" stroke-width="3"/></svg>Teilnahme am SOKA-BAU-Urlaubsverfahren</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#E8786D" stroke-width="3"/></svg>Meldung beim Zoll (Mindestlohn)</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#E8786D" stroke-width="3"/></svg>Betriebshaftpflichtversicherung</li>
         </ul>
       </div>
     </div>
