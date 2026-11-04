@@ -20,7 +20,8 @@ src={'iustin-mazarache':('/home/claude/foto/v2/iustin-clean.jpg',None),
  'mircea-voicu':('/home/claude/site-assets/echipa/mircea-voicu.jpg',(430,0,1230,900)),
  'julia':('/home/claude/site-assets/echipa/julia.jpg',None),
  'patricia':('/home/claude/site-assets/echipa/patricia.jpg',None),
- 'andreea':('/home/claude/site-assets/echipa/andreea.jpg',None)}
+ 'andreea':('/home/claude/site-assets/echipa/andreea.jpg',None),
+ 'ruxandra-mazarache':('/home/claude/site-assets/echipa/ruxandra-mazarache.jpg',(0,0,1200,1470))}
 ONLY=__import__('sys').argv[1:]
 for n,(p,box) in src.items():
     if ONLY and n not in ONLY: continue
@@ -39,6 +40,8 @@ for n,(p,box) in src.items():
         arr[int(h*0.45):,int(w*0.60):]=reg
         fg=Image.fromarray(arr,'RGBA')
         al=fg.split()[-1].filter(ImageFilter.MedianFilter(7)).filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(1.2)); fg.putalpha(al)
+    if n=='ruxandra-mazarache':
+        al=fg.split()[-1].filter(ImageFilter.MinFilter(7)).filter(ImageFilter.GaussianBlur(1.4)); fg.putalpha(al)
     if n=='iustin-mazarache':
         import cv2
         al=np.array(fg.split()[-1]); m=(al>110).astype(np.uint8)*255
@@ -57,11 +60,11 @@ for n,(p,box) in src.items():
     hr=a[top:top+int((bot-top)*0.22)]>128
     cx=int(np.mean(np.where(hr)[1]))
     headw=np.where(hr.any(0))[0]; hw=headw.max()-headw.min()
-    side=int(min(hw*(2.0 if n=='alexandra-vacaretiu' else 2.05 if n=='andreea' else 2.6),(bot-top)/0.92))   # head ~38% of frame width; person reaches the bottom edge
+    side=int(min(hw*(2.0 if n=='alexandra-vacaretiu' else 2.05 if n in ('andreea','ruxandra-mazarache') else 2.6),(bot-top)/0.92))   # head ~38% of frame width; person reaches the bottom edge
     if n=='iustin-mazarache':
         side=int(side*2.4/2.6); x0=cx-side//2-int(side*0.045); y0=top-int(side*0.07)
     else:
-        x0=cx-side//2; y0=top-int(side*(0.08 if n in ('alexandra-vacaretiu','andreea') else 0.10))
+        x0=cx-side//2; y0=top-int(side*(0.08 if n in ('alexandra-vacaretiu','andreea','ruxandra-mazarache') else 0.10))
     canvas=Image.new('RGBA',(side,side),(0,0,0,0)); canvas.paste(fg,(-x0,-y0))
     canvas=canvas.resize((S,S),Image.LANCZOS)
     if n=='iustin-OLD':
