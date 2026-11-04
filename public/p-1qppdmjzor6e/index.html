@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dachkraft – Innenausbau und Sanierung im Ruhrgebiet</title>
+<meta name="description" content="Dachkraft: Trockenbau, Bodenbeläge, Malerarbeiten und Wohnungsrenovierung in Dortmund und im Ruhrgebiet. Festpreis, fester Termin, vollständige Unterlagen.">
+<style>
+:root{
+  --anthrazit:#1F2326;--corten:#A6461A;--corten-hell:#D9733F;--stahl:#6B7378;
+  --kalk:#F3F1EC;--weiss:#FFFFFF;--text:#2A2F33;--text-2:#4A5258;
+  --wrap:1180px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:"Archivo","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--text);background:var(--weiss);line-height:1.55;font-size:17px}
+img,svg{display:block}
+a{color:var(--corten)}
+a:hover{color:#7E3412}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 24px}
+.skip{position:absolute;left:-999px}
+.skip:focus{left:16px;top:16px;background:#fff;padding:8px 12px;z-index:100}
+
+/* Header */
+header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);border-bottom:1px solid #E4E2DD;backdrop-filter:saturate(1.2) blur(6px)}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:72px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--anthrazit)}
+.brand span{font-weight:800;font-size:22px;letter-spacing:2px}
+.menu{display:flex;gap:28px;align-items:center;flex-wrap:wrap}
+.menu a{color:var(--text);text-decoration:none;font-weight:600;font-size:15px}
+.menu a:hover{color:var(--corten)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 24px;background:var(--corten);color:#fff !important;text-decoration:none;font-weight:700;border:0;border-radius:2px;font-size:16px;cursor:pointer;font-family:inherit}
+.btn:hover{background:#8A3913}
+.btn-ghost{background:transparent;border:2px solid var(--kalk);color:var(--kalk) !important}
+.btn-ghost:hover{background:rgba(243,241,236,.12)}
+
+/* Hero */
+.hero{background:var(--anthrazit);color:var(--kalk);overflow:hidden}
+.hero .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:48px;padding-top:88px;padding-bottom:96px}
+.hero-text{flex:1 1 480px;min-width:0}
+.kicker{font-size:14px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--corten-hell);margin:0 0 18px}
+.hero h1{margin:0 0 22px;font-size:clamp(36px,5vw,60px);line-height:1.05;font-weight:800}
+.hero p{margin:0 0 32px;font-size:19px;color:#C9CED1;max-width:560px}
+.cta{display:flex;gap:14px;flex-wrap:wrap}
+.hero-art{flex:1 1 340px;display:flex;justify-content:center}
+.facts{display:flex;flex-wrap:wrap;gap:12px 28px;margin-top:40px;padding:0;list-style:none;color:#C9CED1;font-size:15px}
+.facts li{display:flex;align-items:center;gap:8px}
+.facts svg{flex:none}
+
+/* Sections */
+section{padding:88px 0}
+.alt{background:var(--kalk)}
+h2{margin:0 0 14px;font-size:clamp(28px,3.4vw,40px);line-height:1.15;font-weight:800;color:var(--anthrazit)}
+.lead{margin:0 0 44px;max-width:680px;color:var(--text-2);font-size:18px}
+.grid{display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.card{background:#fff;border:1px solid #E4E2DD;padding:28px;display:flex;flex-direction:column;gap:12px}
+.alt .card{border-color:#DDD9D1}
+.card h3{margin:0;font-size:20px;color:var(--anthrazit)}
+.card p{margin:0;color:var(--text-2);font-size:16px}
+.icon{width:48px;height:48px;background:var(--anthrazit);display:flex;align-items:center;justify-content:center}
+
+.split{display:flex;flex-wrap:wrap;gap:48px}
+.split > div{flex:1 1 420px;min-width:0}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:18px}
+.list li{display:flex;gap:14px;align-items:flex-start}
+.list b{display:block;color:var(--anthrazit);font-size:17px}
+.list span{color:var(--text-2);font-size:16px}
+.check{flex:none;margin-top:3px}
+.docs{background:var(--anthrazit);color:var(--kalk);padding:32px}
+.docs h3{margin:0 0 6px;font-size:20px}
+.docs p{margin:0 0 20px;color:#C9CED1;font-size:15px}
+.docs ul{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.docs li{display:flex;gap:12px;align-items:center;font-size:16px;border-top:1px solid #3A4045;padding-top:12px}
+
+.steps{counter-reset:s;display:grid;gap:24px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));list-style:none;margin:0;padding:0}
+.steps li{counter-increment:s;border-top:4px solid var(--anthrazit);padding-top:18px}
+.steps li::before{content:"0" counter(s);display:block;font-size:34px;font-weight:800;color:var(--corten);line-height:1;margin-bottom:10px}
+.steps b{display:block;font-size:18px;color:var(--anthrazit);margin-bottom:6px}
+.steps span{color:var(--text-2);font-size:16px}
+
+.clients{display:flex;flex-wrap:wrap;gap:14px;margin:0;padding:0;list-style:none}
+.clients li{border:2px solid var(--anthrazit);padding:12px 18px;font-weight:700;color:var(--anthrazit);font-size:16px}
+
+/* Kontakt */
+.kontakt{background:var(--anthrazit);color:var(--kalk)}
+.kontakt h2{color:var(--kalk)}
+.kontakt .lead{color:#C9CED1}
+form{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.field{display:flex;flex-direction:column;gap:6px}
+.field.full{grid-column:1/-1}
+label{font-size:14px;font-weight:600;color:#DADDDF}
+input,select,textarea{font:inherit;font-size:16px;padding:12px 14px;border:1px solid #4A5258;background:#2A2F33;color:#fff;border-radius:2px;min-height:48px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--corten-hell);outline-offset:1px}
+textarea{min-height:120px;resize:vertical}
+.contact-info{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px;font-size:17px}
+.contact-info b{display:block;font-size:14px;color:#9AA2A7;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.contact-info a{color:var(--kalk)}
+.note{font-size:13px;color:#9AA2A7;grid-column:1/-1;margin:0}
+.ok{grid-column:1/-1;background:#2F3A2F;border-left:0;padding:14px;color:#DDEBDD;display:none}
+
+footer{background:#16191B;color:#9AA2A7;font-size:14px;padding:32px 0}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center}
+footer a{color:#C9CED1;text-decoration:none;margin-left:20px}
+footer a:hover{color:#fff}
+
+@media (max-width:720px){
+  .menu{gap:16px;width:100%;padding-bottom:12px}
+  .menu .btn{display:none}
+  section{padding:64px 0}
+  .hero .wrap{padding-top:56px;padding-bottom:64px}
+  footer a{margin:0 16px 0 0}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#inhalt">Zum Inhalt springen</a>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#" aria-label="Dachkraft – Startseite">
+      <svg width="44" height="36" viewBox="0 0 150 120" aria-hidden="true"><polyline points="10,62 75,12 140,62" fill="none" stroke="#1F2326" stroke-width="14" stroke-linecap="square"/><rect x="34" y="74" width="82" height="10" fill="#A6461A"/><rect x="34" y="90" width="82" height="10" fill="#1F2326"/><rect x="34" y="106" width="82" height="10" fill="#6B7378"/></svg>
+      <span>DACHKRAFT</span>
+    </a>
+    <nav class="menu" aria-label="Hauptnavigation">
+      <a href="#leistungen">Leistungen</a>
+      <a href="#auftraggeber">Für Auftraggeber</a>
+      <a href="#ablauf">Ablauf</a>
+      <a href="#kontakt">Kontakt</a>
+      <a class="btn" href="#kontakt">Angebot anfordern</a>
+    </nav>
+  </div>
+</header>
+
+<main id="inhalt">
+<div class="hero">
+  <div class="wrap">
+    <div class="hero-text">
+      <p class="kicker">Dortmund · Ruhrgebiet</p>
+      <h1>Innenausbau und Sanierung.<br>Alles unter einem Dach.</h1>
+      <p>Trockenbau, Bodenbeläge, Malerarbeiten und komplette Wohnungsrenovierungen – zum Festpreis, mit festem Termin und vollständigen Unterlagen ab dem ersten Tag.</p>
+      <div class="cta">
+        <a class="btn" href="#kontakt">Angebot anfordern</a>
+        <a class="btn btn-ghost" href="#leistungen">Leistungen ansehen</a>
+      </div>
+      <ul class="facts">
+        <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>Festpreis pro m²</li>
+        <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>Termin vertraglich zugesichert</li>
+        <li><svg class="check" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>Deutschsprachige Bauleitung</li>
+      </ul>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <svg width="420" height="360" viewBox="0 0 420 360" style="max-width:100%;height:auto">
+        <polyline points="30,170 210,30 390,170" fill="none" stroke="#F3F1EC" stroke-width="30" stroke-linecap="square"/>
+        <rect x="95" y="200" width="230" height="28" fill="#D9733F"/>
+        <rect x="95" y="244" width="230" height="28" fill="#F3F1EC"/>
+        <rect x="95" y="288" width="230" height="28" fill="#6B7378"/>
+        <rect x="0" y="340" width="420" height="4" fill="#3A4045"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<section id="leistungen">
+  <div class="wrap">
+    <h2>Leistungen</h2>
+    <p class="lead">Wir übernehmen den Innenausbau im Bestand – einzeln oder als Komplettpaket aus einer Hand.</p>
+    <div class="grid">
+      <article class="card">
+        <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V3h18v18M9 3v18M15 3v18" fill="none" stroke="#F3F1EC" stroke-width="2"/></svg></div>
+        <h3>Trockenbau</h3>
+        <p>Trennwände, Vorsatzschalen, abgehängte Decken und Dachausbau – auch mit Schall- und Brandschutzanforderungen.</p>
+      </article>
+      <article class="card">
+        <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h18M3 15h18M8 9v6M16 3v6M12 15v6M3 3h18v18H3z" fill="none" stroke="#F3F1EC" stroke-width="2"/></svg></div>
+        <h3>Bodenbeläge</h3>
+        <p>Vinyl, Laminat und Designbeläge inklusive Untergrundvorbereitung, Ausgleichsmasse und Sockelleisten.</p>
+      </article>
+      <article class="card">
+        <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h13v5H4zM17 6.5h3V12h-8v3M12 15v6" fill="none" stroke="#F3F1EC" stroke-width="2"/></svg></div>
+        <h3>Malerarbeiten</h3>
+        <p>Spachteln, Grundieren, Streichen und Tapezieren von Wänden und Decken – sauber abgeklebt, termingerecht übergeben.</p>
+      </article>
+      <article class="card">
+        <div class="icon"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6" fill="none" stroke="#F3F1EC" stroke-width="2"/></svg></div>
+        <h3>Wohnungsrenovierung</h3>
+        <p>Komplettsanierung beim Mieterwechsel: Rückbau, Wände, Boden und Anstrich – bezugsfertig zum vereinbarten Termin.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="auftraggeber" class="alt">
+  <div class="wrap split">
+    <div>
+      <h2>Ihr verlässlicher Nachunternehmer</h2>
+      <p class="lead" style="margin-bottom:32px">Wir arbeiten für Wohnungsunternehmen, Hausverwaltungen, Bauträger und Generalunternehmer im gesamten Ruhrgebiet.</p>
+      <ul class="list">
+        <li><svg class="check" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#A6461A" stroke-width="3"/></svg><div><b>Festpreis und fester Termin</b><span>Klare Preise pro m² oder pro Wohnung, Termine verbindlich im Vertrag.</span></div></li>
+        <li><svg class="check" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#A6461A" stroke-width="3"/></svg><div><b>Ein Ansprechpartner auf Deutsch</b><span>Auf jeder Baustelle eine deutschsprachige Bauleitung – erreichbar für Sie und Ihre Bauleiter.</span></div></li>
+        <li><svg class="check" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#A6461A" stroke-width="3"/></svg><div><b>Wöchentlicher Fotobericht</b><span>Sie sehen den Baufortschritt, ohne vor Ort sein zu müssen.</span></div></li>
+        <li><svg class="check" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#A6461A" stroke-width="3"/></svg><div><b>Eingespielte Teams</b><span>Feste Kolonnen, die ab Auftragsbestätigung kurzfristig verfügbar sind.</span></div></li>
+      </ul>
+    </div>
+    <div>
+      <div class="docs">
+        <h3>Unterlagen vollständig – vor Vertragsbeginn</h3>
+        <p>Für Ihre Nachunternehmerprüfung erhalten Sie alle Nachweise gesammelt vorab.</p>
+        <ul>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>Freistellungsbescheinigung nach § 48b EStG</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>A1-Bescheinigungen aller Mitarbeiter</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>Teilnahme am SOKA-BAU-Urlaubsverfahren</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>Meldung beim Zoll (Mindestlohn)</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#D9733F" stroke-width="3"/></svg>Betriebshaftpflichtversicherung</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="ablauf">
+  <div class="wrap">
+    <h2>So läuft ein Auftrag</h2>
+    <p class="lead">Vom ersten Kontakt bis zur Übergabe – transparent und planbar.</p>
+    <ol class="steps">
+      <li><b>Anfrage</b><span>Sie senden uns Pläne, Leistungsverzeichnis oder ein paar Fotos.</span></li>
+      <li><b>Angebot</b><span>Sie erhalten ein Festpreisangebot mit verbindlichem Zeitplan.</span></li>
+      <li><b>Ausführung</b><span>Unser Team arbeitet nach Plan, mit wöchentlichem Fotobericht.</span></li>
+      <li><b>Übergabe</b><span>Gemeinsame Abnahme, Mängel werden sofort behoben.</span></li>
+    </ol>
+    <h3 style="margin:56px 0 18px;font-size:20px;color:var(--anthrazit)">Einsatzgebiet</h3>
+    <ul class="clients">
+      <li>Dortmund</li><li>Bochum</li><li>Unna</li><li>Lünen</li><li>Schwerte</li><li>Castrop-Rauxel</li><li>Hagen</li>
+    </ul>
+  </div>
+</section>
+
+<section id="kontakt" class="kontakt">
+  <div class="wrap split">
+    <div>
+      <h2>Angebot anfordern</h2>
+      <p class="lead" style="margin-bottom:32px">Beschreiben Sie kurz Ihr Vorhaben – wir melden uns mit einem konkreten Angebot.</p>
+      <ul class="contact-info">
+        <li><b>Telefon</b><a href="tel:[TELEFON]">[TELEFON]</a></li>
+        <li><b>E-Mail</b><a href="mailto:[E-MAIL]">[E-MAIL]</a></li>
+        <li><b>Anschrift</b>[STRASSE NR.], [PLZ] Dortmund</li>
+      </ul>
+    </div>
+    <div>
+      <form id="anfrage" action="#" method="post">
+        <div class="field"><label for="name">Name</label><input id="name" name="name" autocomplete="name" required></div>
+        <div class="field"><label for="firma">Firma</label><input id="firma" name="firma" autocomplete="organization"></div>
+        <div class="field"><label for="email">E-Mail</label><input id="email" name="email" type="email" autocomplete="email" required></div>
+        <div class="field"><label for="tel">Telefon</label><input id="tel" name="tel" type="tel" autocomplete="tel"></div>
+        <div class="field full"><label for="leistung">Leistung</label>
+          <select id="leistung" name="leistung">
+            <option>Wohnungsrenovierung</option><option>Trockenbau</option><option>Bodenbeläge</option><option>Malerarbeiten</option><option>Mehrere Gewerke</option>
+          </select>
+        </div>
+        <div class="field full"><label for="nachricht">Ihr Vorhaben</label><textarea id="nachricht" name="nachricht" placeholder="Ort, Fläche in m², gewünschter Termin"></textarea></div>
+        <div class="field full"><button class="btn" type="submit">Anfrage senden</button></div>
+        <p class="ok" id="ok" role="status">Vielen Dank! Wir melden uns in Kürze bei Ihnen.</p>
+        <p class="note">Mit dem Absenden stimmen Sie der Verarbeitung Ihrer Angaben gemäß unserer <a href="#" style="color:#C9CED1">Datenschutzerklärung</a> zu.</p>
+      </form>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Dachkraft · Innenausbau und Sanierung im Ruhrgebiet</span>
+    <nav aria-label="Rechtliches"><a href="#">Impressum</a><a href="#">Datenschutz</a></nav>
+  </div>
+</footer>
+
+<script>
+document.getElementById('anfrage').addEventListener('submit', function (e) {
+  e.preventDefault();
+  document.getElementById('ok').style.display = 'block';
+  this.reset();
+});
+</script>
+</body>
+</html>
