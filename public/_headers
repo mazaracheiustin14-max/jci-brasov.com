@@ -9,7 +9,3 @@
 
 /assets/*
   Cache-Control: public, max-age=604800
-
-/p-1qppdmjzor6e/*
-  X-Robots-Tag: noindex, nofollow, noarchive
-  Cache-Control: no-store

@@ -34,7 +34,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Arvo&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=a1f8adf3">
+<link rel="stylesheet" href="assets/css/style.css?v=57b1b9f6">
 </head>
 <body>
 <header>
@@ -93,6 +93,7 @@
     </div>
   </div>
 </section>
+<section class="countdown" aria-label="Până la Beyond the Initiative"><div class="wrap"><div class="cd-box" data-live="Evenimentul a început. Te așteptăm la CATTIA Brașov." data-done="Mulțumim tuturor celor care au fost alături de noi la Beyond the Initiative."><div class="kicker">Până la Beyond the Initiative</div><div class="cd-clock" role="timer" aria-label="Timp rămas până la eveniment"><div class="cd-unit"><span class="cd-num" data-u="d">00</span><span class="cd-lab">Zile</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="h">00</span><span class="cd-lab">Ore</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="m">00</span><span class="cd-lab">Min</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="s">00</span><span class="cd-lab">Sec</span></div></div><p class="cd-date">Joi, 26 noiembrie 2026, ora 17:00, CATTIA Brașov</p><a class="btn btn-blue" href="https://chat.whatsapp.com/KAzFP6u8oMZDeslr1SfsNs" target="_blank" rel="noopener">Rezervă-ți locul</a></div></div></section>
 <section class="section">
   <div class="wrap">
     <span class="tag">Despre noi</span>
@@ -171,5 +172,12 @@
     a.addEventListener('click',function(){document.getElementById('menu-toggle').checked=false;});
   });
 </script>
+<script>(function(){var start=Date.UTC(2026,10,26,15,0,0),end=Date.UTC(2026,10,26,20,30,0);
+function pad(n){return(n<10?'0':'')+n}
+function tick(){var now=Date.now(),boxes=document.querySelectorAll('.cd-box');
+boxes.forEach(function(b){if(now>=start){var c=b.querySelector('.cd-clock');if(c&&!b.dataset.fin){b.dataset.fin=1;var p=document.createElement('p');p.className='cd-msg';p.textContent=now<end?b.dataset.live:b.dataset.done;c.replaceWith(p);}return;}
+var s=Math.floor((start-now)/1000),v={d:Math.floor(s/86400),h:Math.floor(s%86400/3600),m:Math.floor(s%3600/60),s:s%60};
+b.querySelectorAll('.cd-num').forEach(function(e){e.textContent=pad(v[e.dataset.u]);});});}
+tick();setInterval(tick,1000);})();</script>
 </body>
 </html>
