@@ -59,7 +59,7 @@ h2.as-h3{font-size:20px;font-weight:600;letter-spacing:0}
 h2.as-h3t{font-size:19px;font-weight:600;letter-spacing:0;margin-top:16px}
 """)
 print('a11y ok')
-import sys; sys.path.insert(0,'/home/claude/tools'); import countdown; countdown.run()
+import sys; sys.path.insert(0,'/home/claude/tools'); import countdown; countdown.run(); import theme; theme.run()
 # versiune pe CSS ca browserele să nu folosească stilul vechi din memorie
 import hashlib
 v=hashlib.md5(open(S+'assets/css/style.css','rb').read()).hexdigest()[:8]
