@@ -34,7 +34,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Arvo&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/style.css?v=4c6521d9">
+<link rel="stylesheet" href="../assets/css/style.css?v=f5625e9a">
 </head>
 <body>
 <header>
@@ -88,12 +88,12 @@
         <dt>Entry</dt><dd>Free, registration required</dd>
         <dt>Seats</dt><dd>around 150</dd>
       </dl>
-      <a class="btn btn-blue" href="https://chat.whatsapp.com/KAzFP6u8oMZDeslr1SfsNs" target="_blank" rel="noopener">Register via WhatsApp</a>
+      <a class="btn btn-blue" href="eveniment#rezerva">Save your seat</a>
     </aside>
     </div>
   </div>
 </section>
-<section class="countdown" aria-label="Countdown to Beyond the Initiative"><div class="wrap"><div class="cd-box" data-live="The event has started. See you at CATTIA Brașov." data-done="Thank you to everyone who joined us at Beyond the Initiative."><div class="kicker">Countdown to Beyond the Initiative</div><div class="cd-clock" role="timer" aria-label="Time left until the event"><div class="cd-unit"><span class="cd-num" data-u="d">00</span><span class="cd-lab">Days</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="h">00</span><span class="cd-lab">Hours</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="m">00</span><span class="cd-lab">Min</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="s">00</span><span class="cd-lab">Sec</span></div></div><p class="cd-date">Thursday, 26 November 2026, 5:00 pm, CATTIA Brașov</p><a class="btn btn-blue" href="https://chat.whatsapp.com/KAzFP6u8oMZDeslr1SfsNs" target="_blank" rel="noopener">Save your seat</a></div></div></section>
+<section class="countdown" aria-label="Countdown to Beyond the Initiative"><div class="wrap"><div class="cd-box" data-live="The event has started. See you at CATTIA Brașov." data-done="Thank you to everyone who joined us at Beyond the Initiative."><div class="kicker">Countdown to Beyond the Initiative</div><div class="cd-clock" role="timer" aria-label="Time left until the event"><div class="cd-unit"><span class="cd-num" data-u="d">00</span><span class="cd-lab">Days</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="h">00</span><span class="cd-lab">Hours</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="m">00</span><span class="cd-lab">Min</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="s">00</span><span class="cd-lab">Sec</span></div></div><p class="cd-stats" data-stats hidden><b data-stat="count">0</b> people have registered so far. <b data-stat="left">150</b> seats left.</p><p class="cd-date">Thursday, 26 November 2026, 5:00 pm, CATTIA Brașov</p><a class="btn btn-blue" href="eveniment#rezerva">Save your seat</a></div></div></section>
 <section class="section">
   <div class="wrap">
     <span class="tag">About us</span>
@@ -178,5 +178,12 @@ boxes.forEach(function(b){if(now>=start){var c=b.querySelector('.cd-clock');if(c
 var s=Math.floor((start-now)/1000),v={d:Math.floor(s/86400),h:Math.floor(s%86400/3600),m:Math.floor(s%3600/60),s:s%60};
 b.querySelectorAll('.cd-num').forEach(function(e){e.textContent=pad(v[e.dataset.u]);});});}
 tick();setInterval(tick,1000);})();</script>
+<script>(function(){var els=document.querySelectorAll('[data-stats]');if(!els.length)return;
+fetch('/api/stats',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+els.forEach(function(el){if(d.count>=20){el.querySelectorAll('[data-stat="count"]').forEach(function(e){e.textContent=d.count});
+el.querySelectorAll('[data-stat="left"]').forEach(function(e){e.textContent=d.left});el.hidden=false;}
+var m=el.querySelector('.meter i');if(m&&d.count>=20)m.style.width=Math.min(100,Math.round(d.count/d.capacity*100))+'%';});
+if(d.closed){document.querySelectorAll('form[data-event]').forEach(function(f){f.querySelectorAll('input,select,textarea,button').forEach(function(x){x.disabled=true});var c=f.querySelector('.closed');if(c)c.hidden=false;});}
+}).catch(function(){});})();</script>
 </body>
 </html>

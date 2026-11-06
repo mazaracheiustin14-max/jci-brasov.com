@@ -1,0 +1,26 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//JCI Brasov//Beyond the Initiative//RO
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:beyond-2026@jci-brasov.com
+DTSTAMP:20261106T100000Z
+DTSTART:20261126T150000Z
+DTEND:20261126T203000Z
+SUMMARY:JCI Brașov Beyond the Initiative
+LOCATION:CATTIA Brașov\, Strada Institutului 35\, Brașov
+DESCRIPTION:Evenimentul de lansare JCI Brașov. Detalii: https://jci-brasov.com/eveniment
+URL:https://jci-brasov.com/eveniment
+BEGIN:VALARM
+TRIGGER:-P1D
+ACTION:DISPLAY
+DESCRIPTION:Mâine: JCI Brașov Beyond the Initiative
+END:VALARM
+BEGIN:VALARM
+TRIGGER:-PT2H
+ACTION:DISPLAY
+DESCRIPTION:În 2 ore: JCI Brașov Beyond the Initiative
+END:VALARM
+END:VEVENT
+END:VCALENDAR

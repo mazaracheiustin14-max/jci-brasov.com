@@ -9,6 +9,11 @@ var FORMSUBMIT = "https://formsubmit.co/ajax/contact@jci-brasov.com";
 var worker_default = {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/api/inscriere") {
+      if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
+      return handleEventSignup(request, env);
+    }
+    if (url.pathname === "/api/stats") return handleStats(env);
     if (url.pathname === "/api/form") {
       if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
       return handleForm(request, env);
@@ -98,6 +103,151 @@ Trimis de pe ${SITE}${next.includes("/en/") ? "/en/" : "/"}`;
   );
 }
 __name(handleForm, "handleForm");
+var EVENT = "beyond-2026";
+var CAPACITY = 150;
+var DEADLINE = Date.UTC(2026, 10, 24, 21, 59, 59);
+var PROFILES = [
+  "Antreprenor",
+  "Manager",
+  "Angajat",
+  "Student",
+  "Freelancer sau consultant",
+  "ONG sau sector public",
+  "Altul",
+  "Entrepreneur",
+  "Employee",
+  "Freelancer or consultant",
+  "NGO or public sector",
+  "Other"
+];
+async function countRegistrations(env) {
+  const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM inscrieri WHERE eveniment = ? AND status = 'confirmat'").bind(EVENT).first();
+  return r && r.n || 0;
+}
+__name(countRegistrations, "countRegistrations");
+async function handleStats(env) {
+  let count = 0;
+  try {
+    count = await countRegistrations(env);
+  } catch (e) {
+    console.log("stats:", e && e.message);
+  }
+  const body = { count, capacity: CAPACITY, left: Math.max(0, CAPACITY - count), closed: Date.now() > DEADLINE, deadline: new Date(DEADLINE).toISOString() };
+  return new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=20" } });
+}
+__name(handleStats, "handleStats");
+function clean(v, max) {
+  return (typeof v === "string" ? v : "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max);
+}
+__name(clean, "clean");
+async function handleEventSignup(request, env) {
+  const origin = request.headers.get("Origin");
+  if (origin && !/^https:\/\/(www\.)?jci-brasov\.com$/.test(origin)) return new Response("Forbidden", { status: 403 });
+  let data;
+  try {
+    data = await request.formData();
+  } catch {
+    return new Response("Bad Request", { status: 400 });
+  }
+  const en = clean(data.get("limba"), 2) === "en";
+  const base = SITE + (en ? "/en" : "");
+  const ok = /* @__PURE__ */ __name((status2) => Response.redirect(`${base}/inscriere-confirmata?s=${status2}`, 303), "ok");
+  if (clean(data.get("_honey"), 100) !== "") return ok("confirmat");
+  const f = {
+    nume: clean(data.get("nume"), 120),
+    email: clean(data.get("email"), 160).toLowerCase(),
+    telefon: clean(data.get("telefon"), 40),
+    companie: clean(data.get("companie"), 160),
+    functie: clean(data.get("functie"), 120),
+    profil: clean(data.get("profil"), 60),
+    intrebare: clean(data.get("intrebare"), 1500),
+    sursa: clean(data.get("sursa"), 80)
+  };
+  const fail = /* @__PURE__ */ __name((msg) => new Response(msg, { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } }), "fail");
+  if (f.nume.length < 3) return fail(en ? "Please enter your full name." : "V\u0103 rug\u0103m s\u0103 completa\u021Bi numele complet.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email)) return fail(en ? "Please enter a valid email address." : "Adresa de email nu este valid\u0103.");
+  if (f.telefon.replace(/\D/g, "").length < 9) return fail(en ? "Please enter a valid phone number." : "Num\u0103rul de telefon nu este valid.");
+  if (f.profil && !PROFILES.includes(f.profil)) f.profil = "";
+  if (!data.get("acord")) return fail(en ? "Please accept the data processing terms." : "Este necesar acordul pentru prelucrarea datelor.");
+  if (Date.now() > DEADLINE) return Response.redirect(`${base}/inscriere-confirmata?s=inchis`, 303);
+  let status = "confirmat";
+  try {
+    const n = await countRegistrations(env);
+    if (n >= CAPACITY) status = "asteptare";
+    const res = await env.DB.prepare(
+      "INSERT OR IGNORE INTO inscrieri (eveniment,nume,email,telefon,companie,functie,profil,intrebare,sursa,limba,acord_marketing,status,tara) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+    ).bind(
+      EVENT,
+      f.nume,
+      f.email,
+      f.telefon,
+      f.companie,
+      f.functie,
+      f.profil,
+      f.intrebare,
+      f.sursa,
+      en ? "en" : "ro",
+      data.get("acord_marketing") ? 1 : 0,
+      status,
+      request.cf && request.cf.country || null
+    ).run();
+    if (!res.meta || res.meta.changes === 0) return ok("deja");
+  } catch (e) {
+    console.log("d1 insert failed:", e && e.message);
+  }
+  const lines = [
+    ["Nume", f.nume],
+    ["Email", f.email],
+    ["Telefon", f.telefon],
+    ["Companie", f.companie],
+    ["Func\u021Bie", f.functie],
+    ["Profil", f.profil],
+    ["\xCEntrebare pentru invita\u021Bi", f.intrebare],
+    ["De unde a aflat", f.sursa],
+    ["Status", status],
+    ["Limba", en ? "EN" : "RO"]
+  ].filter(([, v]) => v);
+  await notify(env, `\xCEnscriere nou\u0103 Beyond the Initiative: ${f.nume}`, lines, f.email);
+  return ok(status);
+}
+__name(handleEventSignup, "handleEventSignup");
+async function notify(env, subject, lines, replyTo) {
+  const body = lines.map(([k, v]) => `${k}: ${v}`).join("\n") + `
+
+--
+${SITE}`;
+  if (env.MAIL && env.DEST) {
+    try {
+      const raw = [
+        `From: "Formular JCI Brasov" <${FROM}>`,
+        `To: <${env.DEST}>`,
+        `Reply-To: <${replyTo}>`,
+        `Subject: =?UTF-8?B?${btoa(String.fromCharCode(...new TextEncoder().encode(subject)))}?=`,
+        `Message-ID: <${crypto.randomUUID()}@jci-brasov.com>`,
+        `Date: ${(/* @__PURE__ */ new Date()).toUTCString()}`,
+        "MIME-Version: 1.0",
+        "Content-Type: text/plain; charset=UTF-8",
+        "Content-Transfer-Encoding: base64",
+        "",
+        b64(body)
+      ].join("\r\n");
+      await env.MAIL.send(new EmailMessage(FROM, env.DEST, raw));
+      return true;
+    } catch (e) {
+      console.log("notify email routing:", e && e.message);
+    }
+  }
+  try {
+    const payload = Object.fromEntries(lines);
+    Object.assign(payload, { _subject: subject, _replyto: replyTo, _template: "table", _captcha: "false" });
+    const r = await fetch(FORMSUBMIT, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json", Origin: SITE, Referer: SITE + "/" }, body: JSON.stringify(payload) });
+    return r.ok;
+  } catch (e) {
+    console.log("notify formsubmit:", e && e.message);
+    return false;
+  }
+}
+__name(notify, "notify");
 
 // ../../../tmp/wr/node_modules/wrangler/templates/middleware/middleware-ensure-req-body-drained.ts
 var drainBody = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx) => {
@@ -146,7 +296,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-EyblyI/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-UJrNEE/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -178,7 +328,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-EyblyI/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-UJrNEE/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;
