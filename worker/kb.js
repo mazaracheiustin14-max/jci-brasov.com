@@ -28,7 +28,7 @@ SPONSORIZARE LA EVENIMENT (adresare cu „dumneavoastră”)
 - Public: aproximativ 150 de antreprenori, manageri și tineri profesioniști din Brașov. Organizarea este susținută integral de parteneri.
 - Sponsor, 1.000 lei: logo pe materialele digitale, prezentarea companiei în secțiunea partenerilor, recunoaștere publică pe scenă.
 - Sponsor Premium, 2.000 lei: spațiu de expunere cu 2–3 roll-up-uri, intervenție pe scenă de 3–5 minute, logo în prezentarea proiectată toată seara, vizibilitate în comunicarea de după eveniment.
-- Acces VIP (bilet), 200 lei: locuri în primele rânduri, întâlnire directă cu invitații din paneluri, acces prioritar la networking, degustare de vin și preparate culinare. Băuturile de la bar se achită separat. Biletul se cumpără online, cu cardul, din butonul „Cumpără biletul VIP” de pe /eveniment#parteneri.
+- Bilet VIP, 200 lei (separat de pachetele de sponsorizare): locuri în primele rânduri, întâlnire directă cu invitații din paneluri, acces prioritar la networking, degustare de vin și preparate culinare; 40 de locuri VIP. Băuturile de la bar se achită separat. Se cumpără online, cu cardul, de pe /eveniment#vip.
 - Sunt binevenite și parteneriatele în regim de barter: produse, servicii, fotografie, catering, materiale.
 - Cererea de ofertă se trimite prin formularul de parteneriat de pe pagina evenimentului (/eveniment#formular-sponsor); răspunsul cu propunerea detaliată și contractul vine în cel mult două zile lucrătoare.
 

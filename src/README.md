@@ -28,8 +28,10 @@ Nu se publică: cursa de bărcuțe (2028), proiectul de depozitare bagaje, acți
 security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune în CSP din public/_headers. Orice script inline nou sau modificat cere rularea lui după deploy.py.
 
 ## Bilet VIP prin Stripe (7 nov 2026)
-- `vip.py` (după deploy.py, înainte de security.py): pachetul Acces VIP cu degustare de vin și preparate, fără roll-up,
-  mențiunea despre bar, butonul „Cumpără biletul VIP” către Payment Link-ul Stripe; creează `vip-confirmat.html` (RO/EN).
+- `vip.py` (după deploy.py, înainte de security.py): biletul VIP e separat de sponsorizări (scos din pachete și din formularul de sponsori);
+  secțiunea #vip pe pagina evenimentului (Gratuit / VIP, contor în timp real, buton Stripe), butoane VIP lângă înscriere și pe prima pagină,
+  `assets/js/vip.js` (citește /api/stats la 15 s) și `vip-confirmat.html` (RO/EN).
+- Locuri VIP: 40, dintre care 15 rezervate deja; constante VIP_TOTAL/VIP_PRESOLD în worker și TOTAL/PRESOLD în vip.py.
 - În Stripe, Payment Link-ul redirecționează după plată la https://jci-brasov.com/vip-confirmat (pagina deschide calendarul automat pe telefon).
 - Worker: `/api/stripe-webhook` (evenimentul checkout.session.completed). Cere secretul `STRIPE_WEBHOOK_SECRET` în Cloudflare.
   Salvează cumpărătorul în D1, tabelul `vip`, îl adaugă în `inscrieri` (sursa „Bilet VIP (Stripe)”) și trimite email organizatorilor.

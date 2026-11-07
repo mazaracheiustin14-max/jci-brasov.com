@@ -166,6 +166,9 @@ async function handleForm(request, env) {
 // ===== Înscrieri la Beyond the Initiative (D1: jci-brasov-inscrieri) =====
 const EVENT = "beyond-2026";
 const CAPACITY = 150;
+// Bilete VIP: 40 de locuri, dintre care 15 rezervate deja (invitați VIP). Vândute = VIP_PRESOLD + plățile din tabelul vip.
+const VIP_TOTAL = 40;
+const VIP_PRESOLD = 15;
 const DEADLINE = Date.UTC(2026, 10, 24, 21, 59, 59); // 24 noiembrie 2026, 23:59 ora României
 const PROFILES = ["Antreprenor", "Manager", "Angajat", "Student", "Freelancer sau consultant", "ONG sau sector public", "Altul",
   "Entrepreneur", "Employee", "Freelancer or consultant", "NGO or public sector", "Other"];
@@ -180,10 +183,16 @@ async function handleStats(request, env, ctx) {
   const key = new Request(new URL("/api/stats", SITE).toString());
   const hit = await cache.match(key);
   if (hit) return hit;
-  let count = 0;
+  let count = 0, vipSold = 0, vipLast = null;
   try { count = await countRegistrations(env); } catch (e) { console.log("stats:", e && e.message); }
-  const body = { count, capacity: CAPACITY, left: Math.max(0, CAPACITY - count), closed: Date.now() > DEADLINE, deadline: new Date(DEADLINE).toISOString() };
-  const res = new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=20" } });
+  try {
+    const v = await env.DB.prepare("SELECT COUNT(*) AS n, MAX(creat) AS last FROM vip WHERE eveniment = ?").bind(EVENT).first();
+    vipSold = (v && v.n) || 0; vipLast = (v && v.last) || null;
+  } catch (e) { /* tabelul vip apare la prima plată */ }
+  const sold = Math.min(VIP_TOTAL, VIP_PRESOLD + vipSold);
+  const body = { count, capacity: CAPACITY, left: Math.max(0, CAPACITY - count), closed: Date.now() > DEADLINE, deadline: new Date(DEADLINE).toISOString(),
+    vip: { total: VIP_TOTAL, sold, left: VIP_TOTAL - sold, last: vipLast } };
+  const res = new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=10" } });
   if (ctx && ctx.waitUntil) ctx.waitUntil(cache.put(key, res.clone()));
   return res;
 }
@@ -392,6 +401,7 @@ async function handleStripe(request, env, ctx) {
       const r = await env.DB.prepare("INSERT OR IGNORE INTO vip (sesiune,eveniment,nume,email,telefon,suma,moneda) VALUES (?,?,?,?,?,?,?)")
         .bind(f.sesiune, EVENT, f.nume, f.email, f.telefon, f.suma, f.moneda).run();
       if (r.meta && r.meta.changes === 0) return json({ received: true, duplicate: true }); // Stripe poate retrimite același eveniment
+      try { await caches.default.delete(new Request(new URL("/api/stats", SITE).toString())); } catch (e) {} // contorul VIP se actualizează imediat
       if (f.email) {
         await env.DB.prepare(
           "INSERT OR IGNORE INTO inscrieri (eveniment,nume,email,telefon,companie,functie,profil,intrebare,sursa,limba,acord_marketing,status,tara) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"

@@ -101,7 +101,7 @@
 <section class="section dark" id="eveniment">
   <div class="wrap">
     <div class="countdown compact"><div class="cd-box" data-live="The event has started. See you at CATTIA Brașov." data-done="Thank you to everyone who joined us at Beyond the Initiative."><div class="kicker">Countdown to Beyond the Initiative</div><div class="cd-clock" role="timer" aria-label="Time left until the event"><div class="cd-unit"><span class="cd-num" data-u="d">00</span><span class="cd-lab">Days</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="h">00</span><span class="cd-lab">Hours</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="m">00</span><span class="cd-lab">Min</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="s">00</span><span class="cd-lab">Sec</span></div></div></div></div>
-    <a class="btn btn-blue cd-cta" href="#rezerva">Save your free seat</a>
+    <div class="cd-ctas" style="display:flex;gap:12px;flex-wrap:wrap;margin:4px 0 28px"><a class="btn btn-blue cd-cta" style="margin:0" href="#rezerva">Save your free seat</a><a class="btn btn-gold cd-vip" href="#vip" style="background:#EFC40F;color:#130F2D">VIP ticket, 200 RON</a></div>
     <div class="event-head">
       <div>
         <span class="tag">26 November 2026</span>
@@ -156,10 +156,43 @@
       <a class="btn btn-blue" href="#rezerva">Save your seat</a>
     </div>
   </div>
-</section><section class="section" id="cu-ce-pleci"><div class="wrap"><span class="tag teal">What you take home</span><h2>One evening, three concrete gains</h2><ol class="take"><li><span class="big">24+</span><b>new contacts</b><p>Two Blitz Networking sessions in small groups, designed so you leave with people you can actually call the next day.</p></li><li><span class="big">2</span><b>panels that answer your questions</b><p>The questions you send when registering go to the moderators and shape the panel discussions.</p></li><li><span class="big">1</span><b>community that continues after the event</b><p>Access to the JCI Brașov community: projects, training and the JCI network in more than 100 countries.</p></li></ol></div></section><section class="section mist" id="rezerva"><div class="wrap res"><div class="res-info res-head">
+</section><section class="section" id="cu-ce-pleci"><div class="wrap"><span class="tag teal">What you take home</span><h2>One evening, three concrete gains</h2><ol class="take"><li><span class="big">24+</span><b>new contacts</b><p>Two Blitz Networking sessions in small groups, designed so you leave with people you can actually call the next day.</p></li><li><span class="big">2</span><b>panels that answer your questions</b><p>The questions you send when registering go to the moderators and shape the panel discussions.</p></li><li><span class="big">1</span><b>community that continues after the event</b><p>Access to the JCI Brașov community: projects, training and the JCI network in more than 100 countries.</p></li></ol></div></section><section class="section vip-sec" id="vip"><style>
+.vip-sec{background:radial-gradient(900px 500px at 85% 0%,rgba(239,196,15,.10),transparent 70%)}
+.vip-grid{display:grid;grid-template-columns:1fr 1.15fr;gap:20px;margin-top:40px;align-items:stretch}
+.vip-card{background:var(--card,#14113A);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:30px;display:flex;flex-direction:column;position:relative}
+.vip-card.gold{border:2px solid var(--yellow,#EFC40F);box-shadow:0 30px 80px -40px rgba(239,196,15,.55)}
+.vip-card small{font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal,#57BCBC)}
+.vip-card.gold small{color:var(--yellow,#EFC40F)}
+.vip-card .price{font-size:44px;font-weight:800;margin:6px 0 4px;font-variant-numeric:tabular-nums}
+.vip-card .price span{font-size:18px;font-weight:600;color:var(--muted,#A9ABC8)}
+.vip-card ul{list-style:none;margin:14px 0 0;padding:0;font-size:15px;color:var(--soft,#B9BBD6)}
+.vip-card li{padding:9px 0 9px 28px;border-top:1px solid rgba(255,255,255,.08);position:relative}
+.vip-card li::before{content:"";position:absolute;left:4px;top:16px;width:10px;height:10px;border-radius:50%;background:var(--teal,#57BCBC)}
+.vip-card.gold li::before{background:var(--yellow,#EFC40F)}
+.vip-card li.all{color:#fff;font-weight:600}.vip-card li.all::before{display:none}.vip-card li.all{padding-left:0}
+.vip-card .sp{flex:1;min-height:22px}
+.vip-card .btn{justify-content:center;width:100%}
+.btn-gold{background:var(--yellow,#EFC40F);color:var(--ink,#130F2D)}.btn-gold:hover{background:#ffd52e}
+.btn-gold[aria-disabled=true]{background:rgba(255,255,255,.15);color:rgba(255,255,255,.6);pointer-events:none}
+.vip-ribbon{position:absolute;top:-14px;right:24px;background:var(--yellow,#EFC40F);color:var(--ink,#130F2D);font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase;padding:6px 12px;border-radius:999px}
+.vip-live{margin-top:22px;background:rgba(239,196,15,.07);border:1px solid rgba(239,196,15,.25);border-radius:14px;padding:16px 18px}
+.vip-live .vl-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:15px;color:#fff}
+.vip-live .vl-top b{color:var(--yellow,#EFC40F);font-size:20px}
+.vip-live .meter{height:10px;border-radius:999px;background:rgba(255,255,255,.1);margin-top:12px;overflow:hidden}
+.vip-live .meter i{display:block;height:100%;background:linear-gradient(90deg,#f5a524,var(--yellow,#EFC40F));transition:width .8s ease}
+.vip-live .vl-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--soft,#B9BBD6)}
+.vip-dot{display:inline-flex;align-items:center;gap:7px}
+.vip-dot::before{content:"";width:8px;height:8px;border-radius:50%;background:#3ddc84;box-shadow:0 0 0 0 rgba(61,220,132,.6);animation:vipPulse 1.8s infinite}
+@keyframes vipPulse{0%{box-shadow:0 0 0 0 rgba(61,220,132,.6)}70%{box-shadow:0 0 0 8px rgba(61,220,132,0)}100%{box-shadow:0 0 0 0 rgba(61,220,132,0)}}
+.vip-card .note{margin:12px 0 0;font-size:13px;color:var(--muted,#A9ABC8)}
+.vip-hint{margin-top:14px;font-size:15px}.vip-hint a{color:var(--yellow,#EFC40F);font-weight:600}
+.vip-bump{animation:vipBump .6s ease}@keyframes vipBump{50%{transform:scale(1.25)}}
+@media (max-width:900px){.vip-grid{grid-template-columns:1fr}.vip-card.gold{order:-1}}
+@media (prefers-reduced-motion:reduce){.vip-dot::before,.vip-bump{animation:none}}
+</style><div class="wrap"><span class="tag">VIP ticket</span><h2>Experience the evening from the front row</h2><p class="lead">Free registration secures your seat in the room. The VIP ticket gives you the full experience: the best seats, direct access to the speakers and an evening curated in every detail.</p><div class="vip-grid"><div class="vip-card"><small>Free access</small><div class="price">0 <span>RON</span></div><ul><li>A seat in the room, within the 150-seat capacity</li><li>Both panels of the evening</li><li>The Blitz Networking sessions</li><li>The event community on WhatsApp</li></ul><div class="sp"></div><a class="btn btn-ghost" href="#rezerva">Register for free</a></div><div class="vip-card gold"><span class="vip-ribbon">Limited seats</span><small>VIP access</small><div class="price">200 <span>RON</span></div><ul><li class="all">Everything in free access, plus:</li><li>Reserved front-row seating</li><li>Direct meeting with the panel speakers</li><li>Priority access to the networking sessions</li><li>Wine and food tasting</li></ul><div class="vip-live" data-vipbox><div class="vl-top"><span><b data-vip="left">25</b> VIP seats available</span><span><b data-vip="sold">15</b> of 40 taken</span></div><div class="meter"><i data-vip="bar" style="width:37.5%"></i></div><div class="vl-foot"><span class="vip-dot">Updated in real time</span><span data-vip="last" hidden></span></div></div><div class="sp"></div><a class="btn btn-gold" data-vip="buy" href="https://buy.stripe.com/4gM7sL2iD4a3eype1v3wQ05" rel="noopener">Buy the VIP ticket</a><p class="note">Secure online card payment via Stripe. Drinks ordered at the bar are paid separately.</p></div></div></div></section><section class="section mist" id="rezerva"><div class="wrap res"><div class="res-info res-head">
       <span class="tag blue">Registration</span>
       <h2>Save your seat</h2>
-      <p class="lead">Entry is free, but seats are limited to the capacity of the room. Registration takes less than a minute.</p>
+      <p class="lead">Entry is free, but seats are limited to the capacity of the room. Registration takes less than a minute.</p><p class="vip-hint"><a href="#vip">Want a front-row seat? See the VIP ticket</a></p>
     </div>
     <form class="signup" method="POST" action="/api/inscriere" data-event>
       <input type="hidden" name="limba" value="en">
@@ -192,13 +225,11 @@
     <span class="tag blue">Partners</span>
     <h2>Sponsorship partnership</h2>
     <p class="lead">Beyond the Initiative brings together around 150 entrepreneurs, managers and young professionals from Brașov. Attendance is free and the event is funded entirely by its partners. For your company, this means direct visibility with a decision-making audience and association with an international network of leaders.</p>
-    <div class="packs">
+    <style>.packs.two{grid-template-columns:repeat(2,1fr)}@media (max-width:900px){.packs.two{grid-template-columns:1fr}}</style><div class="packs two">
       <div class="pack"><small>Sponsor</small><div class="price">1,000 <span>RON</span></div>
         <ul><li>Logo on all digital event materials</li><li>Company profile in the dedicated partners section</li><li>Public acknowledgement from the organisers on stage</li></ul></div>
       <div class="pack hi"><small>Premium Sponsor</small><div class="price">2,000 <span>RON</span></div>
         <ul><li>Dedicated exhibition space with 2–3 roll-ups</li><li>A 3–5 minute address on stage</li><li>Logo on screen throughout the event</li><li>Visibility in post-event communication</li></ul></div>
-      <div class="pack"><small>VIP Access</small><div class="price">200 <span>RON</span></div>
-        <ul><li>Reserved front-row seating</li><li>Direct meeting with the panel speakers</li><li>Priority access to the networking sessions</li><li>Wine and food tasting</li></ul><p style="margin:14px 0 0;font-size:13px;color:var(--muted)">Drinks ordered at the bar are paid separately.</p><div style="flex:1;min-height:20px"></div><a class="btn btn-blue" style="justify-content:center;width:100%" href="https://buy.stripe.com/4gM7sL2iD4a3eype1v3wQ05" rel="noopener">Buy the VIP ticket</a></div>
     </div>
     <p class="inkind">We are also open to barter partnerships: products, services, photography, catering or materials.</p>
     <div class="cta-row"><a class="btn btn-blue" href="#formular-sponsor">Request the partnership proposal</a></div>
@@ -228,7 +259,7 @@
         <div class="field"><label for="s-tel">Phone</label><input id="s-tel" name="Telefon" type="tel" required autocomplete="tel"></div>
       </div>
       <div class="field"><label for="s-pachet">Package of interest</label>
-        <select id="s-pachet" name="Pachet"><option>Sponsor, 1,000 RON</option><option>Premium Sponsor, 2,000 RON</option><option>VIP Access, 200 RON</option><option>Barter partnership</option><option>I would like more details</option></select></div>
+        <select id="s-pachet" name="Pachet"><option>Sponsor, 1,000 RON</option><option>Premium Sponsor, 2,000 RON</option><option>Barter partnership</option><option>I would like more details</option></select></div>
       <div class="field"><label for="s-mesaj">Message</label><textarea id="s-mesaj" name="Mesaj" placeholder="The products or services you would like to promote"></textarea></div>
       <label class="check" for="s-gdpr"><input id="s-gdpr" name="Acord date" type="checkbox" value="da" required><span>I agree that JCI Brașov may use this data solely to contact me about the partnership.</span></label>
       <div class="form-msg" role="status"></div>
@@ -354,5 +385,6 @@ function ask(q){q=(q||'').trim();if(!q||busy)return;busy=true;btn.disabled=true;
 if(location.hash==='#asistent')open();
 })();
 </script>
+<script src="/assets/js/vip.js?v=e5d06789" defer></script>
 </body>
 </html>

@@ -101,7 +101,7 @@
 <section class="section dark" id="eveniment">
   <div class="wrap">
     <div class="countdown compact"><div class="cd-box" data-live="Evenimentul a început. Te așteptăm la CATTIA Brașov." data-done="Mulțumim tuturor celor care au fost alături de noi la Beyond the Initiative."><div class="kicker">Până la Beyond the Initiative</div><div class="cd-clock" role="timer" aria-label="Timp rămas până la eveniment"><div class="cd-unit"><span class="cd-num" data-u="d">00</span><span class="cd-lab">Zile</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="h">00</span><span class="cd-lab">Ore</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="m">00</span><span class="cd-lab">Min</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="s">00</span><span class="cd-lab">Sec</span></div></div></div></div>
-    <a class="btn btn-blue cd-cta" href="#rezerva">Rezervă-ți locul gratuit</a>
+    <div class="cd-ctas" style="display:flex;gap:12px;flex-wrap:wrap;margin:4px 0 28px"><a class="btn btn-blue cd-cta" style="margin:0" href="#rezerva">Rezervă-ți locul gratuit</a><a class="btn btn-gold cd-vip" href="#vip" style="background:#EFC40F;color:#130F2D">Bilet VIP, 200 lei</a></div>
     <div class="event-head">
       <div>
         <span class="tag">26 noiembrie 2026</span>
@@ -156,10 +156,43 @@
       <a class="btn btn-blue" href="#rezerva">Rezervă-ți locul</a>
     </div>
   </div>
-</section><section class="section" id="cu-ce-pleci"><div class="wrap"><span class="tag teal">Cu ce pleci acasă</span><h2>O seară, trei câștiguri concrete</h2><ol class="take"><li><span class="big">24+</span><b>contacte noi</b><p>Două sesiuni de Blitz Networking în grupuri mici, gândite ca să pleci cu oameni pe care chiar îi poți suna a doua zi.</p></li><li><span class="big">2</span><b>paneluri cu răspunsuri la întrebările tale</b><p>Întrebările trimise la înscriere ajung la moderatori și stau la baza discuțiilor cu invitații.</p></li><li><span class="big">1</span><b>comunitate care continuă după eveniment</b><p>Acces la comunitatea JCI Brașov: proiecte, traininguri și rețeaua JCI din peste 100 de țări.</p></li></ol></div></section><section class="section mist" id="rezerva"><div class="wrap res"><div class="res-info res-head">
+</section><section class="section" id="cu-ce-pleci"><div class="wrap"><span class="tag teal">Cu ce pleci acasă</span><h2>O seară, trei câștiguri concrete</h2><ol class="take"><li><span class="big">24+</span><b>contacte noi</b><p>Două sesiuni de Blitz Networking în grupuri mici, gândite ca să pleci cu oameni pe care chiar îi poți suna a doua zi.</p></li><li><span class="big">2</span><b>paneluri cu răspunsuri la întrebările tale</b><p>Întrebările trimise la înscriere ajung la moderatori și stau la baza discuțiilor cu invitații.</p></li><li><span class="big">1</span><b>comunitate care continuă după eveniment</b><p>Acces la comunitatea JCI Brașov: proiecte, traininguri și rețeaua JCI din peste 100 de țări.</p></li></ol></div></section><section class="section vip-sec" id="vip"><style>
+.vip-sec{background:radial-gradient(900px 500px at 85% 0%,rgba(239,196,15,.10),transparent 70%)}
+.vip-grid{display:grid;grid-template-columns:1fr 1.15fr;gap:20px;margin-top:40px;align-items:stretch}
+.vip-card{background:var(--card,#14113A);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:30px;display:flex;flex-direction:column;position:relative}
+.vip-card.gold{border:2px solid var(--yellow,#EFC40F);box-shadow:0 30px 80px -40px rgba(239,196,15,.55)}
+.vip-card small{font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal,#57BCBC)}
+.vip-card.gold small{color:var(--yellow,#EFC40F)}
+.vip-card .price{font-size:44px;font-weight:800;margin:6px 0 4px;font-variant-numeric:tabular-nums}
+.vip-card .price span{font-size:18px;font-weight:600;color:var(--muted,#A9ABC8)}
+.vip-card ul{list-style:none;margin:14px 0 0;padding:0;font-size:15px;color:var(--soft,#B9BBD6)}
+.vip-card li{padding:9px 0 9px 28px;border-top:1px solid rgba(255,255,255,.08);position:relative}
+.vip-card li::before{content:"";position:absolute;left:4px;top:16px;width:10px;height:10px;border-radius:50%;background:var(--teal,#57BCBC)}
+.vip-card.gold li::before{background:var(--yellow,#EFC40F)}
+.vip-card li.all{color:#fff;font-weight:600}.vip-card li.all::before{display:none}.vip-card li.all{padding-left:0}
+.vip-card .sp{flex:1;min-height:22px}
+.vip-card .btn{justify-content:center;width:100%}
+.btn-gold{background:var(--yellow,#EFC40F);color:var(--ink,#130F2D)}.btn-gold:hover{background:#ffd52e}
+.btn-gold[aria-disabled=true]{background:rgba(255,255,255,.15);color:rgba(255,255,255,.6);pointer-events:none}
+.vip-ribbon{position:absolute;top:-14px;right:24px;background:var(--yellow,#EFC40F);color:var(--ink,#130F2D);font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase;padding:6px 12px;border-radius:999px}
+.vip-live{margin-top:22px;background:rgba(239,196,15,.07);border:1px solid rgba(239,196,15,.25);border-radius:14px;padding:16px 18px}
+.vip-live .vl-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:15px;color:#fff}
+.vip-live .vl-top b{color:var(--yellow,#EFC40F);font-size:20px}
+.vip-live .meter{height:10px;border-radius:999px;background:rgba(255,255,255,.1);margin-top:12px;overflow:hidden}
+.vip-live .meter i{display:block;height:100%;background:linear-gradient(90deg,#f5a524,var(--yellow,#EFC40F));transition:width .8s ease}
+.vip-live .vl-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--soft,#B9BBD6)}
+.vip-dot{display:inline-flex;align-items:center;gap:7px}
+.vip-dot::before{content:"";width:8px;height:8px;border-radius:50%;background:#3ddc84;box-shadow:0 0 0 0 rgba(61,220,132,.6);animation:vipPulse 1.8s infinite}
+@keyframes vipPulse{0%{box-shadow:0 0 0 0 rgba(61,220,132,.6)}70%{box-shadow:0 0 0 8px rgba(61,220,132,0)}100%{box-shadow:0 0 0 0 rgba(61,220,132,0)}}
+.vip-card .note{margin:12px 0 0;font-size:13px;color:var(--muted,#A9ABC8)}
+.vip-hint{margin-top:14px;font-size:15px}.vip-hint a{color:var(--yellow,#EFC40F);font-weight:600}
+.vip-bump{animation:vipBump .6s ease}@keyframes vipBump{50%{transform:scale(1.25)}}
+@media (max-width:900px){.vip-grid{grid-template-columns:1fr}.vip-card.gold{order:-1}}
+@media (prefers-reduced-motion:reduce){.vip-dot::before,.vip-bump{animation:none}}
+</style><div class="wrap"><span class="tag">Bilet VIP</span><h2>Trăiește seara din primul rând</h2><p class="lead">Participarea gratuită îți asigură locul în sală. Biletul VIP îți oferă experiența completă: cel mai bun loc, acces direct la invitați și o seară gândită în detaliu.</p><div class="vip-grid"><div class="vip-card"><small>Acces gratuit</small><div class="price">0 <span>lei</span></div><ul><li>Loc în sală, în limita celor 150 de locuri</li><li>Cele două paneluri ale serii</li><li>Sesiunile de Blitz Networking</li><li>Comunitatea evenimentului pe WhatsApp</li></ul><div class="sp"></div><a class="btn btn-ghost" href="#rezerva">Înscrie-te gratuit</a></div><div class="vip-card gold"><span class="vip-ribbon">Locuri limitate</span><small>Acces VIP</small><div class="price">200 <span>lei</span></div><ul><li class="all">Tot ce include accesul gratuit, plus:</li><li>Locuri rezervate în primele rânduri</li><li>Întâlnire directă cu invitații din paneluri</li><li>Acces prioritar la sesiunile de networking</li><li>Degustare de vin și preparate culinare</li></ul><div class="vip-live" data-vipbox><div class="vl-top"><span><b data-vip="left">25</b> locuri VIP disponibile</span><span><b data-vip="sold">15</b> din 40 ocupate</span></div><div class="meter"><i data-vip="bar" style="width:37.5%"></i></div><div class="vl-foot"><span class="vip-dot">Actualizat în timp real</span><span data-vip="last" hidden></span></div></div><div class="sp"></div><a class="btn btn-gold" data-vip="buy" href="https://buy.stripe.com/4gM7sL2iD4a3eype1v3wQ05" rel="noopener">Cumpără biletul VIP</a><p class="note">Plata se face online, cu cardul, prin Stripe. Băuturile comandate de la bar se achită separat.</p></div></div></div></section><section class="section mist" id="rezerva"><div class="wrap res"><div class="res-info res-head">
       <span class="tag blue">Înscriere</span>
       <h2>Rezervă&#8209;ți locul</h2>
-      <p class="lead">Accesul este gratuit, dar locurile sunt limitate la capacitatea sălii. Înscrierea durează sub un minut.</p>
+      <p class="lead">Accesul este gratuit, dar locurile sunt limitate la capacitatea sălii. Înscrierea durează sub un minut.</p><p class="vip-hint"><a href="#vip">Vrei loc în primele rânduri? Vezi biletul VIP</a></p>
     </div>
     <form class="signup" method="POST" action="/api/inscriere" data-event>
       <input type="hidden" name="limba" value="ro">
@@ -192,13 +225,11 @@
     <span class="tag blue">Parteneri</span>
     <h2>Parteneriat de sponsorizare</h2>
     <p class="lead">Beyond the Initiative reunește aproximativ 150 de antreprenori, manageri și tineri profesioniști din Brașov. Participarea este gratuită, iar organizarea este susținută integral de parteneri. Pentru compania dumneavoastră, aceasta înseamnă vizibilitate directă în fața unui public cu putere de decizie și asocierea cu o rețea internațională de lideri.</p>
-    <div class="packs">
+    <style>.packs.two{grid-template-columns:repeat(2,1fr)}@media (max-width:900px){.packs.two{grid-template-columns:1fr}}</style><div class="packs two">
       <div class="pack"><small>Sponsor</small><div class="price">1.000 <span>lei</span></div>
         <ul><li>Logo pe toate materialele digitale ale evenimentului</li><li>Prezentarea companiei în secțiunea dedicată partenerilor</li><li>Recunoaștere publică din partea organizatorilor, pe scenă</li></ul></div>
       <div class="pack hi"><small>Sponsor Premium</small><div class="price">2.000 <span>lei</span></div>
         <ul><li>Spațiu de expunere dedicat, cu 2–3 roll-up-uri</li><li>Intervenție pe scenă de 3–5 minute</li><li>Logo în prezentarea proiectată pe toată durata evenimentului</li><li>Vizibilitate în comunicarea de după eveniment</li></ul></div>
-      <div class="pack"><small>Acces VIP</small><div class="price">200 <span>lei</span></div>
-        <ul><li>Locuri rezervate în primele rânduri</li><li>Întâlnire directă cu invitații din paneluri</li><li>Acces prioritar la sesiunile de networking</li><li>Degustare de vin și preparate culinare</li></ul><p style="margin:14px 0 0;font-size:13px;color:var(--muted)">Băuturile comandate de la bar se achită separat.</p><div style="flex:1;min-height:20px"></div><a class="btn btn-blue" style="justify-content:center;width:100%" href="https://buy.stripe.com/4gM7sL2iD4a3eype1v3wQ05" rel="noopener">Cumpără biletul VIP</a></div>
     </div>
     <p class="inkind">Discutăm cu interes și parteneriate în regim de barter: produse, servicii, fotografie, catering sau materiale.</p>
     <div class="cta-row"><a class="btn btn-blue" href="#formular-sponsor">Solicitați oferta de parteneriat</a></div>
@@ -228,7 +259,7 @@
         <div class="field"><label for="s-tel">Telefon</label><input id="s-tel" name="Telefon" type="tel" required autocomplete="tel"></div>
       </div>
       <div class="field"><label for="s-pachet">Pachetul de interes</label>
-        <select id="s-pachet" name="Pachet"><option>Sponsor, 1.000 lei</option><option>Sponsor Premium, 2.000 lei</option><option>Acces VIP, 200 lei</option><option>Parteneriat în regim de barter</option><option>Doresc mai multe detalii</option></select></div>
+        <select id="s-pachet" name="Pachet"><option>Sponsor, 1.000 lei</option><option>Sponsor Premium, 2.000 lei</option><option>Parteneriat în regim de barter</option><option>Doresc mai multe detalii</option></select></div>
       <div class="field"><label for="s-mesaj">Mesaj</label><textarea id="s-mesaj" name="Mesaj" placeholder="Produsele sau serviciile pe care doriți să le promovați"></textarea></div>
       <label class="check" for="s-gdpr"><input id="s-gdpr" name="Acord date" type="checkbox" value="da" required><span>Sunt de acord ca JCI Brașov să utilizeze aceste date exclusiv pentru a mă contacta în legătură cu parteneriatul.</span></label>
       <div class="form-msg" role="status"></div>
@@ -355,5 +386,6 @@ function ask(q){q=(q||'').trim();if(!q||busy)return;busy=true;btn.disabled=true;
 if(location.hash==='#asistent')open();
 })();
 </script>
+<script src="/assets/js/vip.js?v=e5d06789" defer></script>
 </body>
 </html>

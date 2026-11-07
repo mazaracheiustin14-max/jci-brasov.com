@@ -102,7 +102,8 @@ LLMS = '''# JCI Brașov
 - Marchează trecerea JCI Brașov de la grup de inițiativă la grup cu drepturi depline în JCI România.
 - Două paneluri („Puterea comunității” și „Tehnologia care ne schimbă viața”), opt invitați, două sesiuni de Blitz Networking.
 - Acces gratuit, cu înscriere: https://jci-brasov.com/eveniment#rezerva (aproximativ 150 de locuri, înscrieri până pe 24 noiembrie 2026, ora 23:59).
-- Pachete de sponsorizare: Sponsor 1.000 lei, Sponsor Premium 2.000 lei, Acces VIP 200 lei; parteneriate și în regim de barter.
+- Pachete de sponsorizare: Sponsor 1.000 lei, Sponsor Premium 2.000 lei; parteneriate și în regim de barter.
+- Bilet VIP, 200 lei: primele rânduri, întâlnire cu invitații, networking prioritar, degustare de vin și preparate; /eveniment#vip.
 
 ## Pagini principale
 - [Acasă](https://jci-brasov.com/): prezentarea JCI Brașov
