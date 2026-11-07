@@ -47,3 +47,11 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - Înscrierile noi primesc codul la salvare; pagina de confirmare afișează cardul „Biletul tău” (assets/js/bilet-link.js, adăugat de `src/checkin.py`,
   care rulează după deploy.py și vip.py). Codurile lipsă (ex. biletele VIP din Stripe) se completează automat la fiecare încărcare a panoului.
 - Schimbarea PIN-ului: se generează altă sare și alt hash și se actualizează rândurile `pin_salt` și `pin_hash` din `setari`.
+
+## Invitații automate pe email, din Gmail (7 nov 2026)
+- `worker/invitatii.js`: `/api/invitatii/de-trimis?key=` dă lista înscrierilor confirmate fără invitație (coloana `inscrieri.invitatie_trimisa`),
+  cu subiect, HTML și text gata construite; `/api/invitatii/trimis` marchează trimiterea; `/bilet/<cod>/qr.png` dă QR-ul ca PNG (Gmail nu afișează SVG).
+- Setări D1 (`setari`): `invit_key` (cheia scriptului), `invit_mod` = `test` (trimite doar adreselor din `invit_test`) sau `live` (tuturor).
+  Rândurile de test se exclud cu `invitatie_trimisa = 'exclus-test'`.
+- `src/gmail/Invitatii.gs`: Google Apps Script din contul Gmail care trimite; `instaleaza()` creează declanșatorul la 5 minute, `opreste()` îl șterge.
+  Limita Gmail pentru cont personal: aproximativ 100 de destinatari pe zi; restul pleacă automat a doua zi.

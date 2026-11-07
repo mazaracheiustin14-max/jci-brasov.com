@@ -4,6 +4,7 @@
 import { EmailMessage } from "cloudflare:email";
 import { systemPrompt } from "./kb.js";
 import { handleCheckin } from "./checkin.js";
+import { handleInvitatii } from "./invitatii.js";
 
 const SITE = "https://jci-brasov.com";
 const FROM = "formular@jci-brasov.com";
@@ -20,6 +21,11 @@ export default {
     if (url.pathname.startsWith("/api/")) {
       const tooBig = Number(request.headers.get("Content-Length") || 0) > (url.pathname === "/api/chat" ? 24000 : 64000);
       if (tooBig) return new Response("Payload Too Large", { status: 413 });
+    }
+    // Invitații automate pe email (worker/invitatii.js): coada pentru Gmail și imaginea QR a biletului
+    if (/^\/bilet\/[a-f0-9]{32}\/qr\.png$|^\/api\/invitatii\//.test(url.pathname) && env.DB) {
+      const r = await handleInvitatii(request, env, url);
+      if (r) return r;
     }
     // Bilete nominale cu QR și check-in la intrare (worker/checkin.js)
     if (/^\/(bilet|c)\/|^\/echipa\/?$|^\/api\/(echipa\/|checkin$)/.test(url.pathname)) {
