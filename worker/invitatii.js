@@ -66,7 +66,7 @@ export async function qrPng(text, scale = 10, margin = 3) {
 }
 
 // ---------- emailul ----------
-export function buildEmail(row) {
+export function buildEmail(row, cid = false) {
   const en = row.limba === "en";
   const t = row.token;
   const bilet = `${SITE}/bilet/${t}`;
@@ -85,7 +85,7 @@ export function buildEmail(row) {
     sign: "We look forward to welcoming you,", role: "President, JCI Brașov",
     foot: "You are receiving this email because you registered for Beyond the Initiative on jci-brasov.com.",
   } : {
-    subject: "Invitația dumneavoastră la Beyond the Initiative, 26 noiembrie",
+    subject: "Locul dumneavoastră la Beyond the Initiative, joi 26 noiembrie",
     pre: "Locul dumneavoastră este confirmat. În email găsiți codul QR personal pentru check-in.",
     hi: `Bună ziua, ${nume},`,
     p1: "Vă mulțumim pentru înscrierea la <b>Beyond the Initiative</b>, seara în care JCI Brașov devine organizație cu drepturi depline în JCI România. Locul dumneavoastră este confirmat.",
@@ -102,12 +102,12 @@ export function buildEmail(row) {
   const val = (s) => `<div style="${F};font-size:18px;font-weight:800;color:#130F2D;margin-top:3px">${s}</div>`;
   const html = `<!DOCTYPE html><html lang="${en ? "en" : "ro"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><title>${esc(L.subject)}</title></head>
 <body style="margin:0;padding:0;background:#ECEFF5">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(L.pre)}</div>
+${cid ? "" : `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(L.pre)}</div>`}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ECEFF5"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#FFFFFF;border-radius:18px;overflow:hidden">
 <tr><td style="background:#130F2D;padding:28px 32px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-<td><img src="${SITE}/assets/img/logo-jci-brasov-invers.png" width="120" alt="JCI Brașov" style="display:block;border:0;height:auto"></td>
+<td><img src="${cid ? "cid:logo" : SITE + "/assets/img/logo-jci-brasov-invers.png"}" width="120" alt="JCI Brașov" style="display:block;border:0;height:auto"></td>
 <td align="right" style="${F};font-size:11px;font-weight:800;letter-spacing:3px;color:#EFC40F">${en ? "INVITATION" : "INVITAȚIE"}</td></tr></table>
 <div style="${F};font-size:12px;font-weight:800;letter-spacing:3px;color:#57BCBC;margin-top:30px">${en ? "JCI BRAȘOV LAUNCH EVENT" : "EVENIMENTUL DE LANSARE JCI BRAȘOV"}</div>
 <div style="${F};font-size:38px;line-height:1.05;font-weight:800;color:#FFFFFF;margin-top:10px">BEYOND<br>THE INITIATIVE</div>
@@ -126,7 +126,7 @@ ${lab(en ? "PERSONAL TICKET" : "BILET NOMINAL")}<div style="${F};font-size:22px;
 </td></tr></table></td></tr>
 <tr><td align="center" style="padding:10px 32px 4px">
 <div style="${F};font-size:13px;font-weight:800;letter-spacing:2px;color:#130F2D">${L.qrt.toUpperCase()}</div>
-<img src="${SITE}/bilet/${t}/qr.png" width="200" height="200" alt="${esc(L.qrt)}" style="display:block;margin:12px auto;border:0">
+<img src="${cid ? "cid:qr" : `${SITE}/bilet/${t}/qr.png`}" width="200" height="200" alt="${esc(L.qrt)}" style="display:block;margin:12px auto;border:0">
 <div style="${F};font-size:13px;color:#4A5068">${L.qrp}</div>
 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px auto 0"><tr><td style="background:#0097D7;border-radius:12px">
 <a href="${bilet}" style="display:inline-block;padding:14px 28px;${F};font-size:16px;font-weight:800;color:#FFFFFF;text-decoration:none">${L.btn}</a></td></tr></table>
@@ -137,13 +137,15 @@ ${lab(en ? "PERSONAL TICKET" : "BILET NOMINAL")}<div style="${F};font-size:22px;
 <p style="margin:0 0 20px">${L.tip}</p>
 <p style="margin:0">${L.sign}<br><b>Iustin Mazarache</b><br>${L.role}</p></td></tr>
 <tr><td style="padding:22px 32px 28px;${F};font-size:12px;line-height:1.6;color:#7A7F96;border-top:1px solid #E3E7EF">
-contact@jci-brasov.com | +40 790 827 426 | <a href="${SITE}/eveniment" style="color:#1F4789">jci-brasov.com</a><br>${L.foot}</td></tr>
+contact@jci-brasov.com | +40 790 827 426 | jci-brasov.com<br>${L.foot}</td></tr>
 </table></td></tr></table></body></html>`;
   const strip = (s) => s.replace(/<[^>]+>/g, "");
   const text = [strip(L.hi), "", strip(L.p1), "", `${L.cbtn}: ${SITE}/confirma/${t}`, "", `${L.kd}: ${L.vd}`, `${L.ko}: ${L.vo}`, `${L.kl}: ${L.vl}`, "",
     `${L.qrt}: ${bilet}`, strip(L.qrp), "", L.prog, "", `Hillden: ${L.hill}`, L.tip, "", L.sign, "Iustin Mazarache", L.role, "",
     "contact@jci-brasov.com | +40 790 827 426 | jci-brasov.com"].join("\n");
-  return { subject: L.subject, html, text, qr };
+  const out = { subject: L.subject, html, text, qr };
+  if (cid) out.inline = { logo: `${SITE}/assets/img/logo-jci-brasov-invers.png`, qr: `${SITE}/bilet/${t}/qr.png` };
+  return out;
 }
 
 // ---------- rutare ----------
@@ -179,7 +181,7 @@ export async function handleInvitatii(request, env, url) {
     if (mod !== "live") rows = rows.filter((x) => allowed.includes(String(x.email).toLowerCase()));
     else rows = rows.filter((x) => x.status === "confirmat" || allowed.includes(String(x.email).toLowerCase()));
     rows = rows.slice(0, BATCH);
-    return json({ mod, items: rows.map((x) => ({ id: x.id, email: x.email, nume: x.nume, ...buildEmail(x) })) });
+    return json({ mod, items: rows.map((x) => ({ id: x.id, email: x.email, nume: x.nume, ...buildEmail(x, url.searchParams.get("v") === "2") })) });
   }
 
   // POST /api/invitatii/trimis  { id, ok, eroare }
