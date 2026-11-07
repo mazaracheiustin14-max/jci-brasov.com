@@ -30,6 +30,10 @@ export default {
       if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
       return handleChat(request, env, ctx);
     }
+    if (url.pathname === "/api/stripe-webhook") {
+      if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
+      return handleStripe(request, env, ctx);
+    }
     if (url.pathname === "/api/form") {
       if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
       if (await overLimit(request, env, "form", 5, 15)) return tooMany(request);
@@ -342,4 +346,62 @@ async function handleChat(request, env, ctx) {
     if (ctx && ctx.waitUntil) ctx.waitUntil(save); else await save;
   }
   return json({ answer });
+}
+
+
+// ===== Bilete VIP plătite prin Stripe (Payment Link) =====
+// Stripe trimite evenimentul checkout.session.completed la /api/stripe-webhook. Semnătura se verifică cu secretul
+// STRIPE_WEBHOOK_SECRET (Cloudflare: Worker, Settings, Variables and Secrets). Cumpărătorul se salvează în D1 (tabelul vip),
+// apare și în lista de înscrieri (pentru check-in și locuri), iar organizatorii primesc email.
+async function verifyStripe(raw, header, secret) {
+  if (!header || !secret) return false;
+  const parts = Object.fromEntries(header.split(",").map((x) => x.split("=")).filter((x) => x.length === 2 && x[0] === "t").map((x) => [x[0], x[1]]));
+  const sigs = header.split(",").filter((x) => x.startsWith("v1=")).map((x) => x.slice(3));
+  const t = Number(parts.t);
+  if (!t || !sigs.length || Math.abs(Date.now() / 1000 - t) > 600) return false;
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${t}.${raw}`)));
+  const hex = [...mac].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return sigs.some((sig) => {
+    if (sig.length !== hex.length) return false;
+    let d = 0;
+    for (let i = 0; i < hex.length; i++) d |= hex.charCodeAt(i) ^ sig.charCodeAt(i);
+    return d === 0;
+  });
+}
+
+async function handleStripe(request, env, ctx) {
+  if (!env.STRIPE_WEBHOOK_SECRET) return new Response("Webhook not configured", { status: 503 });
+  const raw = await request.text();
+  if (!(await verifyStripe(raw, request.headers.get("Stripe-Signature"), env.STRIPE_WEBHOOK_SECRET))) return new Response("Bad signature", { status: 400 });
+  let ev;
+  try { ev = JSON.parse(raw); } catch { return new Response("Bad Request", { status: 400 }); }
+  if (ev.type !== "checkout.session.completed" && ev.type !== "checkout.session.async_payment_succeeded") return json({ received: true });
+  const o = (ev.data && ev.data.object) || {};
+  if (o.payment_status !== "paid") return json({ received: true });
+  const c = o.customer_details || {};
+  const f = {
+    sesiune: clean(o.id, 120), nume: noFormula(clean(c.name, 120)), email: clean(c.email, 160).toLowerCase(), telefon: clean(c.phone, 40),
+    suma: (o.amount_total || 0) / 100, moneda: clean(o.currency, 8).toUpperCase(), cantitate: 1,
+  };
+  if (env.DB) {
+    try {
+      await env.DB.prepare(
+        "CREATE TABLE IF NOT EXISTS vip (id INTEGER PRIMARY KEY AUTOINCREMENT, sesiune TEXT UNIQUE, eveniment TEXT, nume TEXT, email TEXT, telefon TEXT, suma REAL, moneda TEXT, creat TEXT DEFAULT (datetime('now')))"
+      ).run();
+      const r = await env.DB.prepare("INSERT OR IGNORE INTO vip (sesiune,eveniment,nume,email,telefon,suma,moneda) VALUES (?,?,?,?,?,?,?)")
+        .bind(f.sesiune, EVENT, f.nume, f.email, f.telefon, f.suma, f.moneda).run();
+      if (r.meta && r.meta.changes === 0) return json({ received: true, duplicate: true }); // Stripe poate retrimite același eveniment
+      if (f.email) {
+        await env.DB.prepare(
+          "INSERT OR IGNORE INTO inscrieri (eveniment,nume,email,telefon,companie,functie,profil,intrebare,sursa,limba,acord_marketing,status,tara) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        ).bind(EVENT, f.nume || f.email, f.email, f.telefon, "", "", "", "", "Bilet VIP (Stripe)", "ro", 0, "confirmat", null).run();
+      }
+    } catch (e) { console.log("vip d1:", e && e.message); }
+  }
+  const lines = [["Bilet", "Acces VIP, Beyond the Initiative"], ["Nume", f.nume], ["Email", f.email], ["Telefon", f.telefon],
+    ["Sumă", `${f.suma} ${f.moneda}`], ["Plată Stripe", f.sesiune]].filter(([, v]) => v);
+  const mail = notify(env, `Bilet VIP plătit: ${f.nume || f.email}`, lines, f.email || "contact@jci-brasov.com");
+  if (ctx && ctx.waitUntil) ctx.waitUntil(mail); else await mail;
+  return json({ received: true });
 }

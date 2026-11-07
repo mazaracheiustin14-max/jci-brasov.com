@@ -17,7 +17,7 @@ def run():
     t = open(h, encoding='utf8').read()
     src = "script-src 'self' " + ' '.join(sorted(hashes)) + " https://static.cloudflareinsights.com"
     t = re.sub(r"script-src [^;]*", src, t, count=1)
-    if 'Cross-Origin-Resource-Policy' not in t:
+    if 'X-Permitted-Cross-Domain-Policies' not in t:
         t = t.replace('  Cross-Origin-Opener-Policy: same-origin', '  Cross-Origin-Opener-Policy: same-origin\n  X-Permitted-Cross-Domain-Policies: none', 1)
     open(h, 'w', encoding='utf8').write(t)
     print('csp: %d scripturi inline' % len(hashes))
