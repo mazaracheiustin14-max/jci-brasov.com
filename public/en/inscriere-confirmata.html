@@ -51,6 +51,7 @@
   <h1 class="as-h2" id="c-h">Your seat is reserved</h1>
   <p class="lead" id="c-p">Thank you for registering. See you on Thursday, 26 November 2026, from 5:00 pm at CATTIA Brașov.</p>
   <div class="steps2">
+  <div class="st2 main" id="c-bilet" hidden><small>Your entry ticket</small><h2>Your personal ticket with QR code</h2><p>Show the code at the entrance for a quick check-in. Save the link or a screenshot.</p><a class="btn btn-blue" id="bilet-a" href="#">View your QR ticket</a></div>
   <div class="st2 main" id="c-cal"><small>Step 1</small><h2>Save the date in your calendar</h2><p>You automatically get a reminder one day and two hours before the event.</p>
     <a class="btn btn-blue" id="cal-main" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=JCI+Bra%C8%99ov+Beyond+the+Initiative&dates=20261126T150000Z/20261126T203000Z&location=CATTIA+Bra%C8%99ov%2C+Strada+Institutului+35%2C+Bra%C8%99ov&details=Evenimentul+de+lansare+JCI+Bra%C8%99ov.+https%3A%2F%2Fjci-brasov.com%2Feveniment" target="_blank" rel="noopener" data-ics="/assets/beyond-the-initiative.ics" data-gc="https://calendar.google.com/calendar/render?action=TEMPLATE&text=JCI+Bra%C8%99ov+Beyond+the+Initiative&dates=20261126T150000Z/20261126T203000Z&location=CATTIA+Bra%C8%99ov%2C+Strada+Institutului+35%2C+Bra%C8%99ov&details=Evenimentul+de+lansare+JCI+Bra%C8%99ov.+https%3A%2F%2Fjci-brasov.com%2Feveniment" data-ios="Add to iPhone Calendar" data-mac="Add to Calendar" data-gctext="Add to Google Calendar">Add to Google Calendar</a>
     <div class="alt" id="cal-alt"><a href="/assets/beyond-the-initiative.ics" data-k="ics">Outlook or Apple Calendar</a></div>
@@ -106,5 +107,6 @@ var iv=setInterval(function(){if(stop){clearInterval(iv);return;}n--;num.textCon
     a.addEventListener('click',function(){document.getElementById('menu-toggle').checked=false;});
   });
 </script>
+<script src="/assets/js/bilet-link.js"></script>
 </body>
 </html>

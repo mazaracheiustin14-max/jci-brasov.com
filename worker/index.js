@@ -3,6 +3,7 @@
 //            (adresă de destinație verificată în Email Routing); 2) altfel, prin FormSubmit, de pe server.
 import { EmailMessage } from "cloudflare:email";
 import { systemPrompt } from "./kb.js";
+import { handleCheckin } from "./checkin.js";
 
 const SITE = "https://jci-brasov.com";
 const FROM = "formular@jci-brasov.com";
@@ -19,6 +20,11 @@ export default {
     if (url.pathname.startsWith("/api/")) {
       const tooBig = Number(request.headers.get("Content-Length") || 0) > (url.pathname === "/api/chat" ? 24000 : 64000);
       if (tooBig) return new Response("Payload Too Large", { status: 413 });
+    }
+    // Bilete nominale cu QR și check-in la intrare (worker/checkin.js)
+    if (/^\/(bilet|c)\/|^\/echipa\/?$|^\/api\/(echipa\/|checkin$)/.test(url.pathname)) {
+      const r = await handleCheckin(request, env, url, overLimit);
+      if (r) return r;
     }
     if (url.pathname === "/api/inscriere") {
       if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
@@ -206,7 +212,7 @@ async function handleEventSignup(request, env, ctx) {
   try { data = await request.formData(); } catch { return new Response("Bad Request", { status: 400 }); }
   const en = clean(data.get("limba"), 2) === "en";
   const base = SITE + (en ? "/en" : "");
-  const ok = (status) => Response.redirect(`${base}/inscriere-confirmata?s=${status}`, 303);
+  const ok = (status, token) => Response.redirect(`${base}/inscriere-confirmata?s=${status}${token ? "&t=" + token : ""}`, 303);
   if (clean(data.get("_honey"), 100) !== "") return ok("confirmat");
 
   const f = {
@@ -224,6 +230,7 @@ async function handleEventSignup(request, env, ctx) {
   if (Date.now() > DEADLINE) return Response.redirect(`${base}/inscriere-confirmata?s=inchis`, 303);
 
   let status = "confirmat";
+  let newToken = null;
   try {
     const n = await countRegistrations(env);
     if (n >= CAPACITY) status = "asteptare";
@@ -231,6 +238,11 @@ async function handleEventSignup(request, env, ctx) {
       "INSERT OR IGNORE INTO inscrieri (eveniment,nume,email,telefon,companie,functie,profil,intrebare,sursa,limba,acord_marketing,status,tara) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
     ).bind(EVENT, f.nume, f.email, f.telefon, f.companie, f.functie, f.profil, f.intrebare, f.sursa, en ? "en" : "ro",
       data.get("acord_marketing") ? 1 : 0, status, (request.cf && request.cf.country) || null).run();
+    if (res.meta && res.meta.changes > 0 && status === "confirmat") {
+      // Cod unic pentru biletul nominal cu QR (vezi worker/checkin.js)
+      const tk = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, "0")).join("");
+      try { await env.DB.prepare("UPDATE inscrieri SET token=? WHERE id=? AND token IS NULL").bind(tk, res.meta.last_row_id).run(); newToken = tk; } catch (e) { console.log("token:", e && e.message); }
+    }
     if (!res.meta || res.meta.changes === 0) {
       // Adresa e deja înscrisă: răspundem la fel ca la o înscriere nouă, ca să nu se poată verifica cine s-a înscris.
       const ex = await env.DB.prepare("SELECT status FROM inscrieri WHERE eveniment=? AND email=?").bind(EVENT, f.email).first();
@@ -243,12 +255,12 @@ async function handleEventSignup(request, env, ctx) {
 
   const lines = [
     ["Nume", f.nume], ["Email", f.email], ["Telefon", f.telefon], ["Companie", f.companie], ["Funcție", f.functie],
-    ["Profil", f.profil], ["Întrebare pentru invitați", f.intrebare], ["De unde a aflat", f.sursa], ["Status", status], ["Limba", en ? "EN" : "RO"],
+    ["Profil", f.profil], ["Întrebare pentru invitați", f.intrebare], ["De unde a aflat", f.sursa], ["Status", status], ["Bilet", newToken ? `${SITE}/bilet/${newToken}` : ""], ["Limba", en ? "EN" : "RO"],
   ].filter(([, v]) => v);
   // Emailul către organizatori pleacă în fundal: vizitatorul primește confirmarea imediat.
   const mail = notify(env, `Înscriere nouă Beyond the Initiative: ${f.nume}`, lines, f.email);
   if (ctx && ctx.waitUntil) ctx.waitUntil(mail); else await mail;
-  return ok(status);
+  return ok(status, newToken);
 }
 
 async function notify(env, subject, lines, replyTo) {
