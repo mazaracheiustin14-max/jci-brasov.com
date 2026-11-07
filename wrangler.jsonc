@@ -12,6 +12,7 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "jci-brasov-inscrieri", "database_id": "1c3fb6c6-db88-48a5-9bb9-7fe7349d3d81" }
   ],
+  "ai": { "binding": "AI" },
   "send_email": [
     { "name": "MAIL" }
   ],

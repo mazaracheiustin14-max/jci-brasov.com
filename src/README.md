@@ -18,7 +18,7 @@ poze netăiate pe același fundal, numele „Iustin Mazarache” fără diacriti
 Nu se publică: cursa de bărcuțe (2028), proiectul de depozitare bagaje, acțiunile inspirate de JCE Laval.
 
 ## Ordinea de build (actualizat 3 nov 2026)
-1. `python3 build.py && python3 build_en.py && python3 post.py && python3 deploy.py` (post.py: 404, noindex, h1, lazy; deploy.py copiază în public/ cu linkuri fără .html)
+1. `python3 build.py && python3 build_en.py && python3 post.py (rulează și countdown, theme, signup, chat, seo2) && python3 deploy.py` (post.py: 404, noindex, h1, lazy; deploy.py copiază în public/ cu linkuri fără .html)
 2. `icons.py` generează favicon, iconițe și imaginile de previzualizare (og-jci-brasov*.jpg); fontul Plus Jakarta Sans din @fontsource (npm)
 3. Fișierele fixe din public/: `_headers` (antete de securitate), `robots.txt`, `sitemap.xml`, `site.webmanifest`, `.well-known/security.txt`, `favicon.ico`
 4. Formularele trimit la `/api/form`, tratat de `worker/index.js` (același domeniu). Trimite prin Email Routing dacă variabila `DEST`

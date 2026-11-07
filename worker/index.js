@@ -2,19 +2,24 @@
 // Trimitere: 1) direct prin Cloudflare Email Routing, dacă variabila DEST e setată în Cloudflare
 //            (adresă de destinație verificată în Email Routing); 2) altfel, prin FormSubmit, de pe server.
 import { EmailMessage } from "cloudflare:email";
+import { systemPrompt } from "./kb.js";
 
 const SITE = "https://jci-brasov.com";
 const FROM = "formular@jci-brasov.com";
 const FORMSUBMIT = "https://formsubmit.co/ajax/contact@jci-brasov.com";
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === "/api/inscriere") {
       if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
       return handleEventSignup(request, env);
     }
     if (url.pathname === "/api/stats") return handleStats(env);
+    if (url.pathname === "/api/chat") {
+      if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
+      return handleChat(request, env, ctx);
+    }
     if (url.pathname === "/api/form") {
       if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
       return handleForm(request, env);
@@ -194,4 +199,95 @@ async function notify(env, subject, lines, replyTo) {
     const r = await fetch(FORMSUBMIT, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json", Origin: SITE, Referer: SITE + "/" }, body: JSON.stringify(payload) });
     return r.ok;
   } catch (e) { console.log("notify formsubmit:", e && e.message); return false; }
+}
+
+
+// ===== Asistentul de pe site (Workers AI) =====
+// Răspunde doar din worker/kb.js. Întrebările se păstrează anonim 90 de zile în D1 (chat_log), ca să îmbunătățim răspunsurile.
+const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+const CHAT_PER_HOUR = 20;   // mesaje pe vizitator pe oră
+const CHAT_PER_DAY = 600;   // plafon zilnic pe tot site-ul, ca să nu apară costuri neprevăzute
+const FALLBACK = {
+  ro: "Momentan nu pot răspunde. Ne poți scrie la contact@jci-brasov.com sau ne poți suna la +40 790 827 426. Pentru eveniment, înscrierea este pe /eveniment#rezerva.",
+  en: "I can't answer right now. Please email contact@jci-brasov.com or call +40 790 827 426. To register for the event, go to /en/eveniment#rezerva.",
+};
+
+function json(obj, status = 200) {
+  return new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
+}
+
+async function sha(str) {
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return [...new Uint8Array(d)].slice(0, 12).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function roDate(lang) {
+  return new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "ro-RO", { timeZone: "Europe/Bucharest", weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date());
+}
+
+function cleanAnswer(t) {
+  return String(t || "").replace(/·/g, ",").replace(/https?:\/\/(www\.)?jci-brasov\.com(?=\/)/g, "").trim().slice(0, 1800);
+}
+
+async function handleChat(request, env, ctx) {
+  const origin = request.headers.get("Origin");
+  if (origin && !/^https:\/\/(www\.)?jci-brasov\.com$/.test(origin) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return json({ error: "forbidden" }, 403);
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: "bad request" }, 400); }
+  const lang = body.lang === "en" ? "en" : "ro";
+  const page = String(body.page || "").slice(0, 80);
+  const history = Array.isArray(body.messages) ? body.messages : [];
+  const msgs = history.slice(-8)
+    .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
+    .map((m) => ({ role: m.role, content: m.content.trim().slice(0, m.role === "user" ? 500 : 900) }));
+  if (!msgs.length || msgs[msgs.length - 1].role !== "user") return json({ error: "bad request" }, 400);
+  const question = msgs[msgs.length - 1].content;
+
+  const ip = request.headers.get("CF-Connecting-IP") || "0";
+  const day = new Date().toISOString().slice(0, 10);
+  const who = await sha(ip + "|" + day + "|jci");
+
+  // limitare abuz
+  if (env.DB) {
+    try {
+      const r = await env.DB.prepare(
+        "SELECT SUM(CASE WHEN ip=? AND creat > datetime('now','-1 hour') THEN 1 ELSE 0 END) AS h, COUNT(*) AS d FROM chat_log WHERE creat > datetime('now','start of day')"
+      ).bind(who).first();
+      if (r && (r.h || 0) >= CHAT_PER_HOUR) return json({ answer: lang === "en" ? "You have sent many questions in a short time. Please try again in an hour or email contact@jci-brasov.com." : "Ai trimis multe întrebări într-un timp scurt. Încearcă din nou peste o oră sau scrie-ne la contact@jci-brasov.com.", limited: true });
+      if (r && (r.d || 0) >= CHAT_PER_DAY) return json({ answer: FALLBACK[lang], limited: true });
+    } catch (e) { console.log("chat limit:", e && e.message); }
+  }
+
+  let seats = "";
+  try {
+    const n = await countRegistrations(env);
+    const left = Math.max(0, CAPACITY - n);
+    if (Date.now() > DEADLINE) seats = " Înscrierile la Beyond the Initiative s-au închis.";
+    else if (n >= 20) seats = ` Locuri rămase acum la Beyond the Initiative: ${left} din ${CAPACITY}.`;
+  } catch {}
+
+  let answer = "", ok = 1;
+  try {
+    if (!env.AI) throw new Error("no AI binding");
+    const out = await env.AI.run(MODEL, {
+      messages: [{ role: "system", content: systemPrompt(lang, roDate(lang), seats) }, ...msgs],
+      max_tokens: 380,
+      temperature: 0.2,
+    });
+    answer = cleanAnswer(typeof out === "string" ? out : out && (out.response ?? (out.choices && out.choices[0] && out.choices[0].message && out.choices[0].message.content)));
+    if (!answer) throw new Error("empty answer");
+  } catch (e) {
+    console.log("chat ai:", e && e.message);
+    answer = FALLBACK[lang]; ok = 0;
+  }
+
+  if (env.DB) {
+    const save = env.DB.prepare("INSERT INTO chat_log (ip,limba,pagina,intrebare,raspuns,ok) VALUES (?,?,?,?,?,?)")
+      .bind(who, lang, page, question, answer, ok).run()
+      .then(() => (Math.random() < 0.02 ? env.DB.prepare("DELETE FROM chat_log WHERE creat < datetime('now','-90 days')").run() : null))
+      .catch((e) => console.log("chat log:", e && e.message));
+    if (ctx && ctx.waitUntil) ctx.waitUntil(save); else await save;
+  }
+  return json({ answer });
 }
