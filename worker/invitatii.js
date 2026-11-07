@@ -74,7 +74,7 @@ export function buildEmail(row) {
   const nume = esc(row.nume);
   const L = en ? {
     subject: "Your invitation to Beyond the Initiative, 26 November",
-    pre: "Your seat is confirmed. Your personal QR code for the entrance is inside.",
+    pre: "Your seat is confirmed. Your personal QR code for check-in is inside.",
     hi: `Dear ${nume},`,
     p1: "Thank you for registering for <b>Beyond the Initiative</b>, the evening on which JCI Brașov becomes a full member organisation of JCI Romania. Your seat is confirmed.",
     kd: "DATE", vd: "Thursday, 26 November 2026", ko: "TIME", vo: "17:00", kl: "VENUE", vl: "CATTIA Brașov, Strada Institutului 35",
@@ -86,7 +86,7 @@ export function buildEmail(row) {
     foot: "You are receiving this email because you registered for Beyond the Initiative on jci-brasov.com.",
   } : {
     subject: "Invitația dumneavoastră la Beyond the Initiative, 26 noiembrie",
-    pre: "Locul dumneavoastră este confirmat. În email găsiți codul QR personal pentru intrare.",
+    pre: "Locul dumneavoastră este confirmat. În email găsiți codul QR personal pentru check-in.",
     hi: `Bună ziua, ${nume},`,
     p1: "Vă mulțumim pentru înscrierea la <b>Beyond the Initiative</b>, seara în care JCI Brașov devine organizație cu drepturi depline în JCI România. Locul dumneavoastră este confirmat.",
     kd: "DATA", vd: "Joi, 26 noiembrie 2026", ko: "ORA", vo: "17:00", kl: "LOCAȚIA", vl: "CATTIA Brașov, Strada Institutului 35",
