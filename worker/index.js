@@ -11,22 +11,63 @@ const FORMSUBMIT = "https://formsubmit.co/ajax/contact@jci-brasov.com";
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname.startsWith("/api/")) {
+      const tooBig = Number(request.headers.get("Content-Length") || 0) > (url.pathname === "/api/chat" ? 24000 : 64000);
+      if (tooBig) return new Response("Payload Too Large", { status: 413 });
+    }
     if (url.pathname === "/api/inscriere") {
       if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
+      if (await overLimit(request, env, "inscriere", 8, 20)) return tooMany(request);
       return handleEventSignup(request, env);
     }
-    if (url.pathname === "/api/stats") return handleStats(env);
+    if (url.pathname === "/api/stats") return handleStats(request, env, ctx);
     if (url.pathname === "/api/chat") {
       if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
       return handleChat(request, env, ctx);
     }
     if (url.pathname === "/api/form") {
       if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
+      if (await overLimit(request, env, "form", 5, 15)) return tooMany(request);
       return handleForm(request, env);
     }
     return env.ASSETS.fetch(request);
   },
 };
+
+// ===== Protecții comune =====
+const EMAIL_RE = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,24}$/;
+
+async function visitorId(request, env) {
+  const ip = request.headers.get("CF-Connecting-IP") || "0";
+  const day = new Date().toISOString().slice(0, 10);
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ip + "|" + day + "|" + (env.HASH_SALT || "jci")));
+  return [...new Uint8Array(d)].slice(0, 12).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Limitează trimiterile per vizitator (IP anonimizat, valabil o zi). Dacă baza nu răspunde, nu blochează vizitatorul.
+async function overLimit(request, env, bucket, perHour, perDay) {
+  if (!env.DB) return false;
+  try {
+    const who = await visitorId(request, env);
+    const r = await env.DB.prepare(
+      "SELECT SUM(CASE WHEN creat > datetime('now','-1 hour') THEN 1 ELSE 0 END) AS h, COUNT(*) AS d FROM rate_log WHERE bucket=? AND ip=? AND creat > datetime('now','-1 day')"
+    ).bind(bucket, who).first();
+    if (r && ((r.h || 0) >= perHour || (r.d || 0) >= perDay)) return true;
+    await env.DB.prepare("INSERT INTO rate_log (bucket, ip) VALUES (?, ?)").bind(bucket, who).run();
+    if (Math.random() < 0.02) await env.DB.prepare("DELETE FROM rate_log WHERE creat < datetime('now','-2 days')").run();
+  } catch (e) { console.log("rate limit:", e && e.message); }
+  return false;
+}
+
+function tooMany(request) {
+  const en = (request.headers.get("Referer") || "").includes("/en/");
+  return new Response(en ? "Too many submissions from your connection. Please try again later or email contact@jci-brasov.com."
+    : "Prea multe trimiteri de pe conexiunea ta. Încearcă din nou mai târziu sau scrie-ne la contact@jci-brasov.com.",
+    { status: 429, headers: { "Content-Type": "text/plain; charset=utf-8", "Retry-After": "3600" } });
+}
+
+// Valorile care încep cu = + - @ pot fi interpretate ca formule când lista e deschisă în Excel.
+function noFormula(v) { return /^[=+\-@\t\r]/.test(v) ? "'" + v : v; }
 
 function safeNext(v, lang) {
   const fallback = lang === "en" ? "/en/multumim.html" : "/multumim.html";
@@ -54,7 +95,7 @@ async function handleForm(request, env) {
   if ((data.get("_honey") || "").toString().trim() !== "") return redirect(); // robot
 
   const email = (data.get("email") || "").toString().trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return new Response("Adresa de email nu este validă.", { status: 400 });
+  if (!EMAIL_RE.test(email)) return new Response("Adresa de email nu este validă.", { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } });
 
   const subject = (data.get("_subject") || "Mesaj nou de pe jci-brasov.com").toString().slice(0, 150);
   const fields = [];
@@ -125,11 +166,17 @@ async function countRegistrations(env) {
   return (r && r.n) || 0;
 }
 
-async function handleStats(env) {
+async function handleStats(request, env, ctx) {
+  const cache = caches.default;
+  const key = new Request(new URL("/api/stats", SITE).toString());
+  const hit = await cache.match(key);
+  if (hit) return hit;
   let count = 0;
   try { count = await countRegistrations(env); } catch (e) { console.log("stats:", e && e.message); }
   const body = { count, capacity: CAPACITY, left: Math.max(0, CAPACITY - count), closed: Date.now() > DEADLINE, deadline: new Date(DEADLINE).toISOString() };
-  return new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=20" } });
+  const res = new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=20" } });
+  if (ctx && ctx.waitUntil) ctx.waitUntil(cache.put(key, res.clone()));
+  return res;
 }
 
 function clean(v, max) { return (typeof v === "string" ? v : "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max); }
@@ -151,9 +198,10 @@ async function handleEventSignup(request, env) {
   };
   const fail = (msg) => new Response(msg, { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } });
   if (f.nume.length < 3) return fail(en ? "Please enter your full name." : "Vă rugăm să completați numele complet.");
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email)) return fail(en ? "Please enter a valid email address." : "Adresa de email nu este validă.");
+  if (!EMAIL_RE.test(f.email)) return fail(en ? "Please enter a valid email address." : "Adresa de email nu este validă.");
   if (f.telefon.replace(/\D/g, "").length < 9) return fail(en ? "Please enter a valid phone number." : "Numărul de telefon nu este valid.");
   if (f.profil && !PROFILES.includes(f.profil)) f.profil = "";
+  for (const k of ["nume", "companie", "functie", "intrebare", "sursa"]) f[k] = noFormula(f[k]);
   if (!data.get("acord")) return fail(en ? "Please accept the data processing terms." : "Este necesar acordul pentru prelucrarea datelor.");
   if (Date.now() > DEADLINE) return Response.redirect(`${base}/inscriere-confirmata?s=inchis`, 303);
 
@@ -165,7 +213,11 @@ async function handleEventSignup(request, env) {
       "INSERT OR IGNORE INTO inscrieri (eveniment,nume,email,telefon,companie,functie,profil,intrebare,sursa,limba,acord_marketing,status,tara) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
     ).bind(EVENT, f.nume, f.email, f.telefon, f.companie, f.functie, f.profil, f.intrebare, f.sursa, en ? "en" : "ro",
       data.get("acord_marketing") ? 1 : 0, status, (request.cf && request.cf.country) || null).run();
-    if (!res.meta || res.meta.changes === 0) return ok("deja");
+    if (!res.meta || res.meta.changes === 0) {
+      // Adresa e deja înscrisă: răspundem la fel ca la o înscriere nouă, ca să nu se poată verifica cine s-a înscris.
+      const ex = await env.DB.prepare("SELECT status FROM inscrieri WHERE eveniment=? AND email=?").bind(EVENT, f.email).first();
+      return ok((ex && ex.status) || "confirmat");
+    }
   } catch (e) {
     console.log("d1 insert failed:", e && e.message);
     // dacă baza de date nu răspunde, nu pierdem înscrierea: ajunge oricum pe email
@@ -216,11 +268,6 @@ function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
 }
 
-async function sha(str) {
-  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-  return [...new Uint8Array(d)].slice(0, 12).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 function roDate(lang) {
   return new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "ro-RO", { timeZone: "Europe/Bucharest", weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date());
 }
@@ -244,9 +291,7 @@ async function handleChat(request, env, ctx) {
   if (!msgs.length || msgs[msgs.length - 1].role !== "user") return json({ error: "bad request" }, 400);
   const question = msgs[msgs.length - 1].content;
 
-  const ip = request.headers.get("CF-Connecting-IP") || "0";
-  const day = new Date().toISOString().slice(0, 10);
-  const who = await sha(ip + "|" + day + "|jci");
+  const who = await visitorId(request, env);
 
   // limitare abuz
   if (env.DB) {

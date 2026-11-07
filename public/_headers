@@ -5,7 +5,9 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
   Cross-Origin-Opener-Policy: same-origin
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests
+  X-Permitted-Cross-Domain-Policies: none
+  X-Permitted-Cross-Domain-Policies: none
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-3FGEX+GIbYUKQtMyBqi3b9WM1oimDbT4HJmfNq57PIg=' 'sha256-BipPx01TKH5gqtwEUBpA2lGanIhCCxtkYSLHkvedqYg=' 'sha256-BmGZyobbXdN/gg2nAN/mdqLrrP9T+CPDcWCUsm7BUHo=' 'sha256-NhIEF/s4mJtgwceltYSIDjL5zt5EUvhbf9aStu4GL0Q=' 'sha256-PdjyOIK1TWbMJ7H1X+/6wXjDV8do+SxgHiDDp7wkGLI=' 'sha256-R/g0ak53Al60Fdi4ozZV85L7XKgxK/ceo/c5nuBlFDw=' 'sha256-UPLdVvwdSddzGtII3Elx+KVnuwOVQEIOyVUmQCt3z3Y=' 'sha256-bhdwnzaJdM35GJStXsb7+C8BxCddlccJrayrzOE95PE=' 'sha256-pgWBo6goVg5vNRXmpKy5vdX6D21xAYoMRiHSB44sUa0=' 'sha256-qqwF1tp/fOytsaUwBbJ7OqobbhEd+Rd8/IsZ2of0Ujg=' 'sha256-vOlFlqjIVDdbVvMYsEZnC6k3YnHmCcpHJx+7PzFbUWQ=' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests
 
 /assets/*
   Cache-Control: public, max-age=604800

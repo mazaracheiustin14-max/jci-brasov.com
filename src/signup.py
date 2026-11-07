@@ -211,7 +211,7 @@ def conf_page(lang):
   <p class="lead" style="font-size:16px;margin-top:28px">{c['share']}</p>
   <p style="margin-top:20px"><a href="{'/en/' if lang=='en' else '/'}eveniment">{c['back']}</a></p>
 </div></section></main>
-<script>(function(){{var m={msgs};var s=new URLSearchParams(location.search).get('s');if(m[s]){{document.getElementById('c-h').textContent=m[s][0];document.getElementById('c-p').textContent=m[s][1];}}}})();</script>'''
+<script>(function(){{var m={msgs};var s=new URLSearchParams(location.search).get('s');if(Object.prototype.hasOwnProperty.call(m,s)){{document.getElementById('c-h').textContent=m[s][0];document.getElementById('c-p').textContent=m[s][1];}}}})();</script>'''
     out=base[:i]+main+base[j:]
     out=re.sub(r'<title>.*?</title>',f'<title>{t["conf_title"]}</title>',out,count=1)
     out=out.replace('multumim.html"','inscriere-confirmata.html"')
