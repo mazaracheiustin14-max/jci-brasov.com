@@ -36,7 +36,7 @@
   </nav>
 </header>
 <main id="main"><section class="section" style="padding-top:28px"><div class="wrap conf">
-  <style>.conf #c-h{font-size:clamp(30px,7.5vw,56px);margin-bottom:10px}.conf #c-p{font-size:17px}.conf .steps2{margin-top:18px!important}
+  <style>.conf #c-h{font-size:clamp(30px,7.5vw,56px);margin-bottom:10px}.conf #c-p{font-size:17px}.conf .steps2{margin-top:18px!important}.conf .mailnote{max-width:620px;margin:22px auto 0;text-align:left;background:rgba(239,196,15,.10);border:1px solid rgba(239,196,15,.55);border-radius:16px;padding:16px 18px}.conf .mailnote small{color:#EFC40F;font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:12px}.conf .mailnote p{margin:6px 0 0;color:#fff;font-size:15px}
   .conf .steps2{display:grid;gap:16px;max-width:620px;margin:28px auto 0;text-align:left}
   .conf .st2{background:var(--card,#14113A);border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:22px 22px 20px}
   .conf .st2.main{border:2px solid var(--blue,#0097D7);box-shadow:0 20px 60px -30px rgba(0,151,215,.7)}
@@ -50,6 +50,7 @@
   <span class="tag">Beyond the Initiative</span>
   <h1 class="as-h2" id="c-h">Your seat is reserved</h1>
   <p class="lead" id="c-p">Thank you for registering. See you on Thursday, 26 November 2026, from 5:00 pm at CATTIA Brașov.</p>
+  <div class="mailnote" id="c-mail"><small>Check your email</small><p>Within 10 minutes you will receive your personal invitation with your QR entry code, from <b>Iustin Mazarache, JCI Brașov</b>. If it is not in your inbox, check Spam or Promotions, open the email and mark it as “Not spam” (or move it to your inbox), so our next messages reach you too.</p></div>
   <div class="steps2">
   <div class="st2 main" id="c-bilet" hidden><small>Your entry ticket</small><h2>Your personal ticket with QR code</h2><p>Show the code at the entrance for a quick check-in. Save the link or a screenshot.</p><a class="btn btn-blue" id="bilet-a" href="#">View your QR ticket</a></div>
   <div class="st2 main" id="c-cal"><small>Step 1</small><h2>Save the date in your calendar</h2><p>You automatically get a reminder one day and two hours before the event.</p>
@@ -67,7 +68,7 @@
 var known=Object.prototype.hasOwnProperty.call(m,s);
 if(known&&s!=='deja'){document.getElementById('c-h').textContent=m[s][0];document.getElementById('c-p').textContent=m[s][1];}
 var cal=document.getElementById('c-cal');
-if(s==='asteptare'||s==='inchis'){cal.style.display='none';if(s==='inchis')document.getElementById('c-wa').querySelector('small').style.display='none';return;}
+if(s==='asteptare'||s==='inchis'){var mn=document.getElementById('c-mail');if(mn)mn.hidden=true;cal.style.display='none';if(s==='inchis')document.getElementById('c-wa').querySelector('small').style.display='none';return;}
 var ua=navigator.userAgent,ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),mac=!ios&&/Macintosh/.test(ua),android=/Android/.test(ua);
 var b=document.getElementById('cal-main'),alt=document.getElementById('cal-alt');
 if(ios||mac){b.href=b.dataset.ics;b.removeAttribute('target');b.textContent=ios?b.dataset.ios:b.dataset.mac;alt.innerHTML='<a href="'+b.dataset.gc+'" target="_blank" rel="noopener">Google Calendar</a>';}

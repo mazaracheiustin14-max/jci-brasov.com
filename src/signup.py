@@ -184,7 +184,7 @@ def sections(lang):
     return (f'<section class="section" id="cu-ce-pleci"><div class="wrap"><span class="tag teal">{t["take_tag"]}</span><h2>{t["take_h"]}</h2><ol class="take">{take}</ol></div></section>'
             f'<section class="section mist" id="rezerva"><div class="wrap res">{info.split("<div class=\"res-info res-meta\">")[0]}{form}<div class="res-info res-meta">{info.split("<div class=\"res-info res-meta\">")[1]}</div></section>'
             f'<section class="section" id="intrebari"><div class="wrap"><span class="tag teal">{t["faq_tag"]}</span><h2>{t["faq_h"]}</h2><div class="faq">{faq}</div></div></section>')
-CONF={'ro':dict(h='Locul tău este rezervat',lead='Mulțumim pentru înscriere. Te așteptăm joi, 26 noiembrie 2026, de la ora 17:00, la CATTIA Brașov.',
+CONF={'ro':dict(mh='Verifică-ți emailul',mp='În cel mult 10 minute primești pe email invitația nominală, cu codul QR de intrare, de la <b>Iustin Mazarache, JCI Brașov</b>. Dacă nu o găsești în Inbox, caută în Spam sau Promoții, deschide emailul și marchează-l ca „Nu este spam” (sau mută-l în Inbox), ca să primești și următoarele noastre mesaje.',h='Locul tău este rezervat',lead='Mulțumim pentru înscriere. Te așteptăm joi, 26 noiembrie 2026, de la ora 17:00, la CATTIA Brașov.',
   wa='Intră în comunitatea evenimentului pe WhatsApp: acolo anunțăm programul final, invitații și noutățile.',wab='Intră în comunitatea WhatsApp',
   asteptare=('Ești pe lista de așteptare','Sala este momentan plină. Te-am trecut pe lista de așteptare și te anunțăm imediat ce se eliberează un loc.'),
   deja=('Ești deja înscris','Avem deja o înscriere cu această adresă de email. Locul tău rămâne rezervat.'),
@@ -194,7 +194,7 @@ CONF={'ro':dict(h='Locul tău este rezervat',lead='Mulțumim pentru înscriere. 
   ios='Adaugă în calendarul iPhone',mac='Adaugă în Calendar',gc='Adaugă în Google Calendar',other_ics='Outlook sau Apple Calendar',other_gc='Google Calendar',
   auto='Deschidem calendarul în <b>3</b> secunde, ca să salvezi data.',stop='Nu acum',
   s2='Pasul 2',s2h='Intră în comunitatea evenimentului',s3='Pasul 3',s3h='Cum ajungi',s3p='CATTIA Brașov, Strada Institutului 35. Primirea invitaților începe la ora 17:00.'),
- 'en':dict(h='Your seat is reserved',lead='Thank you for registering. See you on Thursday, 26 November 2026, from 5:00 pm at CATTIA Brașov.',
+ 'en':dict(mh='Check your email',mp='Within 10 minutes you will receive your personal invitation with your QR entry code, from <b>Iustin Mazarache, JCI Brașov</b>. If it is not in your inbox, check Spam or Promotions, open the email and mark it as “Not spam” (or move it to your inbox), so our next messages reach you too.',h='Your seat is reserved',lead='Thank you for registering. See you on Thursday, 26 November 2026, from 5:00 pm at CATTIA Brașov.',
   wa='Join the event community on WhatsApp, where we share the final programme, speakers and updates.',wab='Join the WhatsApp community',
   asteptare=('You are on the waiting list','The room is currently full. We have added you to the waiting list and will let you know as soon as a seat becomes available.'),
   deja=('You are already registered','We already have a registration with this email address. Your seat remains reserved.'),
@@ -210,7 +210,7 @@ def conf_page(lang):
     i=base.index('<main'); j=base.index('</main>')+len('</main>')
     msgs=_json(dict(asteptare=c['asteptare'],deja=c['deja'],inchis=c['inchis']))
     main=f'''<main id="main"><section class="section" style="padding-top:28px"><div class="wrap conf">
-  <style>.conf #c-h{{font-size:clamp(30px,7.5vw,56px);margin-bottom:10px}}.conf #c-p{{font-size:17px}}.conf .steps2{{margin-top:18px!important}}
+  <style>.conf #c-h{{font-size:clamp(30px,7.5vw,56px);margin-bottom:10px}}.conf #c-p{{font-size:17px}}.conf .steps2{{margin-top:18px!important}}.conf .mailnote{{max-width:620px;margin:22px auto 0;text-align:left;background:rgba(239,196,15,.10);border:1px solid rgba(239,196,15,.55);border-radius:16px;padding:16px 18px}}.conf .mailnote small{{color:#EFC40F;font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:12px}}.conf .mailnote p{{margin:6px 0 0;color:#fff;font-size:15px}}
   .conf .steps2{{display:grid;gap:16px;max-width:620px;margin:28px auto 0;text-align:left}}
   .conf .st2{{background:var(--card,#14113A);border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:22px 22px 20px}}
   .conf .st2.main{{border:2px solid var(--blue,#0097D7);box-shadow:0 20px 60px -30px rgba(0,151,215,.7)}}
@@ -224,6 +224,7 @@ def conf_page(lang):
   <span class="tag">Beyond the Initiative</span>
   <h1 class="as-h2" id="c-h">{c['h']}</h1>
   <p class="lead" id="c-p">{c['lead']}</p>
+  <div class="mailnote" id="c-mail"><small>{c['mh']}</small><p>{c['mp']}</p></div>
   <div class="steps2">
   <div class="st2 main" id="c-cal"><small>{c['s1']}</small><h2>{c['s1h']}</h2><p>{c['s1p']}</p>
     <a class="btn btn-blue" id="cal-main" href="{GCAL}" target="_blank" rel="noopener" data-ics="/assets/beyond-the-initiative.ics" data-gc="{GCAL}" data-ios="{c['ios']}" data-mac="{c['mac']}" data-gctext="{c['gc']}">{c['gc']}</a>
@@ -240,7 +241,7 @@ def conf_page(lang):
 var known=Object.prototype.hasOwnProperty.call(m,s);
 if(known&&s!=='deja'){{document.getElementById('c-h').textContent=m[s][0];document.getElementById('c-p').textContent=m[s][1];}}
 var cal=document.getElementById('c-cal');
-if(s==='asteptare'||s==='inchis'){{cal.style.display='none';if(s==='inchis')document.getElementById('c-wa').querySelector('small').style.display='none';return;}}
+if(s==='asteptare'||s==='inchis'){{var mn=document.getElementById('c-mail');if(mn)mn.hidden=true;cal.style.display='none';if(s==='inchis')document.getElementById('c-wa').querySelector('small').style.display='none';return;}}
 var ua=navigator.userAgent,ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),mac=!ios&&/Macintosh/.test(ua),android=/Android/.test(ua);
 var b=document.getElementById('cal-main'),alt=document.getElementById('cal-alt');
 if(ios||mac){{b.href=b.dataset.ics;b.removeAttribute('target');b.textContent=ios?b.dataset.ios:b.dataset.mac;alt.innerHTML='<a href="'+b.dataset.gc+'" target="_blank" rel="noopener">{c['other_gc']}</a>';}}

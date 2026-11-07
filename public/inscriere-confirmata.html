@@ -36,7 +36,7 @@
   </nav>
 </header>
 <main id="main"><section class="section" style="padding-top:28px"><div class="wrap conf">
-  <style>.conf #c-h{font-size:clamp(30px,7.5vw,56px);margin-bottom:10px}.conf #c-p{font-size:17px}.conf .steps2{margin-top:18px!important}
+  <style>.conf #c-h{font-size:clamp(30px,7.5vw,56px);margin-bottom:10px}.conf #c-p{font-size:17px}.conf .steps2{margin-top:18px!important}.conf .mailnote{max-width:620px;margin:22px auto 0;text-align:left;background:rgba(239,196,15,.10);border:1px solid rgba(239,196,15,.55);border-radius:16px;padding:16px 18px}.conf .mailnote small{color:#EFC40F;font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:12px}.conf .mailnote p{margin:6px 0 0;color:#fff;font-size:15px}
   .conf .steps2{display:grid;gap:16px;max-width:620px;margin:28px auto 0;text-align:left}
   .conf .st2{background:var(--card,#14113A);border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:22px 22px 20px}
   .conf .st2.main{border:2px solid var(--blue,#0097D7);box-shadow:0 20px 60px -30px rgba(0,151,215,.7)}
@@ -50,6 +50,7 @@
   <span class="tag">Beyond the Initiative</span>
   <h1 class="as-h2" id="c-h">Locul tău este rezervat</h1>
   <p class="lead" id="c-p">Mulțumim pentru înscriere. Te așteptăm joi, 26 noiembrie 2026, de la ora 17:00, la CATTIA Brașov.</p>
+  <div class="mailnote" id="c-mail"><small>Verifică-ți emailul</small><p>În cel mult 10 minute primești pe email invitația nominală, cu codul QR de intrare, de la <b>Iustin Mazarache, JCI Brașov</b>. Dacă nu o găsești în Inbox, caută în Spam sau Promoții, deschide emailul și marchează-l ca „Nu este spam” (sau mută-l în Inbox), ca să primești și următoarele noastre mesaje.</p></div>
   <div class="steps2">
   <div class="st2 main" id="c-bilet" hidden><small>Biletul tău de intrare</small><h2>Biletul nominal cu cod QR</h2><p>Arată codul la intrare, pentru check-in rapid. Salvează linkul sau o captură de ecran.</p><a class="btn btn-blue" id="bilet-a" href="#">Vezi biletul cu cod QR</a></div>
   <div class="st2 main" id="c-cal"><small>Pasul 1</small><h2>Salvează data în calendar</h2><p>Primești automat o reamintire cu o zi înainte și cu două ore înainte de eveniment.</p>
@@ -67,7 +68,7 @@
 var known=Object.prototype.hasOwnProperty.call(m,s);
 if(known&&s!=='deja'){document.getElementById('c-h').textContent=m[s][0];document.getElementById('c-p').textContent=m[s][1];}
 var cal=document.getElementById('c-cal');
-if(s==='asteptare'||s==='inchis'){cal.style.display='none';if(s==='inchis')document.getElementById('c-wa').querySelector('small').style.display='none';return;}
+if(s==='asteptare'||s==='inchis'){var mn=document.getElementById('c-mail');if(mn)mn.hidden=true;cal.style.display='none';if(s==='inchis')document.getElementById('c-wa').querySelector('small').style.display='none';return;}
 var ua=navigator.userAgent,ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),mac=!ios&&/Macintosh/.test(ua),android=/Android/.test(ua);
 var b=document.getElementById('cal-main'),alt=document.getElementById('cal-alt');
 if(ios||mac){b.href=b.dataset.ics;b.removeAttribute('target');b.textContent=ios?b.dataset.ios:b.dataset.mac;alt.innerHTML='<a href="'+b.dataset.gc+'" target="_blank" rel="noopener">Google Calendar</a>';}
