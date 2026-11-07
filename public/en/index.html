@@ -34,7 +34,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Arvo&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/style.css?v=f5625e9a">
+<link rel="stylesheet" href="../assets/css/style.css?v=03e43621">
 </head>
 <body>
 <header>
@@ -63,7 +63,7 @@
       <h1>JCI is back in <em>Brașov</em>.</h1>
       <p class="lead">We are the local JCI chapter for people aged 18 to 40 who grow by doing: entrepreneurs, professionals and active citizens who care about their city. Present in Brașov since 2003, we are relaunching with a new generation.</p>
       <div class="hero-ctas">
-        <a class="btn btn-blue" href="eveniment">Join us on 26 November</a>
+        <a class="btn btn-blue" href="eveniment#rezerva">Join us on 26 November</a>
         <a class="btn btn-ghost" href="implica-te">Become a member</a>
       </div>
       <ul class="areas" aria-label="The four JCI areas of opportunity">
@@ -178,6 +178,14 @@ boxes.forEach(function(b){if(now>=start){var c=b.querySelector('.cd-clock');if(c
 var s=Math.floor((start-now)/1000),v={d:Math.floor(s/86400),h:Math.floor(s%86400/3600),m:Math.floor(s%3600/60),s:s%60};
 b.querySelectorAll('.cd-num').forEach(function(e){e.textContent=pad(v[e.dataset.u]);});});}
 tick();setInterval(tick,1000);})();</script>
+<a class="btn btn-blue sticky-cta" href="eveniment#rezerva">Save your free seat</a>
+<script>(function(){
+var f=document.querySelector('form[data-event]');
+if(f){f.addEventListener('submit',function(){var b=f.querySelector('button[type=submit]');if(b&&f.checkValidity()){b.disabled=true;b.textContent=b.dataset.busy;}});}
+var st=document.querySelector('.sticky-cta');if(!st)return;var target=document.getElementById('rezerva');
+function upd(){var y=window.scrollY,show=y>500;if(target){var r=target.getBoundingClientRect();if(r.top<window.innerHeight&&r.bottom>0)show=false;}
+var ft=document.querySelector('footer');if(ft&&ft.getBoundingClientRect().top<window.innerHeight)show=false;st.classList.toggle('on',show);}
+window.addEventListener('scroll',upd,{passive:true});upd();})();</script>
 <script>(function(){var els=document.querySelectorAll('[data-stats]');if(!els.length)return;
 fetch('/api/stats',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
 els.forEach(function(el){if(d.count>=20){el.querySelectorAll('[data-stat="count"]').forEach(function(e){e.textContent=d.count});

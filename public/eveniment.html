@@ -35,7 +35,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Arvo&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=f5625e9a">
+<link rel="stylesheet" href="assets/css/style.css?v=03e43621">
 </head>
 <body>
 <header>
@@ -60,6 +60,7 @@
 <section class="section dark" id="eveniment">
   <div class="wrap">
     <div class="countdown compact"><div class="cd-box" data-live="Evenimentul a început. Te așteptăm la CATTIA Brașov." data-done="Mulțumim tuturor celor care au fost alături de noi la Beyond the Initiative."><div class="kicker">Până la Beyond the Initiative</div><div class="cd-clock" role="timer" aria-label="Timp rămas până la eveniment"><div class="cd-unit"><span class="cd-num" data-u="d">00</span><span class="cd-lab">Zile</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="h">00</span><span class="cd-lab">Ore</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="m">00</span><span class="cd-lab">Min</span></div><span class="cd-sep" aria-hidden="true">:</span><div class="cd-unit"><span class="cd-num" data-u="s">00</span><span class="cd-lab">Sec</span></div></div></div></div>
+    <a class="btn btn-blue cd-cta" href="#rezerva">Rezervă-ți locul gratuit</a>
     <div class="event-head">
       <div>
         <span class="tag">26 noiembrie 2026</span>
@@ -114,13 +115,12 @@
       <a class="btn btn-blue" href="#rezerva">Rezervă-ți locul</a>
     </div>
   </div>
-</section><section class="section" id="cu-ce-pleci"><div class="wrap"><span class="tag teal">Cu ce pleci acasă</span><h2>O seară, trei câștiguri concrete</h2><ol class="take"><li><span class="big">24+</span><b>contacte noi</b><p>Două sesiuni de Blitz Networking în grupuri mici, gândite ca să pleci cu oameni pe care chiar îi poți suna a doua zi.</p></li><li><span class="big">2</span><b>paneluri cu răspunsuri la întrebările tale</b><p>Întrebările trimise la înscriere ajung la moderatori și stau la baza discuțiilor cu invitații.</p></li><li><span class="big">1</span><b>comunitate care continuă după eveniment</b><p>Acces la comunitatea JCI Brașov: proiecte, traininguri și rețeaua JCI din peste 100 de țări.</p></li></ol></div></section><section class="section mist" id="rezerva"><div class="wrap res"><div class="res-info">
+</section><section class="section" id="cu-ce-pleci"><div class="wrap"><span class="tag teal">Cu ce pleci acasă</span><h2>O seară, trei câștiguri concrete</h2><ol class="take"><li><span class="big">24+</span><b>contacte noi</b><p>Două sesiuni de Blitz Networking în grupuri mici, gândite ca să pleci cu oameni pe care chiar îi poți suna a doua zi.</p></li><li><span class="big">2</span><b>paneluri cu răspunsuri la întrebările tale</b><p>Întrebările trimise la înscriere ajung la moderatori și stau la baza discuțiilor cu invitații.</p></li><li><span class="big">1</span><b>comunitate care continuă după eveniment</b><p>Acces la comunitatea JCI Brașov: proiecte, traininguri și rețeaua JCI din peste 100 de țări.</p></li></ol></div></section><section class="section mist" id="rezerva"><div class="wrap res"><div class="res-info res-head">
       <span class="tag blue">Înscriere</span>
       <h2>Rezervă&#8209;ți locul</h2>
       <p class="lead">Accesul este gratuit, dar locurile sunt limitate la capacitatea sălii. Înscrierea durează sub un minut.</p>
-      <div class="stat"><p><b>150 de locuri în sală</b></p><div data-stats hidden><p>Până acum s-au înscris <b data-stat="count">0</b> participanți. Au mai rămas <b data-stat="left">150</b> locuri.</p><div class="meter"><i></i></div></div><p class="dl">Înscrierile se închid pe 24 noiembrie, ora 23:59.</p></div>
-      <div class="res-links"><a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=JCI+Bra%C8%99ov+Beyond+the+Initiative&dates=20261126T150000Z/20261126T203000Z&location=CATTIA+Bra%C8%99ov%2C+Strada+Institutului+35%2C+Bra%C8%99ov&details=Evenimentul+de+lansare+JCI+Bra%C8%99ov.+https%3A%2F%2Fjci-brasov.com%2Feveniment" target="_blank" rel="noopener">Adaugă în calendar: Google Calendar</a><a href="/assets/beyond-the-initiative.ics">Telefon sau Outlook</a><a href="https://www.google.com/maps/search/?api=1&query=CATTIA+Bra%C8%99ov+Strada+Institutului+35" target="_blank" rel="noopener">Deschide în Google Maps</a></div>
-    </div><form class="signup" method="POST" action="/api/inscriere" data-event>
+    </div>
+    <form class="signup" method="POST" action="/api/inscriere" data-event>
       <input type="hidden" name="limba" value="ro">
       <input type="text" name="_honey" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
       <p class="closed" hidden>Înscrierile s-au închis. Pentru locuri rămase, scrie-ne la contact@jci-brasov.com.</p>
@@ -129,6 +129,8 @@
         <div class="field"><label for="i-email">Email <span class="req" aria-hidden="true">*</span></label><input id="i-email" name="email" type="email" required maxlength="160" autocomplete="email" inputmode="email"></div>
         <div class="field"><label for="i-tel">Telefon <span class="req" aria-hidden="true">*</span></label><input id="i-tel" name="telefon" type="tel" required minlength="9" maxlength="40" autocomplete="tel" inputmode="tel"></div>
       </div>
+      <div class="field"><label for="i-q">Ce întrebare ai pentru invitați?</label><textarea id="i-q" name="intrebare" rows="2" maxlength="1500" placeholder="Opțional. Întrebările primite ajung la moderatorii panelurilor."></textarea></div>
+      <details class="more"><summary>Adaugă detalii despre tine (opțional)</summary>
       <div class="row2">
         <div class="field"><label for="i-comp">Companie sau organizație <span class="optl">(opțional)</span></label><input id="i-comp" name="companie" maxlength="160" autocomplete="organization"></div>
         <div class="field"><label for="i-func">Funcție <span class="optl">(opțional)</span></label><input id="i-func" name="functie" maxlength="120" autocomplete="organization-title"></div>
@@ -137,11 +139,14 @@
         <div class="field"><label for="i-prof">Te descrie cel mai bine</label><select id="i-prof" name="profil"><option value="">Alege</option><option>Antreprenor</option><option>Manager</option><option>Angajat</option><option>Student</option><option>Freelancer sau consultant</option><option>ONG sau sector public</option><option>Altul</option></select></div>
         <div class="field"><label for="i-src">De unde ai aflat de eveniment?</label><select id="i-src" name="sursa"><option value="">Alege</option><option>Instagram</option><option>Facebook</option><option>WhatsApp</option><option>LinkedIn</option><option>Recomandare</option><option>JCI România</option><option>Altă sursă</option></select></div>
       </div>
-      <div class="field"><label for="i-q">Ce întrebare ai pentru invitați?</label><textarea id="i-q" name="intrebare" rows="3" maxlength="1500" placeholder="Opțional. Întrebările primite ajung la moderatorii panelurilor."></textarea></div>
+      </details>
       <label class="check"><input type="checkbox" name="acord" value="da" required><span>Sunt de acord ca JCI Brașov să folosească aceste date pentru organizarea evenimentului și pentru a mă contacta în legătură cu participarea.</span></label>
       <label class="check"><input type="checkbox" name="acord_marketing" value="da"><span>Vreau să primesc invitații la următoarele evenimente JCI Brașov.</span></label>
-      <button class="btn btn-blue" type="submit">Rezervă-mi locul</button>
-    </form></div></section><section class="section" id="intrebari"><div class="wrap"><span class="tag teal">Întrebări frecvente</span><h2>Ce trebuie să știi</h2><div class="faq"><details><summary>Cât costă participarea?</summary><p>Nimic. Accesul este gratuit, iar evenimentul este susținut integral de parteneri. Înscrierea este necesară pentru a-ți păstra locul.</p></details><details><summary>Trebuie să fiu membru JCI?</summary><p>Nu. Evenimentul este deschis tuturor celor interesați de antreprenoriat, leadership și comunitate.</p></details><details><summary>Am peste 40 de ani. Pot veni?</summary><p>Da. Membrii JCI au între 18 și 40 de ani, dar la eveniment sunt bineveniți toți: antreprenori, mentori, parteneri.</p></details><details><summary>Pot veni cu un coleg?</summary><p>Da, cu condiția ca fiecare participant să se înscrie separat, ca să avem locurile și ecusoanele pregătite.</p></details><details><summary>Ce se întâmplă dacă se ocupă toate locurile?</summary><p>Înscrierile primite după ocuparea sălii intră pe lista de așteptare și te anunțăm dacă se eliberează un loc.</p></details><details><summary>Unde are loc și cum ajung?</summary><p>La CATTIA Brașov, Strada Institutului 35. Programul începe la 17:00, cu primirea invitaților și înregistrarea.</p></details><details><summary>Ce se întâmplă cu datele mele?</summary><p>Le folosim doar pentru organizarea evenimentului și, dacă ai bifat, pentru invitații la evenimentele JCI Brașov. Nu le transmitem altor organizații.</p></details></div></div></section><section class="section mist" id="parteneri">
+      <button class="btn btn-blue" type="submit" data-busy="Se trimite…">Rezervă-mi locul gratuit</button>
+      <p class="form-note">Fără costuri și fără spam. Primești confirmarea imediat.</p>
+    </form><div class="res-info res-meta"><div class="stat"><p><b>150 de locuri în sală</b></p><div data-stats hidden><p>Până acum s-au înscris <b data-stat="count">0</b> participanți. Au mai rămas <b data-stat="left">150</b> locuri.</p><div class="meter"><i></i></div></div><p class="dl">Înscrierile se închid pe 24 noiembrie, ora 23:59.</p></div>
+      <div class="res-links"><a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=JCI+Bra%C8%99ov+Beyond+the+Initiative&dates=20261126T150000Z/20261126T203000Z&location=CATTIA+Bra%C8%99ov%2C+Strada+Institutului+35%2C+Bra%C8%99ov&details=Evenimentul+de+lansare+JCI+Bra%C8%99ov.+https%3A%2F%2Fjci-brasov.com%2Feveniment" target="_blank" rel="noopener">Adaugă în calendar: Google Calendar</a><a href="/assets/beyond-the-initiative.ics">Telefon sau Outlook</a><a href="https://www.google.com/maps/search/?api=1&query=CATTIA+Bra%C8%99ov+Strada+Institutului+35" target="_blank" rel="noopener">Deschide în Google Maps</a></div>
+    </div></div></section><section class="section" id="intrebari"><div class="wrap"><span class="tag teal">Întrebări frecvente</span><h2>Ce trebuie să știi</h2><div class="faq"><details><summary>Cât costă participarea?</summary><p>Nimic. Accesul este gratuit, iar evenimentul este susținut integral de parteneri. Înscrierea este necesară pentru a-ți păstra locul.</p></details><details><summary>Trebuie să fiu membru JCI?</summary><p>Nu. Evenimentul este deschis tuturor celor interesați de antreprenoriat, leadership și comunitate.</p></details><details><summary>Am peste 40 de ani. Pot veni?</summary><p>Da. Membrii JCI au între 18 și 40 de ani, dar la eveniment sunt bineveniți toți: antreprenori, mentori, parteneri.</p></details><details><summary>Pot veni cu un coleg?</summary><p>Da, cu condiția ca fiecare participant să se înscrie separat, ca să avem locurile și ecusoanele pregătite.</p></details><details><summary>Ce se întâmplă dacă se ocupă toate locurile?</summary><p>Înscrierile primite după ocuparea sălii intră pe lista de așteptare și te anunțăm dacă se eliberează un loc.</p></details><details><summary>Unde are loc și cum ajung?</summary><p>La CATTIA Brașov, Strada Institutului 35. Programul începe la 17:00, cu primirea invitaților și înregistrarea.</p></details><details><summary>Ce se întâmplă cu datele mele?</summary><p>Le folosim doar pentru organizarea evenimentului și, dacă ai bifat, pentru invitații la evenimentele JCI Brașov. Nu le transmitem altor organizații.</p></details></div></div></section><section class="section mist" id="parteneri">
   <div class="wrap">
     <span class="tag blue">Parteneri</span>
     <h2>Parteneriat de sponsorizare</h2>
@@ -229,12 +234,19 @@ boxes.forEach(function(b){if(now>=start){var c=b.querySelector('.cd-clock');if(c
 var s=Math.floor((start-now)/1000),v={d:Math.floor(s/86400),h:Math.floor(s%86400/3600),m:Math.floor(s%3600/60),s:s%60};
 b.querySelectorAll('.cd-num').forEach(function(e){e.textContent=pad(v[e.dataset.u]);});});}
 tick();setInterval(tick,1000);})();</script>
+<a class="btn btn-blue sticky-cta" href="#rezerva">Rezervă-ți locul gratuit</a>
 <script>(function(){var els=document.querySelectorAll('[data-stats]');if(!els.length)return;
 fetch('/api/stats',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
 els.forEach(function(el){if(d.count>=20){el.querySelectorAll('[data-stat="count"]').forEach(function(e){e.textContent=d.count});
 el.querySelectorAll('[data-stat="left"]').forEach(function(e){e.textContent=d.left});el.hidden=false;}
 var m=el.querySelector('.meter i');if(m&&d.count>=20)m.style.width=Math.min(100,Math.round(d.count/d.capacity*100))+'%';});
 if(d.closed){document.querySelectorAll('form[data-event]').forEach(function(f){f.querySelectorAll('input,select,textarea,button').forEach(function(x){x.disabled=true});var c=f.querySelector('.closed');if(c)c.hidden=false;});}
-}).catch(function(){});})();</script>
+}).catch(function(){});})();</script><script>(function(){
+var f=document.querySelector('form[data-event]');
+if(f){f.addEventListener('submit',function(){var b=f.querySelector('button[type=submit]');if(b&&f.checkValidity()){b.disabled=true;b.textContent=b.dataset.busy;}});}
+var st=document.querySelector('.sticky-cta');if(!st)return;var target=document.getElementById('rezerva');
+function upd(){var y=window.scrollY,show=y>500;if(target){var r=target.getBoundingClientRect();if(r.top<window.innerHeight&&r.bottom>0)show=false;}
+var ft=document.querySelector('footer');if(ft&&ft.getBoundingClientRect().top<window.innerHeight)show=false;st.classList.toggle('on',show);}
+window.addEventListener('scroll',upd,{passive:true});upd();})();</script>
 </body>
 </html>

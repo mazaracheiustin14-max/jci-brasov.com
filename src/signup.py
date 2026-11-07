@@ -50,7 +50,7 @@ T={'ro':dict(
  opt='opțional',
  acord='Sunt de acord ca JCI Brașov să folosească aceste date pentru organizarea evenimentului și pentru a mă contacta în legătură cu participarea.',
  mkt='Vreau să primesc invitații la următoarele evenimente JCI Brașov.',
- submit='Rezervă-mi locul', closed='Înscrierile s-au închis. Pentru locuri rămase, scrie-ne la contact@jci-brasov.com.',
+ submit='Rezervă-mi locul gratuit', busy='Se trimite…', more='Adaugă detalii despre tine (opțional)', trust='Fără costuri și fără spam. Primești confirmarea imediat.', sticky='Rezervă-ți locul gratuit', hero_cta='Rezervă-ți locul gratuit', closed='Înscrierile s-au închis. Pentru locuri rămase, scrie-ne la contact@jci-brasov.com.',
  cal='Adaugă în calendar', gcal='Google Calendar', ics='Telefon sau Outlook', map='Deschide în Google Maps',
  faq_tag='Întrebări frecvente', faq_h='Ce trebuie să știi',
  faq=[('Cât costă participarea?','Nimic. Accesul este gratuit, iar evenimentul este susținut integral de parteneri. Înscrierea este necesară pentru a-ți păstra locul.'),
@@ -77,7 +77,7 @@ T={'ro':dict(
  opt='optional',
  acord='I agree that JCI Brașov may use this data to organise the event and to contact me about my attendance.',
  mkt='I would like to receive invitations to future JCI Brașov events.',
- submit='Save my seat', closed='Registration is closed. For remaining seats, email contact@jci-brasov.com.',
+ submit='Save my free seat', busy='Sending…', more='Add details about yourself (optional)', trust='No cost and no spam. You get confirmation straight away.', sticky='Save your free seat', hero_cta='Save your free seat', closed='Registration is closed. For remaining seats, email contact@jci-brasov.com.',
  cal='Add to calendar', gcal='Google Calendar', ics='Phone or Outlook', map='Open in Google Maps',
  faq_tag='FAQ', faq_h='Good to know',
  faq=[('How much does it cost?','Nothing. Entry is free and the event is fully funded by our partners. Registration is required to hold your seat.'),
@@ -97,8 +97,18 @@ CSS="""
 .take .big{display:block;font-size:64px;font-weight:800;line-height:1;letter-spacing:-.03em;color:#fff}
 .take b{display:block;font-size:20px;margin-top:8px}
 .take p{color:var(--soft,#B9BBD6);font-size:15px;margin-top:8px}
-.res{display:grid;grid-template-columns:.9fr 1.1fr;gap:48px;align-items:start}
-@media(max-width:900px){.res{grid-template-columns:1fr;gap:28px}}
+.res{display:grid;grid-template-columns:.9fr 1.1fr;grid-template-areas:"head form" "meta form";column-gap:48px;row-gap:0;align-items:start}
+.res-head{grid-area:head}.res .signup{grid-area:form}.res-meta{grid-area:meta}
+@media(max-width:900px){.res{grid-template-columns:1fr;grid-template-areas:"head" "form" "meta";row-gap:24px}}
+.res .res-meta .stat{margin-top:0}
+details.more{border:1px dashed rgba(255,255,255,.2);border-radius:12px;padding:12px 14px}
+details.more summary{cursor:pointer;font-weight:600;color:#7FCDEE}
+details.more[open]{display:grid;gap:16px}
+.sticky-cta{position:fixed;left:12px;right:12px;bottom:12px;z-index:60;display:none;text-align:center;box-shadow:0 12px 40px -10px rgba(0,0,0,.6)}
+@media(max-width:900px){.sticky-cta.on{display:block}}
+.cd-cta{margin:4px 0 28px}
+.res{grid-template-rows:auto 1fr}
+@media(max-width:900px){.res{grid-template-rows:auto}}
 .res-info .stat{margin-top:24px;border:1px solid var(--line);border-radius:18px;padding:22px 24px;background:rgba(0,151,215,.08)}
 .res-info .stat b{color:#fff;font-size:1.25em;font-variant-numeric:tabular-nums}
 .res-info .stat p+p{margin-top:8px}
@@ -147,6 +157,8 @@ def sections(lang):
         <div class="field"><label for="i-email">{t['f_email']} <span class="req" aria-hidden="true">*</span></label><input id="i-email" name="email" type="email" required maxlength="160" autocomplete="email" inputmode="email"></div>
         <div class="field"><label for="i-tel">{t['f_tel']} <span class="req" aria-hidden="true">*</span></label><input id="i-tel" name="telefon" type="tel" required minlength="9" maxlength="40" autocomplete="tel" inputmode="tel"></div>
       </div>
+      <div class="field"><label for="i-q">{t['f_q']}</label><textarea id="i-q" name="intrebare" rows="2" maxlength="1500" placeholder="{t['f_q_ph']}"></textarea></div>
+      <details class="more"><summary>{t['more']}</summary>
       <div class="row2">
         <div class="field"><label for="i-comp">{t['f_comp']} <span class="optl">({t['opt']})</span></label><input id="i-comp" name="companie" maxlength="160" autocomplete="organization"></div>
         <div class="field"><label for="i-func">{t['f_func']} <span class="optl">({t['opt']})</span></label><input id="i-func" name="functie" maxlength="120" autocomplete="organization-title"></div>
@@ -155,20 +167,22 @@ def sections(lang):
         <div class="field"><label for="i-prof">{t['f_prof']}</label><select id="i-prof" name="profil">{opt_list(t['prof'],t['prof0'])}</select></div>
         <div class="field"><label for="i-src">{t['f_src']}</label><select id="i-src" name="sursa">{opt_list(t['src'],t['prof0'])}</select></div>
       </div>
-      <div class="field"><label for="i-q">{t['f_q']}</label><textarea id="i-q" name="intrebare" rows="3" maxlength="1500" placeholder="{t['f_q_ph']}"></textarea></div>
+      </details>
       <label class="check"><input type="checkbox" name="acord" value="da" required><span>{t['acord']}</span></label>
       <label class="check"><input type="checkbox" name="acord_marketing" value="da"><span>{t['mkt']}</span></label>
-      <button class="btn btn-blue" type="submit">{t['submit']}</button>
+      <button class="btn btn-blue" type="submit" data-busy="{t['busy']}">{t['submit']}</button>
+      <p class="form-note">{t['trust']}</p>
     </form>'''
-    info=f'''<div class="res-info">
+    info=f'''<div class="res-info res-head">
       <span class="tag blue">{t['res_tag']}</span>
       <h2>{t['res_h']}</h2>
       <p class="lead">{t['res_lead']}</p>
-      <div class="stat"><p><b>{t['cap']}</b></p><div data-stats hidden><p>{t['stats']}</p><div class="meter"><i></i></div></div><p class="dl">{t['dl']}</p></div>
+    </div>
+    <div class="res-info res-meta"><div class="stat"><p><b>{t['cap']}</b></p><div data-stats hidden><p>{t['stats']}</p><div class="meter"><i></i></div></div><p class="dl">{t['dl']}</p></div>
       <div class="res-links"><a href="{GCAL}" target="_blank" rel="noopener">{t['cal']}: {t['gcal']}</a><a href="/assets/beyond-the-initiative.ics">{t['ics']}</a><a href="{MAPS}" target="_blank" rel="noopener">{t['map']}</a></div>
     </div>'''
     return (f'<section class="section" id="cu-ce-pleci"><div class="wrap"><span class="tag teal">{t["take_tag"]}</span><h2>{t["take_h"]}</h2><ol class="take">{take}</ol></div></section>'
-            f'<section class="section mist" id="rezerva"><div class="wrap res">{info}{form}</div></section>'
+            f'<section class="section mist" id="rezerva"><div class="wrap res">{info.split("<div class=\"res-info res-meta\">")[0]}{form}<div class="res-info res-meta">{info.split("<div class=\"res-info res-meta\">")[1]}</div></section>'
             f'<section class="section" id="intrebari"><div class="wrap"><span class="tag teal">{t["faq_tag"]}</span><h2>{t["faq_h"]}</h2><div class="faq">{faq}</div></div></section>')
 CONF={'ro':dict(h='Locul tău este rezervat',lead='Mulțumim pentru înscriere. Te așteptăm joi, 26 noiembrie 2026, de la ora 17:00, la CATTIA Brașov.',
   wa='Intră în comunitatea evenimentului pe WhatsApp: acolo anunțăm programul final, invitații și noutățile.',wab='Intră în comunitatea WhatsApp',
@@ -204,6 +218,13 @@ def conf_page(lang):
     open(S+pre+'inscriere-confirmata.html','w',encoding='utf-8').write(out)
 def _json(d):
     import json; return json.dumps(d,ensure_ascii=False)
+JS_UX="""<script>(function(){
+var f=document.querySelector('form[data-event]');
+if(f){f.addEventListener('submit',function(){var b=f.querySelector('button[type=submit]');if(b&&f.checkValidity()){b.disabled=true;b.textContent=b.dataset.busy;}});}
+var st=document.querySelector('.sticky-cta');if(!st)return;var target=document.getElementById('rezerva');
+function upd(){var y=window.scrollY,show=y>500;if(target){var r=target.getBoundingClientRect();if(r.top<window.innerHeight&&r.bottom>0)show=false;}
+var ft=document.querySelector('footer');if(ft&&ft.getBoundingClientRect().top<window.innerHeight)show=false;st.classList.toggle('on',show);}
+window.addEventListener('scroll',upd,{passive:true});upd();})();</script>"""
 def run():
     open(S+'assets/beyond-the-initiative.ics','w',encoding='utf-8',newline='').write(ICS)
     for lang,pre in (('ro',''),('en','en/')):
@@ -220,12 +241,16 @@ def run():
                         'Completează formularul de înscriere și primești imediat confirmarea locului.')
             s=s.replace("Invitations are sent to members of the event's WhatsApp community. Join now to secure your seat.",
                         'Complete the registration form and your seat is confirmed straight away.')
-            s=s.replace('</body>',JS_STATS+'\n</body>',1)
+            s=s.replace('<div class="event-head">',f'<a class="btn btn-blue cd-cta" href="#rezerva">{t["hero_cta"]}</a>\n    <div class="event-head">',1)
+            s=s.replace('</body>',f'<a class="btn btn-blue sticky-cta" href="#rezerva">{t["sticky"]}</a>\n'+JS_STATS+JS_UX+'\n</body>',1)
             open(p,'w',encoding='utf-8').write(s)
         # prima pagină: cardul evenimentului și cronometrul duc la formular
         p=S+pre+'index.html'; s=open(p,encoding='utf-8').read()
         for lbl in ('Înscrie-te prin WhatsApp','Register via WhatsApp','Rezervă-ți locul','Save your seat'):
             s=s.replace(f'<a class="btn btn-blue" href="{WA}" target="_blank" rel="noopener">{lbl}</a>',f'<a class="btn btn-blue" href="eveniment.html#rezerva">{t["cta_index"]}</a>')
+        s=s.replace('href="eveniment.html">Vino pe 26 noiembrie','href="eveniment.html#rezerva">Vino pe 26 noiembrie').replace('href="eveniment.html">Join us on 26 November','href="eveniment.html#rezerva">Join us on 26 November')
+        if 'sticky-cta' not in s:
+            s=s.replace('</body>',f'<a class="btn btn-blue sticky-cta" href="eveniment.html#rezerva">{t["sticky"]}</a>\n'+JS_UX+'\n</body>',1)
         if 'data-stats' not in s:
             s=s.replace('<p class="cd-date">',f'<p class="cd-stats" data-stats hidden>{t["stats"]}</p><p class="cd-date">',1)
             s=s.replace('</body>',JS_STATS+'\n</body>',1)
