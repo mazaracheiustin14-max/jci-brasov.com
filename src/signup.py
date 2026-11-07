@@ -184,15 +184,15 @@ def sections(lang):
     return (f'<section class="section" id="cu-ce-pleci"><div class="wrap"><span class="tag teal">{t["take_tag"]}</span><h2>{t["take_h"]}</h2><ol class="take">{take}</ol></div></section>'
             f'<section class="section mist" id="rezerva"><div class="wrap res">{info.split("<div class=\"res-info res-meta\">")[0]}{form}<div class="res-info res-meta">{info.split("<div class=\"res-info res-meta\">")[1]}</div></section>'
             f'<section class="section" id="intrebari"><div class="wrap"><span class="tag teal">{t["faq_tag"]}</span><h2>{t["faq_h"]}</h2><div class="faq">{faq}</div></div></section>')
-CONF={'ro':dict(mh='Verifică-ți emailul',mp='În cel mult 10 minute primești pe email invitația nominală, cu codul QR de intrare, de la <b>Iustin Mazarache, JCI Brașov</b>. Dacă nu o găsești în Inbox, caută în Spam sau Promoții, deschide emailul și marchează-l ca „Nu este spam” (sau mută-l în Inbox), ca să primești și următoarele noastre mesaje.',h='Locul tău este rezervat',lead='Mulțumim pentru înscriere. Te așteptăm joi, 26 noiembrie 2026, de la ora 17:00, la CATTIA Brașov.',
+CONF={'ro':dict(mh='Verifică-ți emailul',mp='În cel mult 10 minute primești pe email invitația nominală, cu codul QR de intrare, de la <b>Iustin Mazarache, JCI Brașov</b>. Dacă nu o găsești în Inbox, caută în Spam sau Promoții, deschide emailul și marchează-l ca „Nu este spam” (sau mută-l în Inbox). Astfel primești și următoarele noastre emailuri.',h='Locul tău este rezervat',lead='Mulțumim pentru înscriere. Te așteptăm joi, 26 noiembrie 2026, de la ora 17:00, la CATTIA Brașov.',
   wa='Intră în comunitatea evenimentului pe WhatsApp: acolo anunțăm programul final, invitații și noutățile.',wab='Intră în comunitatea WhatsApp',
   asteptare=('Ești pe lista de așteptare','Sala este momentan plină. Te-am trecut pe lista de așteptare și te anunțăm imediat ce se eliberează un loc.'),
   deja=('Ești deja înscris','Avem deja o înscriere cu această adresă de email. Locul tău rămâne rezervat.'),
   inchis=('Înscrierile s-au închis','Termenul de înscriere a trecut. Scrie-ne la contact@jci-brasov.com și verificăm dacă mai sunt locuri disponibile.'),
   back='Înapoi la pagina evenimentului',share='Invită un prieten: trimite-i linkul jci-brasov.com/eveniment',
-  s1='Pasul 1',s1h='Salvează data în calendar',s1p='Primești automat o reamintire cu o zi înainte și cu două ore înainte de eveniment.',
+  s1='Pasul 1',s1h='Salvează data în calendar',s1p='Primești automat un reminder cu o zi înainte și cu două ore înainte de eveniment.',
   ios='Adaugă în calendarul iPhone',mac='Adaugă în Calendar',gc='Adaugă în Google Calendar',other_ics='Outlook sau Apple Calendar',other_gc='Google Calendar',
-  auto='Deschidem calendarul în <b>3</b> secunde, ca să salvezi data.',stop='Nu acum',
+  auto='Deschidem calendarul în <b>3</b> secunde pentru salvarea datei.',stop='Nu acum',
   s2='Pasul 2',s2h='Intră în comunitatea evenimentului',s3='Pasul 3',s3h='Cum ajungi',s3p='CATTIA Brașov, Strada Institutului 35. Primirea invitaților începe la ora 17:00.'),
  'en':dict(mh='Check your email',mp='Within 10 minutes you will receive your personal invitation with your QR entry code, from <b>Iustin Mazarache, JCI Brașov</b>. If it is not in your inbox, check Spam or Promotions, open the email and mark it as “Not spam” (or move it to your inbox), so our next messages reach you too.',h='Your seat is reserved',lead='Thank you for registering. See you on Thursday, 26 November 2026, from 5:00 pm at CATTIA Brașov.',
   wa='Join the event community on WhatsApp, where we share the final programme, speakers and updates.',wab='Join the WhatsApp community',
