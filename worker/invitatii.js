@@ -156,7 +156,13 @@ export async function handleInvitatii(request, env, url) {
 
   const key = await setting(env, "invit_key");
   const given = url.searchParams.get("key") || request.headers.get("X-Invit-Key");
-  if (!eqConst(given, key)) return json({ error: "auth" }, 401);
+  const ok = eqConst(given, key);
+  // Jurnal scurt, pentru diagnoză: cine a întrebat și dacă cheia a fost corectă (fără cheie, fără date personale)
+  try {
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS invit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, creat TEXT DEFAULT (datetime('now')), cale TEXT, cheie_ok INTEGER, agent TEXT)").run();
+    await env.DB.prepare("INSERT INTO invit_log (cale, cheie_ok, agent) VALUES (?,?,?)").bind(p, ok ? 1 : 0, (request.headers.get("User-Agent") || "").slice(0, 120)).run();
+  } catch (e) {}
+  if (!ok) return json({ error: "auth" }, 401);
 
   if (p === "/api/invitatii/de-trimis") {
     await env.DB.prepare("UPDATE inscrieri SET token = lower(hex(randomblob(16))) WHERE token IS NULL").run();
