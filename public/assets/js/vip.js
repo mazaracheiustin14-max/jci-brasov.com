@@ -1,6 +1,6 @@
 // Contorul biletelor VIP (citește /api/stats la 15 secunde cât timp pagina e vizibilă)
 (function () {
-  var boxes = document.querySelectorAll('[data-vipbox]');
+  var boxes = document.querySelectorAll('[data-vipbox],[data-ticketbox]');
   if (!boxes.length) return;
   var en = (document.documentElement.lang || '').indexOf('en') === 0, prevLeft = null, timer = null;
   function ago(iso) {
@@ -24,8 +24,16 @@
       if (v.left <= 0) { b.setAttribute('aria-disabled', 'true'); b.textContent = en ? 'VIP seats sold out' : 'Locurile VIP s-au epuizat'; b.removeAttribute('href'); }
     });
   }
+  // Raportul biletelor nominale: emise din 150 și confirmări de venire
+  function tickets(t) {
+    if (!t || typeof t.total !== 'number') return;
+    document.querySelectorAll('[data-tk="issued"]').forEach(function (e) { e.textContent = t.issued; });
+    document.querySelectorAll('[data-tk="conf"]').forEach(function (e) { e.textContent = t.confirmed; });
+    document.querySelectorAll('[data-tk="bar"]').forEach(function (e) { e.style.width = Math.min(100, t.issued * 100 / t.total) + '%'; });
+    document.querySelectorAll('[data-tk="cbar"]').forEach(function (e) { e.style.width = Math.min(100, t.confirmed * 100 / t.total) + '%'; });
+  }
   function load() {
-    fetch('/api/stats', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) { apply(d.vip); }).catch(function () {});
+    fetch('/api/stats', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) { apply(d.vip); tickets(d.tickets); }).catch(function () {});
   }
   function start() { if (!timer) { load(); timer = setInterval(load, 15000); } }
   function stop() { clearInterval(timer); timer = null; }

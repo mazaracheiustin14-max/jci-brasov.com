@@ -5,7 +5,7 @@
   function post(token, undo) {
     return fetch("/api/checkin", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
       body: JSON.stringify({ token: token, undo: !!undo }) }).then(function (r) {
-      if (r.status === 401) { location.href = "/echipa"; throw new Error("auth"); }
+      if (r.status === 401) { location.href = "/checkin"; throw new Error("auth"); }
       return r.json();
     });
   }
@@ -37,7 +37,7 @@
   if (!$("pz")) return;
   function load() {
     fetch("/api/echipa/stats", { credentials: "same-origin", cache: "no-store" }).then(function (r) {
-      if (r.status === 401) { location.href = "/echipa"; return null; }
+      if (r.status === 401) { location.href = "/checkin"; return null; }
       return r.json();
     }).then(function (j) {
       if (!j) return;

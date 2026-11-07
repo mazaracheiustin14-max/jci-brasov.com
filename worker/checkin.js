@@ -108,27 +108,27 @@ export async function handleCheckin(request, env, url, overLimit) {
     return scanPage(env, m[1], s);
   }
 
-  if (p === "/echipa" || p === "/echipa/") {
+  if (p === "/checkin" || p === "/checkin/") {
     const s = await staffSession(request, env);
     return s ? dashboardPage(s) : loginPage(url.searchParams.get("e") === "1", url.searchParams.get("n"));
   }
 
   if (p === "/api/echipa/login") {
     if (request.method !== "POST" || !sameOrigin(request)) return new Response("Forbidden", { status: 403 });
-    if (await overLimit(request, env, "pin", 10, 30)) return Response.redirect(`${url.origin}/echipa?e=1`, 303);
+    if (await overLimit(request, env, "pin", 10, 30)) return Response.redirect(`${url.origin}/checkin?e=1`, 303);
     const f = await request.formData().catch(() => null);
     const pin = String((f && f.get("pin")) || "").replace(/\D/g, "").slice(0, 12);
     const who = String((f && f.get("nume")) || "").replace(/[^\p{L}\p{N} .-]/gu, "").trim().slice(0, 40);
     const next = String((f && f.get("next")) || "");
     const salt = await setting(env, "pin_salt"), hash = await setting(env, "pin_hash");
     if (!salt || !hash || !pin || !eqConst(await sha256(salt + ":" + pin), hash)) {
-      return Response.redirect(`${url.origin}/echipa?e=1`, 303);
+      return Response.redirect(`${url.origin}/checkin?e=1`, 303);
     }
-    const dest = /^\/c\/[a-f0-9]{32}$/.test(next) ? next : "/echipa";
+    const dest = /^\/c\/[a-f0-9]{32}$/.test(next) ? next : "/checkin";
     return new Response(null, { status: 303, headers: { Location: url.origin + dest, "Set-Cookie": await makeSession(env, who), "Cache-Control": "no-store" } });
   }
   if (p === "/api/echipa/logout") {
-    return new Response(null, { status: 303, headers: { Location: url.origin + "/echipa", "Set-Cookie": `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` } });
+    return new Response(null, { status: 303, headers: { Location: url.origin + "/checkin", "Set-Cookie": `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` } });
   }
 
   if (p.startsWith("/api/echipa/") || p === "/api/checkin") {
@@ -291,7 +291,7 @@ async function ticketPage(env, token) {
 
 async function scanPage(env, token, s) {
   const row = await findByToken(env, token);
-  if (!row) return html(shell("Cod necunoscut", `<div class="state s-warn"><p class="k" style="color:#fff">COD NECUNOSCUT</p><h1>Invitația nu există</h1><p class="muted">Caută persoana după nume.</p></div><a class="btn b-blue mt" href="/echipa">Înapoi la panou</a>`), 404);
+  if (!row) return html(shell("Cod necunoscut", `<div class="state s-warn"><p class="k" style="color:#fff">COD NECUNOSCUT</p><h1>Invitația nu există</h1><p class="muted">Caută persoana după nume.</p></div><a class="btn b-blue mt" href="/checkin">Înapoi la panou</a>`), 404);
   const vip = await isVip(env, row);
   const info = `<p class="name" style="color:#fff">${esc(row.nume)}</p>${row.companie ? `<p class="muted">${esc(row.companie)}</p>` : ""}${vip ? '<span class="vip">ACCES VIP</span>' : ""}`;
   let inner;
@@ -303,13 +303,13 @@ async function scanPage(env, token, s) {
     inner = `<div class="state s-wait" id="st"><p class="k" style="color:#fff">INVITAȚIE VALIDĂ</p>${info}</div>
 <button class="btn b-green mt" id="go" data-token="${token}">Confirmă intrarea</button>`;
   }
-  inner += `<a class="btn b-ghost mt" href="/echipa">Panoul echipei</a><p class="muted mt" style="text-align:center">Conectat ca ${esc(s.who)}</p>`;
+  inner += `<a class="btn b-ghost mt" href="/checkin">Panoul echipei</a><p class="muted mt" style="text-align:center">Conectat ca ${esc(s.who)}</p>`;
   return html(shell("Check-in", inner, `<script src="/assets/js/echipa.js"></script>`));
 }
 
 function loginPage(err, next) {
   const n = /^\/c\/[a-f0-9]{32}$/.test(next || "") ? next : "";
-  return html(shell("Echipa JCI Brașov", `<p class="k">Acces echipă</p><h1>Check-in la intrare</h1>
+  return html(shell("Check-in JCI Brașov", `<p class="k">Acces echipă</p><h1>Check-in la intrare</h1>
 ${err ? '<div class="err">PIN greșit sau prea multe încercări. Încearcă din nou.</div>' : ""}
 <form method="POST" action="/api/echipa/login" class="card">
 <label class="lab" for="nume">NUMELE TĂU</label><input id="nume" name="nume" autocomplete="name" placeholder="ex. Alexandra" class="mt" required maxlength="40">

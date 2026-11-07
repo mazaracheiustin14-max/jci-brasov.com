@@ -42,7 +42,7 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - `/bilet/<cod>`: biletul public al participantului, cu QR (assets/js/qrcode.js, licență MIT, și bilet.js). QR-ul duce la `/c/<cod>`.
 - `/c/<cod>`: pentru echipa conectată, fișa de check-in (invitație validă, deja folosită sau listă de așteptare, buton „Confirmă intrarea”);
   pentru oricine altcineva, redirecționează la bilet, fără să confirme nimic.
-- `/echipa`: autentificare cu nume + PIN (sesiune 16 ore, max. 10 încercări/oră), contor live, căutare după nume/email/telefon/companie,
+- `/checkin` (inițial /echipa, mutat pe 7 nov ca să nu ascundă pagina Echipa): autentificare cu nume + PIN (sesiune 16 ore, max. 10 încercări/oră), contor live, căutare după nume/email/telefon/companie,
   ultimele intrări cu anulare, export CSV (`/api/echipa/export.csv`). Script: assets/js/echipa.js.
 - Înscrierile noi primesc codul la salvare; pagina de confirmare afișează cardul „Biletul tău” (assets/js/bilet-link.js, adăugat de `src/checkin.py`,
   care rulează după deploy.py și vip.py). Codurile lipsă (ex. biletele VIP din Stripe) se completează automat la fiecare încărcare a panoului.

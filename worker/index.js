@@ -28,7 +28,7 @@ export default {
       if (r) return r;
     }
     // Bilete nominale cu QR și check-in la intrare (worker/checkin.js)
-    if (/^\/(bilet|c|confirma)\/|^\/echipa\/?$|^\/api\/(echipa\/|checkin$)/.test(url.pathname)) {
+    if (/^\/(bilet|c|confirma)\/|^\/checkin\/?$|^\/api\/(echipa\/|checkin$)/.test(url.pathname)) {
       const r = await handleCheckin(request, env, url, overLimit);
       if (r) return r;
     }
@@ -201,9 +201,18 @@ async function handleStats(request, env, ctx) {
     const v = await env.DB.prepare("SELECT COUNT(*) AS n, MAX(creat) AS last FROM vip WHERE eveniment = ?").bind(EVENT).first();
     vipSold = (v && v.n) || 0; vipLast = (v && v.last) || null;
   } catch (e) { /* tabelul vip apare la prima plată */ }
+  // Biletele nominale emise (invitații trimise pe email) și confirmările de venire (butonul din email)
+  let issued = 0, confirmed = 0;
+  try {
+    const b = await env.DB.prepare(
+      "SELECT SUM(CASE WHEN invitatie_trimisa IS NOT NULL AND invitatie_trimisa NOT LIKE 'exclus%' AND invitatie_trimisa NOT LIKE 'eroare%' THEN 1 ELSE 0 END) AS i, SUM(CASE WHEN primire_confirmata IS NOT NULL THEN 1 ELSE 0 END) AS c FROM inscrieri WHERE eveniment=? AND status='confirmat'"
+    ).bind(EVENT).first();
+    issued = (b && b.i) || 0; confirmed = (b && b.c) || 0;
+  } catch (e) { /* coloanele apar odată cu sistemul de invitații */ }
   const sold = Math.min(VIP_TOTAL, VIP_PRESOLD + vipSold);
   const body = { count, capacity: CAPACITY, left: Math.max(0, CAPACITY - count), closed: Date.now() > DEADLINE, deadline: new Date(DEADLINE).toISOString(),
-    vip: { total: VIP_TOTAL, sold, left: VIP_TOTAL - sold, last: vipLast } };
+    vip: { total: VIP_TOTAL, sold, left: VIP_TOTAL - sold, last: vipLast },
+    tickets: { total: CAPACITY, issued, confirmed } };
   const res = new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=10" } });
   if (ctx && ctx.waitUntil) ctx.waitUntil(cache.put(key, res.clone()));
   return res;
