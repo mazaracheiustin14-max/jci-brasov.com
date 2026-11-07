@@ -23,7 +23,7 @@ export default {
     if (url.pathname === "/api/inscriere") {
       if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
       if (await overLimit(request, env, "inscriere", 8, 20)) return tooMany(request);
-      return handleEventSignup(request, env);
+      return handleEventSignup(request, env, ctx);
     }
     if (url.pathname === "/api/stats") return handleStats(request, env, ctx);
     if (url.pathname === "/api/chat") {
@@ -59,7 +59,7 @@ async function overLimit(request, env, bucket, perHour, perDay) {
     ).bind(bucket, who).first();
     if (r && ((r.h || 0) >= perHour || (r.d || 0) >= perDay)) return true;
     await env.DB.prepare("INSERT INTO rate_log (bucket, ip) VALUES (?, ?)").bind(bucket, who).run();
-    if (Math.random() < 0.02) await env.DB.prepare("DELETE FROM rate_log WHERE creat < datetime('now','-2 days')").run();
+    if (Math.random() < 0.02) env.DB.prepare("DELETE FROM rate_log WHERE creat < datetime('now','-2 days')").run().catch(() => {});
   } catch (e) { console.log("rate limit:", e && e.message); }
   return false;
 }
@@ -186,7 +186,7 @@ async function handleStats(request, env, ctx) {
 
 function clean(v, max) { return (typeof v === "string" ? v : "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max); }
 
-async function handleEventSignup(request, env) {
+async function handleEventSignup(request, env, ctx) {
   const origin = request.headers.get("Origin");
   if (origin && !/^https:\/\/(www\.)?jci-brasov\.com$/.test(origin)) return new Response("Forbidden", { status: 403 });
   let data;
@@ -232,7 +232,9 @@ async function handleEventSignup(request, env) {
     ["Nume", f.nume], ["Email", f.email], ["Telefon", f.telefon], ["Companie", f.companie], ["Funcție", f.functie],
     ["Profil", f.profil], ["Întrebare pentru invitați", f.intrebare], ["De unde a aflat", f.sursa], ["Status", status], ["Limba", en ? "EN" : "RO"],
   ].filter(([, v]) => v);
-  await notify(env, `Înscriere nouă Beyond the Initiative: ${f.nume}`, lines, f.email);
+  // Emailul către organizatori pleacă în fundal: vizitatorul primește confirmarea imediat.
+  const mail = notify(env, `Înscriere nouă Beyond the Initiative: ${f.nume}`, lines, f.email);
+  if (ctx && ctx.waitUntil) ctx.waitUntil(mail); else await mail;
   return ok(status);
 }
 
