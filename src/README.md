@@ -55,3 +55,6 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
   Rândurile de test se exclud cu `invitatie_trimisa = 'exclus-test'`.
 - `src/gmail/Invitatii.gs`: Google Apps Script din contul Gmail care trimite; `instaleaza()` creează declanșatorul la 5 minute, `opreste()` îl șterge.
   Limita Gmail pentru cont personal: aproximativ 100 de destinatari pe zi; restul pleacă automat a doua zi.
+- Butonul „Confirm primirea invitației” din email duce la `/confirma/<cod>`; confirmarea se salvează prin POST (automat în browser, prin assets/js/confirma.js),
+  în coloana `inscrieri.primire_confirmata`. Panoul /echipa arată invitațiile trimise și confirmările; exportul CSV le include.
+- Rânduri cu `status = 'test'`: primesc invitația (dacă adresa e în `invit_test`), au bilet valid, dar nu intră în numărul de înscriși.

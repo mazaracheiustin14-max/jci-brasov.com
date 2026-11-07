@@ -80,7 +80,7 @@ export function buildEmail(row) {
     kd: "DATE", vd: "Thursday, 26 November 2026", ko: "TIME", vo: "17:00", kl: "VENUE", vl: "CATTIA Brașov, Strada Institutului 35",
     prog: "Two panels with leaders from business and public administration, two Blitz Networking sessions and at least 24 new business contacts.",
     qrt: "Your personal entry code", qrp: "Show this code at the entrance. It is personal and valid once.",
-    btn: "Open your ticket", hill: "Everything offered at the Hillden stand is free. Drinks from the bar are paid separately.",
+    btn: "Open your ticket", cbtn: "I confirm I received the invitation", cnote: "One click lets us know the invitation reached you.", hill: "Everything offered at the Hillden stand is free. Drinks from the bar are paid separately.",
     tip: "Bring business cards and prepare a one-minute introduction of your work.",
     sign: "We look forward to welcoming you,", role: "President, JCI Brașov",
     foot: "You are receiving this email because you registered for Beyond the Initiative on jci-brasov.com.",
@@ -92,7 +92,7 @@ export function buildEmail(row) {
     kd: "DATA", vd: "Joi, 26 noiembrie 2026", ko: "ORA", vo: "17:00", kl: "LOCAȚIA", vl: "CATTIA Brașov, Strada Institutului 35",
     prog: "Două paneluri cu lideri din mediul de afaceri și din administrație, două sesiuni de Blitz Networking și cel puțin 24 de contacte noi de business.",
     qrt: "Codul dumneavoastră de intrare", qrp: "Prezentați acest cod la intrare. Este personal și valabil o singură dată.",
-    btn: "Deschideți biletul", hill: "Tot ce se oferă la standul Hillden este gratuit. Consumația de la bar se achită separat.",
+    btn: "Deschideți biletul", cbtn: "Confirm primirea invitației", cnote: "Un singur clic ne arată că invitația a ajuns la dumneavoastră.", hill: "Tot ce se oferă la standul Hillden este gratuit. Consumația de la bar se achită separat.",
     tip: "Vă recomandăm să aduceți cărți de vizită și să pregătiți o prezentare de un minut despre activitatea dumneavoastră.",
     sign: "Vă așteptăm cu drag,", role: "Președinte, JCI Brașov",
     foot: "Primiți acest email pentru că v-ați înscris la Beyond the Initiative pe jci-brasov.com.",
@@ -114,6 +114,10 @@ export function buildEmail(row) {
 </td></tr>
 <tr><td style="padding:30px 32px 6px;${F};font-size:16px;line-height:1.6;color:#2A2F45">
 <p style="margin:0 0 14px">${L.hi}</p><p style="margin:0">${L.p1}</p></td></tr>
+<tr><td align="center" style="padding:20px 32px 4px">
+<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#1FA463;border-radius:12px">
+<a href="${SITE}/confirma/${t}" style="display:inline-block;padding:15px 30px;${F};font-size:16px;font-weight:800;color:#FFFFFF;text-decoration:none">${L.cbtn}</a></td></tr></table>
+<div style="${F};font-size:13px;color:#4A5068;margin-top:8px">${L.cnote}</div></td></tr>
 <tr><td style="padding:18px 32px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F7FB;border-radius:14px;border-left:5px solid #1F4789"><tr><td style="padding:20px 22px">
 ${lab(en ? "PERSONAL TICKET" : "BILET NOMINAL")}<div style="${F};font-size:22px;font-weight:800;color:#1F4789;margin:4px 0 16px">${nume}</div>
@@ -136,7 +140,7 @@ ${lab(en ? "PERSONAL TICKET" : "BILET NOMINAL")}<div style="${F};font-size:22px;
 contact@jci-brasov.com | +40 790 827 426 | <a href="${SITE}/eveniment" style="color:#1F4789">jci-brasov.com</a><br>${L.foot}</td></tr>
 </table></td></tr></table></body></html>`;
   const strip = (s) => s.replace(/<[^>]+>/g, "");
-  const text = [strip(L.hi), "", strip(L.p1), "", `${L.kd}: ${L.vd}`, `${L.ko}: ${L.vo}`, `${L.kl}: ${L.vl}`, "",
+  const text = [strip(L.hi), "", strip(L.p1), "", `${L.cbtn}: ${SITE}/confirma/${t}`, "", `${L.kd}: ${L.vd}`, `${L.ko}: ${L.vo}`, `${L.kl}: ${L.vl}`, "",
     `${L.qrt}: ${bilet}`, strip(L.qrp), "", L.prog, "", `Hillden: ${L.hill}`, L.tip, "", L.sign, "Iustin Mazarache", L.role, "",
     "contact@jci-brasov.com | +40 790 827 426 | jci-brasov.com"].join("\n");
   return { subject: L.subject, html, text, qr };
@@ -169,10 +173,11 @@ export async function handleInvitatii(request, env, url) {
     const mod = (await setting(env, "invit_mod")) || "test";
     const allowed = ((await setting(env, "invit_test")) || "").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
     const r = await env.DB.prepare(
-      "SELECT id, nume, email, limba, token FROM inscrieri WHERE eveniment=? AND status='confirmat' AND invitatie_trimisa IS NULL ORDER BY id LIMIT 200"
+      "SELECT id, nume, email, limba, token, status FROM inscrieri WHERE eveniment=? AND status IN ('confirmat','test') AND invitatie_trimisa IS NULL ORDER BY id LIMIT 200"
     ).bind(EVENT).all();
     let rows = r.results || [];
     if (mod !== "live") rows = rows.filter((x) => allowed.includes(String(x.email).toLowerCase()));
+    else rows = rows.filter((x) => x.status === "confirmat" || allowed.includes(String(x.email).toLowerCase()));
     rows = rows.slice(0, BATCH);
     return json({ mod, items: rows.map((x) => ({ id: x.id, email: x.email, nume: x.nume, ...buildEmail(x) })) });
   }

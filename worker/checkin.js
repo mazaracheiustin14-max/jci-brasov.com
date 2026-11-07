@@ -98,6 +98,9 @@ export async function handleCheckin(request, env, url, overLimit) {
   let m = p.match(/^\/bilet\/([a-f0-9]{32})\/?$/);
   if (m) return ticketPage(env, m[1]);
 
+  m = p.match(/^\/confirma\/([a-f0-9]{32})\/?$/);
+  if (m) return confirmReceipt(request, env, m[1]);
+
   m = p.match(/^\/c\/([a-f0-9]{32})\/?$/);
   if (m) {
     const s = await staffSession(request, env);
@@ -166,13 +169,13 @@ async function doCheckin(env, token, undo, s) {
 async function stats(env) {
   await ensureTokens(env);
   const t = await env.DB.prepare(
-    "SELECT SUM(CASE WHEN status='confirmat' THEN 1 ELSE 0 END) AS inscrisi, SUM(CASE WHEN prezent_la IS NOT NULL THEN 1 ELSE 0 END) AS prezenti, SUM(CASE WHEN status='asteptare' THEN 1 ELSE 0 END) AS asteptare FROM inscrieri WHERE eveniment=?"
+    "SELECT SUM(CASE WHEN status='confirmat' THEN 1 ELSE 0 END) AS inscrisi, SUM(CASE WHEN prezent_la IS NOT NULL THEN 1 ELSE 0 END) AS prezenti, SUM(CASE WHEN status='asteptare' THEN 1 ELSE 0 END) AS asteptare, SUM(CASE WHEN status='confirmat' AND primire_confirmata IS NOT NULL THEN 1 ELSE 0 END) AS confirmari, SUM(CASE WHEN status='confirmat' AND invitatie_trimisa IS NOT NULL AND invitatie_trimisa NOT LIKE 'exclus%' AND invitatie_trimisa NOT LIKE 'eroare%' THEN 1 ELSE 0 END) AS trimise FROM inscrieri WHERE eveniment=?"
   ).bind(EVENT).first();
   const last = await env.DB.prepare(
     "SELECT nume, companie, prezent_la, prezent_de, token FROM inscrieri WHERE eveniment=? AND prezent_la IS NOT NULL ORDER BY prezent_la DESC LIMIT 12"
   ).bind(EVENT).all();
   return json({
-    inscrisi: (t && t.inscrisi) || 0, prezenti: (t && t.prezenti) || 0, asteptare: (t && t.asteptare) || 0,
+    inscrisi: (t && t.inscrisi) || 0, confirmari: (t && t.confirmari) || 0, trimise: (t && t.trimise) || 0, prezenti: (t && t.prezenti) || 0, asteptare: (t && t.asteptare) || 0,
     ultimii: (last.results || []).map((r) => ({ nume: r.nume, companie: r.companie, ora: oraRo(r.prezent_la), de: r.prezent_de, token: r.token })),
   });
 }
@@ -184,29 +187,29 @@ async function search(env, q) {
   const like = "%" + q.replace(/[%_]/g, "") + "%";
   const digits = q.replace(/\D/g, "");
   const r = await env.DB.prepare(
-    "SELECT nume, email, telefon, companie, status, sursa, prezent_la, token FROM inscrieri WHERE eveniment=? AND (nume LIKE ? OR email LIKE ? OR companie LIKE ? OR (? <> '' AND replace(replace(replace(telefon,' ',''),'+',''),'-','') LIKE ?)) ORDER BY nume LIMIT 15"
+    "SELECT nume, email, telefon, companie, status, sursa, prezent_la, primire_confirmata, token FROM inscrieri WHERE eveniment=? AND (nume LIKE ? OR email LIKE ? OR companie LIKE ? OR (? <> '' AND replace(replace(replace(telefon,' ',''),'+',''),'-','') LIKE ?)) ORDER BY nume LIMIT 15"
   ).bind(EVENT, like, like, like, digits.length >= 4 ? digits : "", "%" + digits + "%").all();
   return json({
     rezultate: (r.results || []).map((x) => ({
       nume: x.nume, email: x.email, telefon: x.telefon, companie: x.companie, status: x.status,
-      vip: (x.sursa || "").includes("VIP"), prezent: !!x.prezent_la, ora: oraRo(x.prezent_la), token: x.token,
+      vip: (x.sursa || "").includes("VIP"), prezent: !!x.prezent_la, ora: oraRo(x.prezent_la), confirmat: !!x.primire_confirmata, token: x.token,
     })),
   });
 }
 
 async function exportCsv(env) {
   const r = await env.DB.prepare(
-    "SELECT nume,email,telefon,companie,functie,profil,status,sursa,creat,prezent_la,prezent_de FROM inscrieri WHERE eveniment=? ORDER BY nume"
+    "SELECT nume,email,telefon,companie,functie,profil,status,sursa,creat,invitatie_trimisa,primire_confirmata,prezent_la,prezent_de FROM inscrieri WHERE eveniment=? ORDER BY nume"
   ).bind(EVENT).all();
   const cell = (v) => {
     let s = String(v == null ? "" : v);
     if (/^[=+\-@]/.test(s)) s = "'" + s;
     return '"' + s.replace(/"/g, '""') + '"';
   };
-  const head = ["Nume", "Email", "Telefon", "Companie", "Funcție", "Profil", "Status", "Sursa", "Înscris la (UTC)", "Prezent", "Ora intrării", "Confirmat de"];
+  const head = ["Nume", "Email", "Telefon", "Companie", "Funcție", "Profil", "Status", "Sursa", "Înscris la (UTC)", "Invitație trimisă (UTC)", "Primire confirmată (UTC)", "Prezent", "Ora intrării", "Confirmat de"];
   const lines = [head.map(cell).join(";")];
   for (const x of r.results || []) {
-    lines.push([x.nume, x.email, x.telefon, x.companie, x.functie, x.profil, x.status, x.sursa, x.creat,
+    lines.push([x.nume, x.email, x.telefon, x.companie, x.functie, x.profil, x.status, x.sursa, x.creat, x.invitatie_trimisa, x.primire_confirmata,
       x.prezent_la ? "DA" : "NU", oraRo(x.prezent_la), x.prezent_de].map(cell).join(";"));
   }
   return new Response("﻿" + lines.join("\r\n"), {
@@ -273,7 +276,7 @@ async function ticketPage(env, token) {
   const T = en
     ? { k: "Your entry ticket", h: "See you on 26 November", g: "PERSONAL TICKET", d: "DATE", dv: "Thursday, 26 November 2026", o: "TIME", l: "VENUE", lv: "CATTIA Brașov, Strada Institutului 35", q: "Show this code at the entrance. Save a screenshot so you have it offline.", w: "You are on the waiting list. We will confirm your seat as soon as one becomes available." }
     : { k: "Biletul tău de intrare", h: "Ne vedem pe 26 noiembrie", g: "BILET NOMINAL", d: "DATA", dv: "Joi, 26 noiembrie 2026", o: "ORA", l: "LOCAȚIA", lv: "CATTIA Brașov, Strada Institutului 35", q: "Arată acest cod la intrare. Salvează o captură de ecran, ca să îl ai și fără internet.", w: "Ești pe lista de așteptare. Îți confirmăm locul imediat ce se eliberează unul." };
-  if (row.status !== "confirmat") {
+  if (row.status !== "confirmat" && row.status !== "test") {
     return html(shell("Listă de așteptare", `<p class="k">${T.k}</p><h1>${esc(row.nume)}</h1><div class="card"><p class="muted">${T.w}</p></div>`));
   }
   const inner = `<p class="k">${T.k}</p><h1>${T.h}</h1>
@@ -292,7 +295,7 @@ async function scanPage(env, token, s) {
   const vip = await isVip(env, row);
   const info = `<p class="name" style="color:#fff">${esc(row.nume)}</p>${row.companie ? `<p class="muted">${esc(row.companie)}</p>` : ""}${vip ? '<span class="vip">ACCES VIP</span>' : ""}`;
   let inner;
-  if (row.status !== "confirmat") {
+  if (row.status !== "confirmat" && row.status !== "test") {
     inner = `<div class="state s-warn"><p class="k" style="color:#fff">LISTĂ DE AȘTEPTARE</p>${info}<p class="muted mt">Persoana nu are loc confirmat.</p></div>`;
   } else if (row.prezent_la) {
     inner = `<div class="state s-warn"><p class="k" style="color:#fff">INVITAȚIE DEJA FOLOSITĂ</p>${info}<p class="muted mt">Intrare confirmată la ora <b>${oraRo(row.prezent_la)}</b>${row.prezent_de ? ` de ${esc(row.prezent_de)}` : ""}.</p></div>`;
@@ -318,10 +321,36 @@ ${err ? '<div class="err">PIN greșit sau prea multe încercări. Încearcă din
 function dashboardPage(s) {
   return html(shell("Check-in Beyond the Initiative", `<p class="k">Panoul echipei</p><h1>Check-in</h1>
 <div class="card"><div class="row"><div><p class="lab">AU INTRAT</p><p class="big" id="pz">0</p></div><div><p class="lab">ÎNSCRIȘI</p><p class="big" id="ins" style="color:#B9BBD6">0</p></div></div>
-<div class="bar"><i id="bar" style="width:0"></i></div><p class="muted mt" id="upd">Se actualizează automat.</p></div>
+<div class="bar"><i id="bar" style="width:0"></i></div>
+<div class="row mt"><div><p class="lab">INVITAȚII TRIMISE</p><p class="val" style="color:#fff" id="tr">0</p></div><div><p class="lab">AU CONFIRMAT PRIMIREA</p><p class="val" style="color:#fff" id="cf">0</p></div></div><p class="muted mt" id="upd">Se actualizează automat.</p></div>
 <div class="card mt"><p class="lab">CAUTĂ DUPĂ NUME, EMAIL SAU TELEFON</p><input id="q" class="mt" placeholder="ex. Popescu" autocomplete="off" enterkeyhint="search"><div id="rez"></div></div>
 <div class="card mt"><p class="lab">ULTIMELE INTRĂRI</p><div id="ult"><p class="muted mt">Nimeni încă.</p></div></div>
 <a class="btn b-ghost mt" href="/api/echipa/export.csv">Descarcă lista de prezență (Excel)</a>
 <form method="POST" action="/api/echipa/logout"><button class="btn b-ghost mt" type="submit">Deconectare (${esc(s.who)})</button></form>`,
     `<script src="/assets/js/echipa.js"></script>`));
+}
+
+// ---------- confirmarea primirii invitației (butonul din email) ----------
+// GET afișează pagina, iar confirmarea se face prin POST (din buton sau automat, prin assets/js/confirma.js),
+// ca scanerele de linkuri ale unor servere de email să nu confirme în locul persoanei.
+async function confirmReceipt(request, env, token) {
+  const row = await findByToken(env, token);
+  if (!row) return html(shell("Invitație negăsită", `<h1>Invitația nu a fost găsită</h1><p class="muted">Verificați linkul primit sau scrieți-ne la contact@jci-brasov.com.</p>`), 404);
+  const en = row.limba === "en";
+  if (request.method === "POST") {
+    if (!sameOrigin(request)) return new Response("Forbidden", { status: 403 });
+    await env.DB.prepare("UPDATE inscrieri SET primire_confirmata=datetime('now') WHERE id=? AND primire_confirmata IS NULL").bind(row.id).run();
+    return Response.redirect(new URL(`/confirma/${token}`, request.url).toString(), 303);
+  }
+  const done = !!row.primire_confirmata || (await env.DB.prepare("SELECT primire_confirmata FROM inscrieri WHERE id=?").bind(row.id).first()).primire_confirmata;
+  const T = en
+    ? { k: "Beyond the Initiative", h1: "Thank you, see you on 26 November", p: "We have recorded that you received your invitation. Your seat is confirmed.", h0: "Confirm receipt of your invitation", b: "I confirm I received the invitation", t: "Open your QR ticket", i: "Thursday, 26 November 2026, 17:00, CATTIA Brașov, Strada Institutului 35" }
+    : { k: "Beyond the Initiative", h1: "Vă mulțumim, ne vedem pe 26 noiembrie", p: "Am înregistrat că ați primit invitația. Locul dumneavoastră este confirmat.", h0: "Confirmați primirea invitației", b: "Confirm primirea invitației", t: "Deschideți biletul cu cod QR", i: "Joi, 26 noiembrie 2026, ora 17:00, CATTIA Brașov, Strada Institutului 35" };
+  const inner = done
+    ? `<p class="k">${T.k}</p><h1>${T.h1}</h1><div class="state s-ok"><p class="name" style="color:#fff">${esc(row.nume)}</p><p class="muted mt">${T.p}</p></div>
+<p class="muted mt">${T.i}</p><a class="btn b-blue mt" href="/bilet/${token}">${T.t}</a>`
+    : `<p class="k">${T.k}</p><h1>${T.h0}</h1><div class="card"><p class="name" style="color:#fff">${esc(row.nume)}</p><p class="muted mt">${T.i}</p></div>
+<form method="POST" action="/confirma/${token}" id="cf-form"><button class="btn b-green mt" type="submit">${T.b}</button></form>
+<a class="btn b-ghost mt" href="/bilet/${token}">${T.t}</a>`;
+  return html(shell(en ? "Confirm receipt" : "Confirmare invitație", inner, done ? "" : `<script src="/assets/js/confirma.js"></script>`));
 }

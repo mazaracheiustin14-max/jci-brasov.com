@@ -42,6 +42,7 @@
     }).then(function (j) {
       if (!j) return;
       $("pz").textContent = j.prezenti; $("ins").textContent = j.inscrisi;
+      if ($("tr")) { $("tr").textContent = j.trimise; $("cf").textContent = j.confirmari; }
       $("bar").style.width = (j.inscrisi ? Math.min(100, Math.round(100 * j.prezenti / j.inscrisi)) : 0) + "%";
       $("upd").textContent = "Actualizat la " + new Date().toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) + (j.asteptare ? ". Pe lista de așteptare: " + j.asteptare : "");
       $("ult").innerHTML = j.ultimii.length ? j.ultimii.map(function (x) {
@@ -56,7 +57,7 @@
     if (q.length < 2) { $("rez").innerHTML = ""; return; }
     fetch("/api/echipa/cauta?q=" + encodeURIComponent(q), { credentials: "same-origin", cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
       $("rez").innerHTML = j.rezultate.length ? j.rezultate.map(function (x) {
-        var meta = [x.companie, x.telefon, x.status === "asteptare" ? "listă de așteptare" : "", x.vip ? "VIP" : ""].filter(Boolean).map(esc).join(", ");
+        var meta = [x.companie, x.telefon, x.status === "asteptare" ? "listă de așteptare" : "", x.vip ? "VIP" : "", x.confirmat ? "a confirmat primirea" : ""].filter(Boolean).map(esc).join(", ");
         var act = x.prezent ? '<span class="ok">Intrat ' + esc(x.ora) + "</span>"
           : (x.status === "confirmat" ? '<button data-in="' + esc(x.token) + '">Confirmă</button>' : "");
         return '<div class="res"><span><b>' + esc(x.nume) + "</b><small>" + meta + "</small></span>" + act + "</div>";
