@@ -229,9 +229,9 @@ var ft=document.querySelector('footer');if(ft&&ft.getBoundingClientRect().top<wi
 window.addEventListener('scroll',upd,{passive:true});upd();})();</script>
 <script>(function(){var els=document.querySelectorAll('[data-stats]');if(!els.length)return;
 fetch('/api/stats',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
-els.forEach(function(el){if(d.count>=20){el.querySelectorAll('[data-stat="count"]').forEach(function(e){e.textContent=d.count});
+els.forEach(function(el){if(d.count>=0){el.querySelectorAll('[data-stat="count"]').forEach(function(e){e.textContent=d.count});
 el.querySelectorAll('[data-stat="left"]').forEach(function(e){e.textContent=d.left});el.hidden=false;}
-var m=el.querySelector('.meter i');if(m&&d.count>=20)m.style.width=Math.min(100,Math.round(d.count/d.capacity*100))+'%';});
+var m=el.querySelector('.meter i');if(m&&d.count>=0)m.style.width=Math.min(100,Math.round(d.count/d.capacity*100))+'%';});
 if(d.closed){document.querySelectorAll('form[data-event]').forEach(function(f){f.querySelectorAll('input,select,textarea,button').forEach(function(x){x.disabled=true});var c=f.querySelector('.closed');if(c)c.hidden=false;});}
 }).catch(function(){});})();</script>
 <div id="jchat" data-hello="Bună! Te pot ajuta cu informații despre evenimentul din 26 noiembrie, sponsorizare, proiecte sau cum devii membru. Ce vrei să afli?" data-typing="Scrie…" data-err="Nu am putut trimite mesajul. Verifică conexiunea sau scrie-ne la contact@jci-brasov.com.">

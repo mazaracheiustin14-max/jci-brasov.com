@@ -136,9 +136,9 @@ form.signup .closed{background:#3A3200;color:#FFF3B8;border-radius:12px;padding:
 """
 JS_STATS="""<script>(function(){var els=document.querySelectorAll('[data-stats]');if(!els.length)return;
 fetch('/api/stats',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
-els.forEach(function(el){if(d.count>=20){el.querySelectorAll('[data-stat="count"]').forEach(function(e){e.textContent=d.count});
+els.forEach(function(el){if(d.count>=0){el.querySelectorAll('[data-stat="count"]').forEach(function(e){e.textContent=d.count});
 el.querySelectorAll('[data-stat="left"]').forEach(function(e){e.textContent=d.left});el.hidden=false;}
-var m=el.querySelector('.meter i');if(m&&d.count>=20)m.style.width=Math.min(100,Math.round(d.count/d.capacity*100))+'%';});
+var m=el.querySelector('.meter i');if(m&&d.count>=0)m.style.width=Math.min(100,Math.round(d.count/d.capacity*100))+'%';});
 if(d.closed){document.querySelectorAll('form[data-event]').forEach(function(f){f.querySelectorAll('input,select,textarea,button').forEach(function(x){x.disabled=true});var c=f.querySelector('.closed');if(c)c.hidden=false;});}
 }).catch(function(){});})();</script>"""
 def opt_list(items,first=None):
@@ -158,6 +158,7 @@ def sections(lang):
         <div class="field"><label for="i-tel">{t['f_tel']} <span class="req" aria-hidden="true">*</span></label><input id="i-tel" name="telefon" type="tel" required minlength="9" maxlength="40" autocomplete="tel" inputmode="tel"></div>
       </div>
       <div class="field"><label for="i-q">{t['f_q']}</label><textarea id="i-q" name="intrebare" rows="2" maxlength="1500" placeholder="{t['f_q_ph']}"></textarea></div>
+      <div class="field"><label for="i-src">{t['f_src']} <span class="req" aria-hidden="true">*</span></label><select id="i-src" name="sursa" required>{opt_list(t['src'],t['prof0'])}</select></div>
       <details class="more"><summary>{t['more']}</summary>
       <div class="row2">
         <div class="field"><label for="i-comp">{t['f_comp']} <span class="optl">({t['opt']})</span></label><input id="i-comp" name="companie" maxlength="160" autocomplete="organization"></div>
@@ -165,7 +166,6 @@ def sections(lang):
       </div>
       <div class="row2">
         <div class="field"><label for="i-prof">{t['f_prof']}</label><select id="i-prof" name="profil">{opt_list(t['prof'],t['prof0'])}</select></div>
-        <div class="field"><label for="i-src">{t['f_src']}</label><select id="i-src" name="sursa">{opt_list(t['src'],t['prof0'])}</select></div>
       </div>
       </details>
       <label class="check"><input type="checkbox" name="acord" value="da" required><span>{t['acord']}</span></label>

@@ -24,16 +24,15 @@
       if (v.left <= 0) { b.setAttribute('aria-disabled', 'true'); b.textContent = en ? 'VIP seats sold out' : 'Locurile VIP s-au epuizat'; b.removeAttribute('href'); }
     });
   }
-  // Raportul biletelor nominale: emise din 150 și confirmări de venire
-  function tickets(t) {
-    if (!t || typeof t.total !== 'number') return;
-    document.querySelectorAll('[data-tk="issued"]').forEach(function (e) { e.textContent = t.issued; });
-    document.querySelectorAll('[data-tk="conf"]').forEach(function (e) { e.textContent = t.confirmed; });
-    document.querySelectorAll('[data-tk="bar"]').forEach(function (e) { e.style.width = Math.min(100, t.issued * 100 / t.total) + '%'; });
-    document.querySelectorAll('[data-tk="cbar"]').forEach(function (e) { e.style.width = Math.min(100, t.confirmed * 100 / t.total) + '%'; });
+  // Caseta de înscrieri în timp real din cardul „Acces gratuit”
+  function tickets(d) {
+    if (!d || typeof d.capacity !== 'number') return;
+    document.querySelectorAll('[data-tk="count"]').forEach(function (e) { e.textContent = d.count; });
+    document.querySelectorAll('[data-tk="left"]').forEach(function (e) { e.textContent = d.left; });
+    document.querySelectorAll('[data-tk="bar"]').forEach(function (e) { e.style.width = Math.min(100, d.count * 100 / d.capacity) + '%'; });
   }
   function load() {
-    fetch('/api/stats', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) { apply(d.vip); tickets(d.tickets); }).catch(function () {});
+    fetch('/api/stats', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) { apply(d.vip); tickets(d); }).catch(function () {});
   }
   function start() { if (!timer) { load(); timer = setInterval(load, 15000); } }
   function stop() { clearInterval(timer); timer = null; }

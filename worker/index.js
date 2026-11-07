@@ -201,18 +201,9 @@ async function handleStats(request, env, ctx) {
     const v = await env.DB.prepare("SELECT COUNT(*) AS n, MAX(creat) AS last FROM vip WHERE eveniment = ?").bind(EVENT).first();
     vipSold = (v && v.n) || 0; vipLast = (v && v.last) || null;
   } catch (e) { /* tabelul vip apare la prima plată */ }
-  // Biletele nominale emise (invitații trimise pe email) și confirmările de venire (butonul din email)
-  let issued = 0, confirmed = 0;
-  try {
-    const b = await env.DB.prepare(
-      "SELECT SUM(CASE WHEN invitatie_trimisa IS NOT NULL AND invitatie_trimisa NOT LIKE 'exclus%' AND invitatie_trimisa NOT LIKE 'eroare%' THEN 1 ELSE 0 END) AS i, SUM(CASE WHEN primire_confirmata IS NOT NULL THEN 1 ELSE 0 END) AS c FROM inscrieri WHERE eveniment=? AND status='confirmat'"
-    ).bind(EVENT).first();
-    issued = (b && b.i) || 0; confirmed = (b && b.c) || 0;
-  } catch (e) { /* coloanele apar odată cu sistemul de invitații */ }
   const sold = Math.min(VIP_TOTAL, VIP_PRESOLD + vipSold);
   const body = { count, capacity: CAPACITY, left: Math.max(0, CAPACITY - count), closed: Date.now() > DEADLINE, deadline: new Date(DEADLINE).toISOString(),
-    vip: { total: VIP_TOTAL, sold, left: VIP_TOTAL - sold, last: vipLast },
-    tickets: { total: CAPACITY, issued, confirmed } };
+    vip: { total: VIP_TOTAL, sold, left: VIP_TOTAL - sold, last: vipLast } };
   const res = new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=10" } });
   if (ctx && ctx.waitUntil) ctx.waitUntil(cache.put(key, res.clone()));
   return res;
@@ -240,6 +231,7 @@ async function handleEventSignup(request, env, ctx) {
   if (!EMAIL_RE.test(f.email)) return fail(en ? "Please enter a valid email address." : "Adresa de email nu este validă.");
   if (f.telefon.replace(/\D/g, "").length < 9) return fail(en ? "Please enter a valid phone number." : "Numărul de telefon nu este valid.");
   if (f.profil && !PROFILES.includes(f.profil)) f.profil = "";
+  if (!f.sursa) return fail(en ? "Please tell us how you heard about the event." : "Vă rugăm să alegeți de unde ați aflat de eveniment.");
   for (const k of ["nume", "companie", "functie", "intrebare", "sursa"]) f[k] = noFormula(f[k]);
   if (!data.get("acord")) return fail(en ? "Please accept the data processing terms." : "Este necesar acordul pentru prelucrarea datelor.");
   if (Date.now() > DEADLINE) return Response.redirect(`${base}/inscriere-confirmata?s=inchis`, 303);

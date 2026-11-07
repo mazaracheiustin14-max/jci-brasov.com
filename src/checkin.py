@@ -39,8 +39,8 @@ for rel, (tag, h, p, btn) in TEAM.items():
 
 # ---- Raportul biletelor nominale în cardul „Acces gratuit” (RO/EN), citit de assets/js/vip.js din /api/stats ----
 BOX = {
-  'eveniment.html': ('bilete emise din 150', 'au confirmat venirea', 'Actualizat în timp real', '#rezerva">Înscrie-te gratuit'),
-  'en/eveniment.html': ('tickets issued of 150', 'confirmed attendance', 'Updated in real time', '#rezerva">Register for free'),
+  'eveniment.html': ('înscriși din 150', 'locuri rămase', 'Actualizat în timp real', '#rezerva">Înscrie-te gratuit'),
+  'en/eveniment.html': ('registered of 150', 'seats left', 'Updated in real time', '#rezerva">Register for free'),
 }
 CSS = ('<style>.tk-live{background:rgba(0,151,215,.08)!important;border-color:rgba(0,151,215,.3)!important}'
        '.tk-live .vl-top b{color:#7FD3F7!important}.tk-live .meter{position:relative}'
@@ -53,8 +53,8 @@ for rel, (a, b, live, anchor) in BOX.items():
     if 'data-ticketbox' in s:
         continue
     box = (CSS + '<div class="vip-live tk-live" data-ticketbox><div class="vl-top">'
-           f'<span><b data-tk="issued">0</b> {a}</span><span><b data-tk="conf">0</b> {b}</span></div>'
-           '<div class="meter"><i class="iss" data-tk="bar" style="width:0"></i><i class="cnf" data-tk="cbar" style="width:0"></i></div>'
+           f'<span><b data-tk="count">0</b> {a}</span><span><b data-tk="left">150</b> {b}</span></div>'
+           '<div class="meter"><i class="cnf" data-tk="bar" style="width:0"></i></div>'
            f'<div class="vl-foot"><span class="vip-dot">{live}</span></div></div>')
     key = '<div class="sp"></div><a class="btn btn-ghost" href="' + anchor
     assert key in s, rel
