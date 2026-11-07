@@ -78,8 +78,8 @@ export function buildEmail(row, cid = false) {
     hi: `Dear ${nume},`,
     p1: "Thank you for registering for <b>Beyond the Initiative</b>, the evening on which JCI Brașov becomes a full member organisation of JCI Romania. Your seat is confirmed.",
     kd: "DATE", vd: "Thursday, 26 November 2026", ko: "TIME", vo: "17:00", kl: "VENUE", vl: "CATTIA Brașov, Strada Institutului 35",
-    prog: "Two panels with leaders from business and public administration, two Blitz Networking sessions and at least 24 new business contacts.",
-    qrt: "Your personal check-in code", qrp: "Show this code at check-in. It is personal and valid once.",
+    pk: "WHAT AWAITS YOU", p1n: "2", p1l: "panels with business and public sector leaders", p2n: "2", p2l: "Blitz Networking sessions", p3n: "24+", p3l: "new business contacts", prog: "Two panels with leaders from business and public administration, two Blitz Networking sessions and at least 24 new business contacts.",
+    qrt: "Check-in code", qrp: "Show this code at check-in. It is personal and valid once.",
     btn: "Open your ticket", cbtn: "I confirm I received the invitation", cnote: "One click lets us know the invitation reached you.", hill: "Everything offered at the Hillden stand is free. Drinks from the bar are paid separately.",
     tip: "Bring business cards and prepare a one-minute introduction of your work.",
     sign: "We look forward to welcoming you,", role: "President, JCI Brașov",
@@ -90,9 +90,9 @@ export function buildEmail(row, cid = false) {
     hi: `Bună ziua, ${nume},`,
     p1: "Vă mulțumim pentru înscrierea la <b>Beyond the Initiative</b>, seara în care JCI Brașov devine organizație cu drepturi depline în JCI România. Locul dumneavoastră este confirmat.",
     kd: "DATA", vd: "Joi, 26 noiembrie 2026", ko: "ORA", vo: "17:00", kl: "LOCAȚIA", vl: "CATTIA Brașov, Strada Institutului 35",
-    prog: "Două paneluri cu lideri din mediul de afaceri și din administrație, două sesiuni de Blitz Networking și cel puțin 24 de contacte noi de business.",
-    qrt: "Codul dumneavoastră de check-in", qrp: "Prezentați acest cod la check-in. Este personal și valabil o singură dată.",
-    btn: "Deschideți biletul", cbtn: "Confirm primirea invitației", cnote: "Un singur clic ne arată că invitația a ajuns la dumneavoastră.", hill: "Tot ce se oferă la standul Hillden este gratuit. Consumația de la bar se achită separat.",
+    pk: "CE VĂ AȘTEAPTĂ", p1n: "2", p1l: "paneluri cu lideri din business și administrație", p2n: "2", p2l: "sesiuni de Blitz Networking", p3n: "24+", p3l: "contacte noi de business", prog: "Două paneluri cu lideri din mediul de afaceri și din administrație, două sesiuni de Blitz Networking și cel puțin 24 de contacte noi de business.",
+    qrt: "Codul check-in", qrp: "Prezentați acest cod la check-in. Este personal și valabil o singură dată.",
+    btn: "Deschideți biletul", cbtn: "Confirm primirea invitației", cnote: "Un singur click ne arată că invitația a ajuns la dumneavoastră.", hill: "Tot ce se oferă la standul Hillden este gratuit. Consumația de la bar se achită separat.",
     tip: "Vă recomandăm să aduceți cărți de vizită și să pregătiți o prezentare de un minut despre activitatea dumneavoastră.",
     sign: "Vă așteptăm cu drag,", role: "Președinte, JCI Brașov",
     foot: "Primiți acest email pentru că v-ați înscris la Beyond the Initiative pe jci-brasov.com.",
@@ -132,7 +132,13 @@ ${lab(en ? "PERSONAL TICKET" : "BILET NOMINAL")}<div style="${F};font-size:22px;
 <a href="${bilet}" style="display:inline-block;padding:14px 28px;${F};font-size:16px;font-weight:800;color:#FFFFFF;text-decoration:none">${L.btn}</a></td></tr></table>
 </td></tr>
 <tr><td style="padding:24px 32px 8px;${F};font-size:15px;line-height:1.6;color:#2A2F45">
-<p style="margin:0 0 12px">${L.prog}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#130F2D;border-radius:14px;margin:0 0 14px"><tr><td style="padding:18px 16px 16px">
+<div style="${F};font-size:11px;font-weight:800;letter-spacing:2px;color:#57BCBC;text-align:center;margin-bottom:12px">${L.pk}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+${[[L.p1n, L.p1l], [L.p2n, L.p2l], [L.p3n, L.p3l]].map(([n, l]) => `<td width="33%" valign="top" align="center" style="padding:0 6px">
+<div style="${F};font-size:30px;line-height:1;font-weight:800;color:#EFC40F">${n}</div>
+<div style="${F};font-size:12px;line-height:1.4;color:#E3E5EE;margin-top:6px">${l}</div></td>`).join("")}
+</tr></table></td></tr></table>
 <p style="margin:0 0 12px;background:#FFF8DC;border-radius:10px;padding:12px 14px"><b>Hillden:</b> ${L.hill}</p>
 <p style="margin:0 0 20px">${L.tip}</p>
 <p style="margin:0">${L.sign}<br><b>Iustin Mazarache</b><br>${L.role}</p></td></tr>
