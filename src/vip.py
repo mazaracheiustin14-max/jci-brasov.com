@@ -149,7 +149,7 @@ def home(l):
 
 JS = r'''// Contorul biletelor VIP (citește /api/stats la 15 secunde cât timp pagina e vizibilă)
 (function () {
-  var boxes = document.querySelectorAll('[data-vipbox]');
+  var boxes = document.querySelectorAll('[data-vipbox],[data-ticketbox]');
   if (!boxes.length) return;
   var en = (document.documentElement.lang || '').indexOf('en') === 0, prevLeft = null, timer = null;
   function ago(iso) {
@@ -173,8 +173,15 @@ JS = r'''// Contorul biletelor VIP (citește /api/stats la 15 secunde cât timp 
       if (v.left <= 0) { b.setAttribute('aria-disabled', 'true'); b.textContent = en ? 'VIP seats sold out' : 'Locurile VIP s-au epuizat'; b.removeAttribute('href'); }
     });
   }
+  // Caseta de înscrieri în timp real din cardul „Acces gratuit”
+  function tickets(d) {
+    if (!d || typeof d.capacity !== 'number') return;
+    document.querySelectorAll('[data-tk="count"]').forEach(function (e) { e.textContent = d.count; });
+    document.querySelectorAll('[data-tk="left"]').forEach(function (e) { e.textContent = d.left; });
+    document.querySelectorAll('[data-tk="bar"]').forEach(function (e) { e.style.width = Math.min(100, d.count * 100 / d.capacity) + '%'; });
+  }
   function load() {
-    fetch('/api/stats', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) { apply(d.vip); }).catch(function () {});
+    fetch('/api/stats', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) { apply(d.vip); tickets(d); }).catch(function () {});
   }
   function start() { if (!timer) { load(); timer = setInterval(load, 15000); } }
   function stop() { clearInterval(timer); timer = null; }
