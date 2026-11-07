@@ -145,7 +145,7 @@ if(location.hash==='#asistent')open();
 def run():
     for p in glob.glob(S + '*.html') + glob.glob(S + 'en/*.html'):
         s = open(p, encoding='utf8').read()
-        if 'id="jchat"' in s or '</body>' not in s:
+        if 'id="jchat"' in s or '</body>' not in s or p.endswith(('inscriere-confirmata.html', 'multumim.html')):
             continue
         t = T['en' if '/en/' in p else 'ro']
         s = s.replace('</head>', CSS + '\n</head>', 1)

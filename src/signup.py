@@ -189,29 +189,67 @@ CONF={'ro':dict(h='Locul tău este rezervat',lead='Mulțumim pentru înscriere. 
   asteptare=('Ești pe lista de așteptare','Sala este momentan plină. Te-am trecut pe lista de așteptare și te anunțăm imediat ce se eliberează un loc.'),
   deja=('Ești deja înscris','Avem deja o înscriere cu această adresă de email. Locul tău rămâne rezervat.'),
   inchis=('Înscrierile s-au închis','Termenul de înscriere a trecut. Scrie-ne la contact@jci-brasov.com și verificăm dacă mai sunt locuri disponibile.'),
-  back='Înapoi la pagina evenimentului',share='Invită un prieten: trimite-i linkul jci-brasov.com/eveniment'),
+  back='Înapoi la pagina evenimentului',share='Invită un prieten: trimite-i linkul jci-brasov.com/eveniment',
+  s1='Pasul 1',s1h='Salvează data în calendar',s1p='Primești automat o reamintire cu o zi înainte și cu două ore înainte de eveniment.',
+  ios='Adaugă în calendarul iPhone',mac='Adaugă în Calendar',gc='Adaugă în Google Calendar',other_ics='Outlook sau Apple Calendar',other_gc='Google Calendar',
+  auto='Deschidem calendarul în <b>3</b> secunde, ca să salvezi data.',stop='Nu acum',
+  s2='Pasul 2',s2h='Intră în comunitatea evenimentului',s3='Pasul 3',s3h='Cum ajungi',s3p='CATTIA Brașov, Strada Institutului 35. Primirea invitaților începe la ora 17:00.'),
  'en':dict(h='Your seat is reserved',lead='Thank you for registering. See you on Thursday, 26 November 2026, from 5:00 pm at CATTIA Brașov.',
   wa='Join the event community on WhatsApp, where we share the final programme, speakers and updates.',wab='Join the WhatsApp community',
   asteptare=('You are on the waiting list','The room is currently full. We have added you to the waiting list and will let you know as soon as a seat becomes available.'),
   deja=('You are already registered','We already have a registration with this email address. Your seat remains reserved.'),
   inchis=('Registration is closed','The registration deadline has passed. Email contact@jci-brasov.com and we will check whether seats are still available.'),
-  back='Back to the event page',share='Invite a friend: send them jci-brasov.com/en/eveniment')}
+  back='Back to the event page',share='Invite a friend: send them jci-brasov.com/en/eveniment',
+  s1='Step 1',s1h='Save the date in your calendar',s1p='You automatically get a reminder one day and two hours before the event.',
+  ios='Add to iPhone Calendar',mac='Add to Calendar',gc='Add to Google Calendar',other_ics='Outlook or Apple Calendar',other_gc='Google Calendar',
+  auto='Opening your calendar in <b>3</b> seconds so you can save the date.',stop='Not now',
+  s2='Step 2',s2h='Join the event community',s3='Step 3',s3h='How to get there',s3p='CATTIA Brașov, Strada Institutului 35. Doors open at 5:00 pm.')}
 def conf_page(lang):
     t=T[lang]; c=CONF[lang]; pre='en/' if lang=='en' else ''
     base=open(S+pre+'multumim.html',encoding='utf-8').read()
     i=base.index('<main'); j=base.index('</main>')+len('</main>')
     msgs=_json(dict(asteptare=c['asteptare'],deja=c['deja'],inchis=c['inchis']))
-    main=f'''<main id="main"><section class="section"><div class="wrap conf">
+    main=f'''<main id="main"><section class="section" style="padding-top:28px"><div class="wrap conf">
+  <style>.conf #c-h{{font-size:clamp(30px,7.5vw,56px);margin-bottom:10px}}.conf #c-p{{font-size:17px}}.conf .steps2{{margin-top:18px!important}}
+  .conf .steps2{{display:grid;gap:16px;max-width:620px;margin:28px auto 0;text-align:left}}
+  .conf .st2{{background:var(--card,#14113A);border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:22px 22px 20px}}
+  .conf .st2.main{{border:2px solid var(--blue,#0097D7);box-shadow:0 20px 60px -30px rgba(0,151,215,.7)}}
+  .conf .st2 small{{color:var(--teal,#57BCBC);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:12px}}
+  .conf .st2 h2{{font-size:20px;margin:6px 0 6px;text-transform:none;letter-spacing:0;text-align:left}}
+  .conf .st2 p{{margin:0 0 14px;color:var(--soft,#B9BBD6);font-size:15px}}
+  .conf .st2 .btn{{width:100%;justify-content:center;text-align:center}}
+  .conf .alt{{margin-top:10px;font-size:14px;color:var(--soft,#B9BBD6)}}.conf .alt a{{color:#7FD3F7}}
+  .conf .auto{{margin-top:12px;font-size:14px;color:#fff;background:rgba(0,151,215,.15);border-radius:10px;padding:10px 12px;display:none;align-items:center;justify-content:space-between;gap:10px}}
+  .conf .auto.on{{display:flex}}.conf .auto button{{background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap;flex:none}}</style>
   <span class="tag">Beyond the Initiative</span>
   <h1 class="as-h2" id="c-h">{c['h']}</h1>
   <p class="lead" id="c-p">{c['lead']}</p>
-  <p class="lead" style="font-size:17px">{c['wa']}</p>
-  <div class="cta-row" style="justify-content:center"><a class="btn btn-blue" href="{WA}" target="_blank" rel="noopener">{c['wab']}</a></div>
-  <div class="res-links"><a href="{GCAL}" target="_blank" rel="noopener">{t['cal']}: {t['gcal']}</a><a href="/assets/beyond-the-initiative.ics">{t['ics']}</a><a href="{MAPS}" target="_blank" rel="noopener">{t['map']}</a></div>
+  <div class="steps2">
+  <div class="st2 main" id="c-cal"><small>{c['s1']}</small><h2>{c['s1h']}</h2><p>{c['s1p']}</p>
+    <a class="btn btn-blue" id="cal-main" href="{GCAL}" target="_blank" rel="noopener" data-ics="/assets/beyond-the-initiative.ics" data-gc="{GCAL}" data-ios="{c['ios']}" data-mac="{c['mac']}" data-gctext="{c['gc']}">{c['gc']}</a>
+    <div class="alt" id="cal-alt"><a href="/assets/beyond-the-initiative.ics" data-k="ics">{c['other_ics']}</a></div>
+    <div class="auto" id="cal-auto" role="status"><span>{c['auto']}</span><button type="button" id="cal-stop">{c['stop']}</button></div>
+  </div>
+  <div class="st2" id="c-wa"><small>{c['s2']}</small><h2>{c['s2h']}</h2><p>{c['wa']}</p><a class="btn btn-blue" href="{WA}" target="_blank" rel="noopener">{c['wab']}</a></div>
+  <div class="st2"><small>{c['s3']}</small><h2>{c['s3h']}</h2><p>{c['s3p']}</p><div class="alt" style="margin-top:0"><a href="{MAPS}" target="_blank" rel="noopener">{t['map']}</a></div></div>
+  </div>
   <p class="lead" style="font-size:16px;margin-top:28px">{c['share']}</p>
   <p style="margin-top:20px"><a href="{'/en/' if lang=='en' else '/'}eveniment">{c['back']}</a></p>
 </div></section></main>
-<script>(function(){{var m={msgs};var s=new URLSearchParams(location.search).get('s');if(Object.prototype.hasOwnProperty.call(m,s)){{document.getElementById('c-h').textContent=m[s][0];document.getElementById('c-p').textContent=m[s][1];}}}})();</script>'''
+<script>(function(){{var m={msgs};var s=new URLSearchParams(location.search).get('s');
+var known=Object.prototype.hasOwnProperty.call(m,s);
+if(known&&s!=='deja'){{document.getElementById('c-h').textContent=m[s][0];document.getElementById('c-p').textContent=m[s][1];}}
+var cal=document.getElementById('c-cal');
+if(s==='asteptare'||s==='inchis'){{cal.style.display='none';if(s==='inchis')document.getElementById('c-wa').querySelector('small').style.display='none';return;}}
+var ua=navigator.userAgent,ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),mac=!ios&&/Macintosh/.test(ua),android=/Android/.test(ua);
+var b=document.getElementById('cal-main'),alt=document.getElementById('cal-alt');
+if(ios||mac){{b.href=b.dataset.ics;b.removeAttribute('target');b.textContent=ios?b.dataset.ios:b.dataset.mac;alt.innerHTML='<a href="'+b.dataset.gc+'" target="_blank" rel="noopener">{c['other_gc']}</a>';}}
+if(!(ios||android))return;
+var K='jci-cal-auto';try{{if(sessionStorage.getItem(K))return;sessionStorage.setItem(K,'1');}}catch(e){{}}
+var box=document.getElementById('cal-auto'),n=3,num=box.querySelector('b'),stop=false;box.classList.add('on');
+document.getElementById('cal-stop').addEventListener('click',function(){{stop=true;box.classList.remove('on');}});
+var iv=setInterval(function(){{if(stop){{clearInterval(iv);return;}}n--;num.textContent=n;if(n<=0){{clearInterval(iv);box.classList.remove('on');location.href=b.href;}}}},1000);
+}})();</script>'''
     out=base[:i]+main+base[j:]
     out=re.sub(r'<title>.*?</title>',f'<title>{t["conf_title"]}</title>',out,count=1)
     out=out.replace('multumim.html"','inscriere-confirmata.html"')
