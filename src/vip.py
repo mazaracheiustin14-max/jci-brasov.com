@@ -51,8 +51,8 @@ T = {
         tag='Bilet VIP', h2='Trăiește seara din primul rând',
         lead='Participarea gratuită îți asigură locul în sală. Biletul VIP îți oferă experiența completă: cel mai bun loc, acces direct la invitați și o seară gândită în detaliu.',
         free='Acces gratuit', cur='lei',
-        free_li=['Loc în sală, în limita celor 150 de locuri', 'Cele două paneluri ale serii', 'Sesiunile de Blitz Networking', 'Comunitatea evenimentului pe WhatsApp'],
-        free_btn='Înscrie-te gratuit', ribbon='Locuri limitate',
+        free_li=['Loc în sală, în limita celor 150 de locuri', 'Cele două paneluri ale serii', 'Sesiunile de Blitz Networking', 'Comunitatea evenimentului pe WhatsApp', 'Tot ce se oferă la standul Hillden'],
+        free_btn='Înscrie-te gratuit', free_bar='Consumația de la bar se achită separat.', ribbon='Locuri limitate',
         vip='Acces VIP', all='Tot ce include accesul gratuit, plus:',
         vip_li=['Locuri rezervate în primele rânduri', 'Întâlnire directă cu invitații din paneluri', 'Acces prioritar la sesiunile de networking', 'Degustare de vin și preparate culinare'],
         left='locuri VIP disponibile', sold='din %d ocupate' % TOTAL, live='Actualizat în timp real',
@@ -64,8 +64,8 @@ T = {
         tag='VIP ticket', h2='Experience the evening from the front row',
         lead='Free registration secures your seat in the room. The VIP ticket gives you the full experience: the best seats, direct access to the speakers and an evening curated in every detail.',
         free='Free access', cur='RON',
-        free_li=['A seat in the room, within the 150-seat capacity', 'Both panels of the evening', 'The Blitz Networking sessions', 'The event community on WhatsApp'],
-        free_btn='Register for free', ribbon='Limited seats',
+        free_li=['A seat in the room, within the 150-seat capacity', 'Both panels of the evening', 'The Blitz Networking sessions', 'The event community on WhatsApp', 'Everything offered at the Hillden stand'],
+        free_btn='Register for free', free_bar='Drinks from the bar are paid separately.', ribbon='Limited seats',
         vip='VIP access', all='Everything in free access, plus:',
         vip_li=['Reserved front-row seating', 'Direct meeting with the panel speakers', 'Priority access to the networking sessions', 'Wine and food tasting'],
         left='VIP seats available', sold='of %d taken' % TOTAL, live='Updated in real time',
@@ -82,8 +82,8 @@ def section(l):
     li = lambda xs: ''.join('<li>%s</li>' % x for x in xs)
     return ('<section class="section vip-sec" id="vip">' + CSS + '<div class="wrap">'
             '<span class="tag">%s</span><h2>%s</h2><p class="lead">%s</p><div class="vip-grid">' % (t['tag'], t['h2'], t['lead']) +
-            '<div class="vip-card"><small>%s</small><div class="price">0 <span>%s</span></div><ul>%s</ul><div class="sp"></div>'
-            '<a class="btn btn-ghost" href="#rezerva">%s</a></div>' % (t['free'], t['cur'], li(t['free_li']), t['free_btn']) +
+            '<div class="vip-card"><small>%s</small><div class="price">0 <span>%s</span></div><ul>%s</ul><p class="note">%s</p><div class="sp"></div>'
+            '<a class="btn btn-ghost" href="#rezerva">%s</a></div>' % (t['free'], t['cur'], li(t['free_li']), t['free_bar'], t['free_btn']) +
             '<div class="vip-card gold"><span class="vip-ribbon">%s</span><small>%s</small><div class="price">200 <span>%s</span></div>'
             '<ul><li class="all">%s</li>%s</ul>' % (t['ribbon'], t['vip'], t['cur'], t['all'], li(t['vip_li'])) +
             '<div class="vip-live" data-vipbox><div class="vl-top"><span><b data-vip="left">%d</b> %s</span><span><b data-vip="sold">%d</b> %s</span></div>'

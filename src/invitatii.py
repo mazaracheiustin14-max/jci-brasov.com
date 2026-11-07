@@ -25,17 +25,19 @@ body{{width:1080px;height:1350px;font-family:P,sans-serif;color:#fff;background:
 .tag{{font-size:20px;font-weight:700;letter-spacing:5px;color:#EFC40F;border:2px solid rgba(239,196,15,.55);padding:12px 22px;border-radius:999px}}
 .nm p:last-child{{font-size:46px!important;color:#1F4789;white-space:nowrap!important}}
 .nm{{min-width:0;padding-bottom:22px;border-bottom:2px solid #DDE3EE}}
-.k{{margin-top:56px;font-size:26px;font-weight:700;letter-spacing:7px;color:#57BCBC}}
-h1{{margin-top:20px;font-size:124px;line-height:.95;font-weight:800;letter-spacing:-2px}}
-.sub{{margin-top:28px;font-size:32px;line-height:1.4;color:#C9CDE0;width:860px}}
+.k{{margin-top:48px;font-size:26px;font-weight:700;letter-spacing:7px;color:#57BCBC}}
+h1{{margin-top:18px;font-size:116px;line-height:.95;font-weight:800;letter-spacing:-2px}}
+.sub{{margin-top:24px;margin-bottom:36px;font-size:32px;line-height:1.4;color:#C9CDE0;width:860px}}
 .sub b{{color:#fff;font-weight:700}}
 .ticket{{margin-top:auto;margin-bottom:0;display:flex;background:#F5F7FB;color:#130F2D;border-radius:26px;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.45)}}
 .main{{flex:1;min-width:0;padding:36px 44px;display:flex;flex-direction:column;gap:24px}}
 .row{{display:flex;gap:36px}}
 .f p:first-child{{font-size:17px;font-weight:800;letter-spacing:3px;color:#0097D7}}
 .f p:last-child{{font-size:34px;font-weight:800;margin-top:6px;white-space:nowrap}}
-.prog{{display:flex;gap:12px;flex-wrap:wrap}}
-.prog span{{font-size:19px;font-weight:700;color:#1F4789;background:#E3EAF5;padding:10px 16px;border-radius:10px}}
+.prog{{display:flex;gap:8px;flex-wrap:wrap}}
+.hn{{font-size:19px;line-height:1.4;color:#4A5068}}
+.hn b{{color:#130F2D}}
+.prog span{{font-size:17px;font-weight:700;color:#1F4789;background:#E3EAF5;padding:8px 12px;border-radius:10px}}
 .stub{{flex:0 0 250px;border-left:3px dashed #B9C2D6;padding:40px 30px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:12px;background:#1F4789;color:#fff;border-radius:0 26px 26px 0}}
 .stub .s1{{margin-top:6px;font-size:15px;font-weight:800;letter-spacing:3px;color:#EFC40F}}
 .qrbox{{background:#fff;border-radius:14px;padding:10px}}
@@ -63,6 +65,7 @@ h1{{margin-top:20px;font-size:124px;line-height:.95;font-weight:800;letter-spaci
    </div>
    <div class="f"><p>LOCAȚIA</p><p>CATTIA Brașov</p></div>
    <div class="prog"><span>2 paneluri</span><span>2 sesiuni Blitz Networking</span><span>24+ contacte noi</span></div>
+   <p class="hn">La standul <b>Hillden</b> totul este gratuit. Consumația de la bar se achită separat.</p>
   </div>
   <div class="stub"><div class="qrbox"><img src="data:image/svg+xml;base64,{qsvg}"></div><p class="s1">SCANAȚI LA INTRARE</p><p class="s3">Cod personal, valabil o singură dată</p></div>
   <div class="notch" style="top:-20px"></div><div class="notch" style="bottom:-20px"></div>

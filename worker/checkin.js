@@ -281,6 +281,7 @@ async function ticketPage(env, token) {
 <div class="grid2"><div><p class="lab">${T.d}</p><p class="val">${T.dv}</p></div><div><p class="lab">${T.o}</p><p class="val">17:00</p></div></div>
 <div class="mt"><p class="lab">${T.l}</p><p class="val">${T.lv}</p></div></div>
 <hr class="sep"><div class="qr"><div id="qr" data-url="https://jci-brasov.com/c/${token}" role="img" aria-label="Cod QR de intrare"></div><p>${T.q}</p></div></div>
+<p class="muted mt">${en ? "Everything offered at the Hillden stand is free. Drinks from the bar are paid separately." : "Tot ce se oferă la standul Hillden este gratuit. Consumația de la bar se achită separat."}</p>
 <a class="btn b-ghost mt" href="/assets/beyond-the-initiative.ics">${en ? "Add to calendar" : "Adaugă în calendar"}</a>`;
   return html(shell(en ? "Your ticket" : "Biletul tău", inner, `<script src="/assets/js/qrcode.js"></script><script src="/assets/js/bilet.js"></script>`));
 }
