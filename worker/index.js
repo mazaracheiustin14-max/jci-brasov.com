@@ -11,6 +11,11 @@ const FORMSUBMIT = "https://formsubmit.co/ajax/contact@jci-brasov.com";
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // O singură adresă oficială: www.jci-brasov.com și jci-brasov.ro (când e atașat) trimit permanent către jci-brasov.com
+    const host = url.hostname.toLowerCase();
+    if (host === "www.jci-brasov.com" || host === "jci-brasov.ro" || host === "www.jci-brasov.ro") {
+      return Response.redirect("https://jci-brasov.com" + url.pathname + url.search, 301);
+    }
     if (url.pathname.startsWith("/api/")) {
       const tooBig = Number(request.headers.get("Content-Length") || 0) > (url.pathname === "/api/chat" ? 24000 : 64000);
       if (tooBig) return new Response("Payload Too Large", { status: 413 });
