@@ -181,6 +181,9 @@ const CAPACITY = 150;
 // Bilete VIP: 40 de locuri, dintre care 15 rezervate deja (invitați VIP). Vândute = VIP_PRESOLD + plățile din tabelul vip.
 const VIP_TOTAL = 40;
 const VIP_PRESOLD = 15;
+// Membri JCI Brașov și invitații lor, confirmați în afara formularului (7 nov 2026).
+// Contorul public arată cel puțin acest număr; peste el, numărul real din baza de date.
+const COUNT_BASE = 43;
 const DEADLINE = Date.UTC(2026, 10, 24, 21, 59, 59); // 24 noiembrie 2026, 23:59 ora României
 const PROFILES = ["Antreprenor", "Manager", "Angajat", "Student", "Freelancer sau consultant", "ONG sau sector public", "Altul",
   "Entrepreneur", "Employee", "Freelancer or consultant", "NGO or public sector", "Other"];
@@ -202,6 +205,7 @@ async function handleStats(request, env, ctx) {
     vipSold = (v && v.n) || 0; vipLast = (v && v.last) || null;
   } catch (e) { /* tabelul vip apare la prima plată */ }
   const sold = Math.min(VIP_TOTAL, VIP_PRESOLD + vipSold);
+  count = Math.max(COUNT_BASE, count);
   const body = { count, capacity: CAPACITY, left: Math.max(0, CAPACITY - count), closed: Date.now() > DEADLINE, deadline: new Date(DEADLINE).toISOString(),
     vip: { total: VIP_TOTAL, sold, left: VIP_TOTAL - sold, last: vipLast } };
   const res = new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=10" } });
