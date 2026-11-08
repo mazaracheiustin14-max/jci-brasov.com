@@ -62,6 +62,18 @@ async function isVip(env, row) {
     return !!v;
   } catch (e) { return false; }
 }
+// Numărul de serie al biletului VIP: locurile 01–15 sunt rezervate invitaților VIP (VIP_PRESOLD din index.js),
+// cumpărătorii din Stripe primesc 16, 17, ... în ordinea plății. Fără plată în tabelul vip → fără număr.
+const VIP_PRESOLD = 15, VIP_TOTAL = 40;
+async function vipNumber(env, row) {
+  try {
+    const v = await env.DB.prepare("SELECT id FROM vip WHERE eveniment=? AND lower(email)=lower(?) ORDER BY id LIMIT 1").bind(EVENT, row.email).first();
+    if (!v) return null;
+    const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM vip WHERE eveniment=? AND id<=?").bind(EVENT, v.id).first();
+    const n = VIP_PRESOLD + ((r && r.n) || 1);
+    return n <= VIP_TOTAL ? n : null;
+  } catch (e) { return null; }
+}
 
 // ---------- sesiunea echipei ----------
 function readCookie(request, name) {
@@ -258,12 +270,44 @@ input:focus{outline:2px solid #0097D7;border-color:transparent}
 .state{border-radius:22px;padding:26px;text-align:center}
 .s-ok{background:#123D2B;border:2px solid #1FA463}.s-warn{background:#47181C;border:2px solid #D64545}.s-wait{background:#1B1745;border:2px solid #0097D7}
 .err{background:#47181C;border:1px solid #D64545;border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:14px}
+body.vipb{background-color:#0B0920;background-image:radial-gradient(600px 420px at 85% 0,rgba(239,196,15,.18),transparent 60%),radial-gradient(500px 400px at 0 100%,rgba(0,151,215,.18),transparent 60%),linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:auto,auto,44px 44px,44px 44px}
+.vipb .pill{color:#0B0920;border:0;background:linear-gradient(100deg,#B8860B,#EFC40F 40%,#FFF1A8 50%,#EFC40F 60%,#B8860B)}
+.vipb .k{color:#EFC40F}
+.vipb h1 em{font-style:normal;background:linear-gradient(100deg,#EFC40F,#FFF1A8,#EFC40F);-webkit-background-clip:text;background-clip:text;color:transparent}
+@property --a{syntax:'<angle>';initial-value:0deg;inherits:false}
+@keyframes vspin{to{--a:360deg}}
+.vt{position:relative;border-radius:24px;padding:2px;background:conic-gradient(from var(--a,0deg),#B8860B,#EFC40F,#FFF1A8,#EFC40F,#B8860B,#EFC40F,#B8860B);box-shadow:0 40px 90px -30px rgba(239,196,15,.45);animation:vspin 8s linear infinite}
+.vt-in{border-radius:22px;overflow:hidden;background:linear-gradient(160deg,#1E1A4D 0%,#130F2D 55%,#0E0B24 100%);position:relative}
+.vt .holo{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;opacity:.55;background:linear-gradient(115deg,transparent 30%,rgba(255,241,168,.25) 42%,rgba(87,188,188,.18) 50%,rgba(0,151,215,.15) 56%,transparent 68%);background-size:250% 250%;background-position:var(--hx,30%) var(--hy,30%)}
+.vt .hd{padding:24px 24px 20px;position:relative}
+.vt .r1{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.vt .lab{color:#EFC40F}
+.vt .no{text-align:right;flex:none}.vt .no b{display:block;font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}.vt .no small{font-size:12px;color:#A9ABC8;font-weight:600}
+.vt .name{color:#fff;font-size:30px;margin-top:6px}
+.vt .zone{display:inline-flex;align-items:center;gap:8px;margin-top:12px;background:rgba(239,196,15,.12);border:1px solid rgba(239,196,15,.45);color:#FFE27A;font-weight:700;font-size:13px;border-radius:999px;padding:6px 12px}
+.vt .zone i{width:8px;height:8px;border-radius:50%;background:#EFC40F;box-shadow:0 0 10px #EFC40F}
+.vt .lm{font-size:11px;font-weight:800;letter-spacing:.2em;color:#57BCBC}
+.vt .val{font-size:17px;font-weight:700}
+.vt .pk{margin:0 24px;padding:16px 0 4px;border-top:1px solid rgba(255,255,255,.1);position:relative}
+.vt .pk ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.vt .pk li{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px;font-size:13px;line-height:1.35;color:#E3E4F2}
+.vt .pk svg{display:block;width:22px;height:22px;margin-bottom:8px;stroke:#EFC40F;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.vt .cut{position:relative;height:30px;margin-top:18px}
+.vt .cut::before{content:"";position:absolute;left:22px;right:22px;top:50%;border-top:2px dashed rgba(239,196,15,.4)}
+.vt .cut span{position:absolute;top:0;width:30px;height:30px;border-radius:50%;background:#0B0920}
+.vt .cut .l{left:-17px}.vt .cut .r{right:-17px}
+.vt .vq{padding:6px 24px 26px;display:flex;flex-direction:column;align-items:center;gap:14px;position:relative}
+.vt .qb{background:#fff;border-radius:18px;padding:14px;box-shadow:0 0 0 3px rgba(239,196,15,.6),0 0 40px -6px rgba(239,196,15,.6)}
+.vt .qb #qr svg{width:210px;height:210px;display:block}
+.vt .vq p{font-size:13.5px;color:#B9BBD6;text-align:center;line-height:1.5}.vt .vq p b{color:#FFE27A}
+.vt .ft{display:flex;justify-content:space-between;padding:12px 24px;background:rgba(239,196,15,.08);font-size:11px;font-weight:800;letter-spacing:.2em;color:#EFC40F;position:relative}
+@media (prefers-reduced-motion:reduce){.vt{animation:none}}
 .bar{height:10px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden;margin-top:14px}.bar i{display:block;height:100%;background:linear-gradient(90deg,#0097D7,#57BCBC)}
 `;
-function shell(title, inner, scripts = "") {
+function shell(title, inner, scripts = "", bodyClass = "") {
   return `<!DOCTYPE html><html lang="ro"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#130F2D"><title>${esc(title)}</title>
-<link rel="icon" href="/assets/img/favicon-32.png"><style>${CSS}</style></head><body><div class="w">
+<link rel="icon" href="/assets/img/favicon-32.png"><style>${CSS}</style></head><body${bodyClass ? ` class="${bodyClass}"` : ""}><div class="w">
 <div class="top"><img src="/assets/img/logo-jci-brasov-invers.png" alt="JCI Brașov"><span class="pill">BEYOND THE INITIATIVE</span></div>
 ${inner}</div>${scripts}</body></html>`;
 }
@@ -279,6 +323,7 @@ async function ticketPage(env, token) {
   if (row.status !== "confirmat" && row.status !== "test") {
     return html(shell("Listă de așteptare", `<p class="k">${T.k}</p><h1>${esc(row.nume)}</h1><div class="card"><p class="muted">${T.w}</p></div>`));
   }
+  if (vip) return html(vipTicket(row, token, en, T, await vipNumber(env, row)));
   const inner = `<p class="k">${T.k}</p><h1>${T.h}</h1>
 <div class="t"><div class="in"><p class="lab">${T.g}</p><p class="name">${esc(row.nume)}</p>${vip ? '<span class="vip">ACCES VIP</span>' : ""}
 <div class="grid2"><div><p class="lab">${T.d}</p><p class="val">${T.dv}</p></div><div><p class="lab">${T.o}</p><p class="val">17:00</p></div></div>
@@ -287,6 +332,38 @@ async function ticketPage(env, token) {
 <p class="muted mt">${en ? "Everything offered at the Hillden stand is free. Drinks from the bar are paid separately." : "Tot ce se oferă la standul Hillden este gratuit. Consumația de la bar se achită separat."}</p>
 <a class="btn b-ghost mt" href="/assets/beyond-the-initiative.ics">${en ? "Add to calendar" : "Adaugă în calendar"}</a>`;
   return html(shell(en ? "Your ticket" : "Biletul tău", inner, `<script src="/assets/js/qrcode.js"></script><script src="/assets/js/bilet.js"></script>`));
+}
+
+// Biletul VIP: ramă aurie animată, strat holografic (assets/js/bilet-vip.js), număr de serie, beneficiile incluse.
+function vipTicket(row, token, en, T, no) {
+  const nn = no ? String(no).padStart(2, "0") : "";
+  const V = en
+    ? { k: "VIP invitation", h: "Your seat is <em>in the front row</em>", g: "PERSONAL VIP TICKET", of: "of " + VIP_TOTAL, z: "VIP area, front rows", inc: "WHAT YOUR TICKET INCLUDES",
+        p: ["Reserved seat in the front rows", "Meet the panel speakers in person", "Priority access to networking", "Wine and food tasting"],
+        q: "Show this code at the <b>VIP entrance</b>. Save a screenshot so you have it offline." }
+    : { k: "Invitație VIP", h: "Locul tău este <em>în primul rând</em>", g: "BILET VIP NOMINAL", of: "din " + VIP_TOTAL, z: "Zona VIP, primele rânduri", inc: "CE INCLUDE BILETUL TĂU",
+        p: ["Loc rezervat în primele rânduri", "Întâlnire directă cu invitații din paneluri", "Acces prioritar la networking", "Degustare de vin și preparate culinare"],
+        q: "Prezintă codul la <b>intrarea VIP</b>. Salvează o captură de ecran, ca să îl ai și fără internet." };
+  const ic = [
+    '<path d="M5 11V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4M3 11h18v5H3zM6 16v3M18 16v3"/>',
+    '<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 19c0-3 3-5 6-5s6 2 6 5M15 14.5c3 0 6 1.6 6 4.5"/>',
+    '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+    '<path d="M8 3h8l-1 7a3 3 0 0 1-6 0zM12 13v7M8 21h8"/>',
+  ];
+  const perks = V.p.map((t, i) => `<li><svg viewBox="0 0 24 24" aria-hidden="true">${ic[i]}</svg>${t}</li>`).join("");
+  const inner = `<p class="k">${V.k}</p><h1>${V.h}</h1>
+<div class="vt"><div class="vt-in"><div class="holo"></div>
+<div class="hd"><div class="r1"><div><p class="lab">${V.g}</p><p class="name">${esc(row.nume)}</p></div>${nn ? `<div class="no"><b>${nn}</b><small>${V.of}</small></div>` : ""}</div>
+<span class="zone"><i></i>${V.z}</span>
+<div class="grid2"><div><p class="lm">${T.d}</p><p class="val">${T.dv}</p></div><div><p class="lm">${T.o}</p><p class="val">17:00</p></div></div>
+<div class="mt"><p class="lm">${T.l}</p><p class="val">${T.lv}</p></div></div>
+<div class="pk"><p class="lab">${V.inc}</p><ul>${perks}</ul></div>
+<div class="cut"><span class="l"></span><span class="r"></span></div>
+<div class="vq"><div class="qb"><div id="qr" data-url="https://jci-brasov.com/c/${token}" role="img" aria-label="Cod QR de intrare"></div></div><p>${V.q}</p></div>
+<div class="ft"><span>LEAD CONNECT GROW</span><span>${nn ? "VIP " + nn : "VIP"}</span></div></div></div>
+<p class="muted mt">${en ? "Everything offered at the Hillden stand is free. Drinks from the bar are paid separately." : "Tot ce se oferă la standul Hillden este gratuit. Consumația de la bar se achită separat."}</p>
+<a class="btn b-ghost mt" href="/assets/beyond-the-initiative.ics">${en ? "Add to calendar" : "Adaugă în calendar"}</a>`;
+  return shell(en ? "Your VIP ticket" : "Biletul tău VIP", inner, `<script src="/assets/js/qrcode.js"></script><script src="/assets/js/bilet.js"></script><script src="/assets/js/bilet-vip.js"></script>`, "vipb");
 }
 
 async function scanPage(env, token, s) {
