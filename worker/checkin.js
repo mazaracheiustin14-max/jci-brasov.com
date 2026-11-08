@@ -211,17 +211,18 @@ async function search(env, q) {
 
 async function exportCsv(env) {
   const r = await env.DB.prepare(
-    "SELECT nume,email,telefon,companie,functie,profil,status,sursa,acord_bcr,creat,invitatie_trimisa,primire_confirmata,prezent_la,prezent_de FROM inscrieri WHERE eveniment=? ORDER BY nume"
+    "SELECT nume,email,telefon,companie,functie,profil,status,sursa,acord_bcr,creat,invitatie_trimisa,primire_confirmata,prezent_la,prezent_de FROM inscrieri WHERE eveniment=? ORDER BY primire_confirmata IS NULL, nume"
   ).bind(EVENT).all();
   const cell = (v) => {
     let s = String(v == null ? "" : v);
     if (/^[=+\-@]/.test(s)) s = "'" + s;
     return '"' + s.replace(/"/g, '""') + '"';
   };
-  const head = ["Nume", "Email", "Telefon", "Companie", "Funcție", "Profil", "Status", "Sursa", "Acord BCR", "Înscris la (UTC)", "Invitație trimisă (UTC)", "Primire confirmată (UTC)", "Prezent", "Ora intrării", "Confirmat de"];
+  const dataRo = (utc) => utc ? new Date(utc.replace(" ", "T") + "Z").toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+  const head = ["Nume", "Email", "A confirmat primirea emailului", "Confirmat la", "Telefon", "Companie", "Funcție", "Profil", "Status", "Sursa", "Acord BCR", "Înscris la", "Invitație trimisă", "Prezent", "Ora intrării", "Confirmat de"];
   const lines = [head.map(cell).join(";")];
   for (const x of r.results || []) {
-    lines.push([x.nume, x.email, x.telefon, x.companie, x.functie, x.profil, x.status, x.sursa, x.acord_bcr ? "DA" : "NU", x.creat, x.invitatie_trimisa, x.primire_confirmata,
+    lines.push([x.nume, x.email, x.primire_confirmata ? "DA" : "NU", dataRo(x.primire_confirmata), x.telefon, x.companie, x.functie, x.profil, x.status, x.sursa, x.acord_bcr ? "DA" : "NU", dataRo(x.creat), dataRo(x.invitatie_trimisa),
       x.prezent_la ? "DA" : "NU", oraRo(x.prezent_la), x.prezent_de].map(cell).join(";"));
   }
   return new Response("﻿" + lines.join("\r\n"), {
