@@ -199,17 +199,17 @@ async function search(env, q) {
 
 async function exportCsv(env) {
   const r = await env.DB.prepare(
-    "SELECT nume,email,telefon,companie,functie,profil,status,sursa,creat,invitatie_trimisa,primire_confirmata,prezent_la,prezent_de FROM inscrieri WHERE eveniment=? ORDER BY nume"
+    "SELECT nume,email,telefon,companie,functie,profil,status,sursa,acord_bcr,creat,invitatie_trimisa,primire_confirmata,prezent_la,prezent_de FROM inscrieri WHERE eveniment=? ORDER BY nume"
   ).bind(EVENT).all();
   const cell = (v) => {
     let s = String(v == null ? "" : v);
     if (/^[=+\-@]/.test(s)) s = "'" + s;
     return '"' + s.replace(/"/g, '""') + '"';
   };
-  const head = ["Nume", "Email", "Telefon", "Companie", "Funcție", "Profil", "Status", "Sursa", "Înscris la (UTC)", "Invitație trimisă (UTC)", "Primire confirmată (UTC)", "Prezent", "Ora intrării", "Confirmat de"];
+  const head = ["Nume", "Email", "Telefon", "Companie", "Funcție", "Profil", "Status", "Sursa", "Acord BCR", "Înscris la (UTC)", "Invitație trimisă (UTC)", "Primire confirmată (UTC)", "Prezent", "Ora intrării", "Confirmat de"];
   const lines = [head.map(cell).join(";")];
   for (const x of r.results || []) {
-    lines.push([x.nume, x.email, x.telefon, x.companie, x.functie, x.profil, x.status, x.sursa, x.creat, x.invitatie_trimisa, x.primire_confirmata,
+    lines.push([x.nume, x.email, x.telefon, x.companie, x.functie, x.profil, x.status, x.sursa, x.acord_bcr ? "DA" : "NU", x.creat, x.invitatie_trimisa, x.primire_confirmata,
       x.prezent_la ? "DA" : "NU", oraRo(x.prezent_la), x.prezent_de].map(cell).join(";"));
   }
   return new Response("﻿" + lines.join("\r\n"), {

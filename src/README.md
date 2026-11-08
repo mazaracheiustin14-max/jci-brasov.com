@@ -58,3 +58,10 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - Butonul „Confirm primirea invitației” din email duce la `/confirma/<cod>`; confirmarea se salvează prin POST (automat în browser, prin assets/js/confirma.js),
   în coloana `inscrieri.primire_confirmata`. Panoul /echipa arată invitațiile trimise și confirmările; exportul CSV le include.
 - Rânduri cu `status = 'test'`: primesc invitația (dacă adresa e în `invit_test`), au bilet valid, dar nu intră în numărul de înscriși.
+
+## Parteneri confirmați și acordul BCR (8 nov 2026)
+- `parteneri.py` (după deploy.py, vip.py și checkin.py, înainte de security.py): blocul „Partenerii evenimentului” pe pagina evenimentului (RO/EN),
+  cu BCR Asigurări (Partenerul Panelului I) și CATTIA Brașov (partener de locație); bifa opțională „Doresc să fiu contactat de BCR Asigurări”
+  în formularul de înscriere și întrebarea frecventă despre date actualizată.
+- D1: coloana nouă `inscrieri.acord_bcr` (0/1), salvată de `/api/inscriere`; exportul CSV din /checkin are coloana „Acord BCR”.
+  La BCR se transmit doar numele, emailul și telefonul celor cu `acord_bcr = 1`.

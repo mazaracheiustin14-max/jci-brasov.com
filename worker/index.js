@@ -246,9 +246,9 @@ async function handleEventSignup(request, env, ctx) {
     const n = await countRegistrations(env);
     if (n >= CAPACITY) status = "asteptare";
     const res = await env.DB.prepare(
-      "INSERT OR IGNORE INTO inscrieri (eveniment,nume,email,telefon,companie,functie,profil,intrebare,sursa,limba,acord_marketing,status,tara) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+      "INSERT OR IGNORE INTO inscrieri (eveniment,nume,email,telefon,companie,functie,profil,intrebare,sursa,limba,acord_marketing,acord_bcr,status,tara) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
     ).bind(EVENT, f.nume, f.email, f.telefon, f.companie, f.functie, f.profil, f.intrebare, f.sursa, en ? "en" : "ro",
-      data.get("acord_marketing") ? 1 : 0, status, (request.cf && request.cf.country) || null).run();
+      data.get("acord_marketing") ? 1 : 0, data.get("acord_bcr") ? 1 : 0, status, (request.cf && request.cf.country) || null).run();
     if (res.meta && res.meta.changes > 0 && status === "confirmat") {
       // Cod unic pentru biletul nominal cu QR (vezi worker/checkin.js)
       const tk = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, "0")).join("");
