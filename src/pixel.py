@@ -8,6 +8,7 @@ import glob, re, hashlib, os
 
 S = '/home/claude/jci-brasov.com/public/'
 SRC = os.path.dirname(os.path.abspath(__file__)) + '/'
+BANNER = False  # 9 nov 2026: banner scos temporar la cererea lui Iustin; pixelul pornește fără acord. True = varianta cu acord GDPR.
 EXCLUDE = ('p-',)  # previzualizări pentru alți clienți (ex. Dachkraft)
 
 
@@ -32,18 +33,19 @@ fbq('track', 'PageView', {}, {eventID: window.jciPv});
 
 
 def head_tags():
+    inline = INLINE if BANNER else re.sub(r"fbq\('consent', \(function.*?\)\(\)\);", "fbq('consent', 'grant');", INLINE, flags=re.S)
     # Codul de bază Meta, inline (ca să-l recunoască verificatorul Meta), blocat cu fbq('consent','revoke') până la „Accept”.
-    return ('<!-- Meta Pixel Code -->\n' + INLINE + '\n'
+    return ('<!-- Meta Pixel Code -->\n' + inline + '\n'
             '<link rel="stylesheet" href="/assets/css/consent.css?v=' + ver('assets/css/consent.css') + '">\n'
             '<script src="/assets/js/meta-pixel.js?v=' + ver('assets/js/meta-pixel.js') + '" async></script>\n'
             '<!-- End Meta Pixel Code -->\n')
 
 
 FOOT = {
-    'ro': '<span class="legal-links"><a href="/confidentialitate">Politica de confidențialitate</a>'
-          '<button type="button" class="cookie-link" data-cookie-settings>Setări cookie-uri</button></span>',
-    'en': '<span class="legal-links"><a href="/en/confidentialitate">Privacy policy</a>'
-          '<button type="button" class="cookie-link" data-cookie-settings>Cookie settings</button></span>',
+    'ro': '<span class="legal-links"><a href="/confidentialitate">Politica de confidențialitate</a>' + ('' if not BANNER else
+          '<button type="button" class="cookie-link" data-cookie-settings>Setări cookie-uri</button>') + '</span>',
+    'en': '<span class="legal-links"><a href="/en/confidentialitate">Privacy policy</a>' + ('' if not BANNER else
+          '<button type="button" class="cookie-link" data-cookie-settings>Cookie settings</button>') + '</span>',
 }
 ACORD = {
     'ro': [('legătură cu participarea.', 'legătură cu participarea. Detalii în <a href="/confidentialitate" target="_blank">politica de confidențialitate</a>.'),
@@ -82,7 +84,8 @@ def run():
         lang = 'en' if p[len(S):].startswith('en/') else 'ro'
         s = re.sub(r'<!-- Meta Pixel Code.*?<!-- End Meta Pixel Code -->\n', '', s, flags=re.S)
         s = s.replace('</head>', tags + '</head>', 1)
-        if 'legal-links' not in s:
+        s = re.sub(r'<span class="legal-links">.*?</span>', '', s, count=1, flags=re.S)
+        if True:
             s = s.replace('<span>© 2026 JCI Brașov</span>', '<span>© 2026 JCI Brașov</span>' + FOOT[lang], 1)
         if 'confidentialitate" target' not in s:
             for a, b in ACORD[lang]:

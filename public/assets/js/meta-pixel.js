@@ -2,6 +2,7 @@
    Alegerea se păstrează 6 luni în localStorage („jci_consent”); butonul [data-cookie-settings] din subsol redeschide bannerul.
    Fișier extern, ca CSP să rămână fără 'unsafe-inline'. */
 (function () {
+  var BANNER = false; // banner scos temporar (9 nov 2026); true = varianta cu acord
   var ID = '1646950960458698', K = 'jci_consent', MAX = 182 * 864e5;
   var en = (document.documentElement.lang || '').slice(0, 2) === 'en';
   var T = en ? {
@@ -67,6 +68,7 @@
   }
 
   function init() {
+    if (!BANNER) { if (window.fbq) conversions(); return; }
     var c = get();
     if (c === 'granted') { if (window.fbq) conversions(); }
     else if (c === null) show();
