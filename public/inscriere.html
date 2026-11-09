@@ -75,9 +75,9 @@
 }
 @media(prefers-reduced-motion:reduce){#jchat .jc-fab{transition:none}}
 </style>
-<!-- Meta Pixel Code -->
-<script src="/assets/js/meta-pixel.js" async></script>
-<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=1646950960458698&amp;ev=PageView&amp;noscript=1"></noscript>
+<!-- Meta Pixel Code (pornește doar cu acordul vizitatorului) -->
+<link rel="stylesheet" href="/assets/css/consent.css?v=a396e1ad">
+<script src="/assets/js/meta-pixel.js?v=c1d51058" async></script>
 <!-- End Meta Pixel Code -->
 </head>
 <body>
@@ -123,7 +123,7 @@
       <div class="field"><label for="f-sursa">Cum ai aflat de noi</label>
         <select id="f-sursa" name="Sursa"><option>Recomandarea unui membru</option><option>Instagram sau Facebook</option><option>Comunitatea WhatsApp</option><option>Un eveniment JCI</option><option>Altă sursă</option></select></div>
       <label class="check" for="f-cotizatie"><input id="f-cotizatie" name="Accept cotizatie" type="checkbox" value="da" required><span>Am luat la cunoștință cotizația anuală de 300 lei și contribuția de 15 lei pe lună pentru sediul social.</span></label>
-      <label class="check" for="f-gdpr"><input id="f-gdpr" name="Acord date" type="checkbox" value="da" required><span>Sunt de acord ca JCI Brașov să folosească datele mele doar pentru procesul de înscriere și pentru a mă contacta în legătură cu activitatea organizației.</span></label>
+      <label class="check" for="f-gdpr"><input id="f-gdpr" name="Acord date" type="checkbox" value="da" required><span>Sunt de acord ca JCI Brașov să folosească datele mele doar pentru procesul de înscriere și pentru a mă contacta în legătură cu activitatea organizației. Detalii în <a href="/confidentialitate" target="_blank">politica de confidențialitate</a>.</span></label>
       <div class="form-msg" role="status"></div>
       <button class="btn btn-blue" type="submit" style="justify-content:center">Trimite cererea</button>
       <p class="form-note">Te contactăm în câteva zile pentru o discuție de cunoaștere.</p>
@@ -176,7 +176,7 @@ document.querySelectorAll('form.signup').forEach(function(f){
         <li><a href="mailto:contact@jci-brasov.com">contact@jci-brasov.com</a></li>
       </ul>
     </div>
-    <div class="legal"><span>© 2026 JCI Brașov</span><span>Lead Connect Grow</span></div>
+    <div class="legal"><span>© 2026 JCI Brașov</span><span class="legal-links"><a href="/confidentialitate">Politica de confidențialitate</a><button type="button" class="cookie-link" data-cookie-settings>Setări cookie-uri</button></span><span>Lead Connect Grow</span></div>
   </div>
 </footer>
 <script>

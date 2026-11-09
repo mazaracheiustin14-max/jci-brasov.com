@@ -1,0 +1,28 @@
+/* Banner acord cookie-uri și pagina de confidențialitate (9 nov 2026) */
+.ck{position:fixed;left:18px;bottom:18px;z-index:9999;width:440px;max-width:calc(100vw - 36px);background:#14113A;color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:20px 22px;box-shadow:0 24px 70px -18px rgba(0,0,0,.85),0 0 50px -24px rgba(0,151,215,.6);font-family:var(--font,'Plus Jakarta Sans',system-ui,sans-serif);font-size:15px;line-height:1.55}
+.ck p{margin:0 0 16px;color:#D5D7EA}
+.ck a{color:#57BCBC;text-decoration:underline;text-underline-offset:3px}
+.ck-row{display:flex;gap:10px}
+.ck-row button{flex:1 1 0;font:inherit;font-weight:700;font-size:15px;line-height:1;padding:14px 18px;border-radius:999px;border:2px solid #fff;cursor:pointer;transition:transform .15s}
+.ck-row button:hover{transform:translateY(-1px)}
+.ck-yes{background:#0097D7;border-color:#0097D7!important;color:#fff}
+.ck-no{background:transparent;color:#fff}
+@media (max-width:560px){.ck{left:12px;right:12px;bottom:12px;width:auto;max-width:none}}
+
+.legal .legal-links{display:flex;flex-wrap:wrap;gap:18px}
+.legal a,.cookie-link{color:inherit;text-decoration:none}
+.legal a:hover,.cookie-link:hover{text-decoration:underline}
+.cookie-link{background:none;border:0;padding:0;font:inherit;cursor:pointer}
+
+.policy{max-width:820px}
+.policy h3{font-size:clamp(19px,1.8vw,22px);font-weight:800;margin:44px 0 12px;letter-spacing:-.01em}
+.policy p,.policy li{color:#D5D7EA}
+.policy ul{padding-left:22px}
+.policy li{margin:6px 0}
+.policy a{color:#57BCBC}
+.policy .tbl{overflow-x:auto;margin:16px 0}
+.policy table{width:100%;border-collapse:collapse;font-size:15px;min-width:560px}
+.policy th,.policy td{text-align:left;vertical-align:top;padding:12px 10px;border-bottom:1px solid rgba(255,255,255,.10)}
+.policy th{color:#fff;font-weight:700}
+.policy td{color:#D5D7EA}
+.policy .upd{color:#A9ABC8;font-size:15px;text-align:center;margin-top:12px}

@@ -66,9 +66,13 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - D1: coloana nouă `inscrieri.acord_bcr` (0/1), salvată de `/api/inscriere`; exportul CSV din /checkin are coloana „Acord BCR”.
   La BCR se transmit doar numele, emailul și telefonul celor cu `acord_bcr = 1`.
 
-## Meta Pixel (9 nov 2026)
-- ID 1646950960458698. Codul stă în `public/assets/js/meta-pixel.js` (fișier extern, ca CSP să rămână fără 'unsafe-inline'):
-  PageView pe toate paginile, CompleteRegistration pe inscriere-confirmata și vip-confirmat, Lead pe multumim.
-- `pixel.py` rulează după parteneri.py și ÎNAINTE de security.py: pune scriptul și `<noscript>` deasupra `</head>` (RO/EN, fără previzualizările p-*)
-  și adaugă www.facebook.com / connect.facebook.net în img-src și connect-src. `security.py` adaugă connect.facebook.net în script-src.
+## Meta Pixel cu acord GDPR și politica de confidențialitate (9 nov 2026)
+- Pixel ID 1646950960458698, în `public/assets/js/meta-pixel.js`. Codul Meta se încarcă DOAR după „Accept” în bannerul de cookie-uri
+  (alegerea se ține 6 luni în localStorage, cheia `jci_consent`; „Refuz” șterge _fbp/_fbc). Fără `<noscript>` (ar urmări fără acord).
+  Evenimente: PageView; CompleteRegistration pe inscriere-confirmata și vip-confirmat; Lead pe multumim.
+- `public/assets/css/consent.css`: bannerul (stânga jos, butoane egale) și stilul paginii de politică.
+- `src/confidentialitate-ro.html` / `-en.html`: conținutul politicii. `pixel.py` generează /confidentialitate și /en/confidentialitate
+  pe scheletul paginii multumim, adaugă în subsol „Politica de confidențialitate” și „Setări cookie-uri” (redeschide bannerul),
+  leagă bifele de acord din formulare de politică, adaugă paginile în sitemap și domeniile Meta în CSP.
+- Ordine: după parteneri.py, ÎNAINTE de security.py (`security.py` pune connect.facebook.net în script-src). Idempotent.
 - Paginile private (/bilet, /c, /checkin, generate de worker) nu au pixel.

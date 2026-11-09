@@ -75,9 +75,9 @@
 }
 @media(prefers-reduced-motion:reduce){#jchat .jc-fab{transition:none}}
 </style>
-<!-- Meta Pixel Code -->
-<script src="/assets/js/meta-pixel.js" async></script>
-<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=1646950960458698&amp;ev=PageView&amp;noscript=1"></noscript>
+<!-- Meta Pixel Code (pornește doar cu acordul vizitatorului) -->
+<link rel="stylesheet" href="/assets/css/consent.css?v=a396e1ad">
+<script src="/assets/js/meta-pixel.js?v=c1d51058" async></script>
 <!-- End Meta Pixel Code -->
 </head>
 <body>
@@ -123,7 +123,7 @@
       <div class="field"><label for="f-sursa">How did you hear about us</label>
         <select id="f-sursa" name="Sursa"><option>Referral from a member</option><option>Instagram or Facebook</option><option>WhatsApp community</option><option>A JCI event</option><option>Other</option></select></div>
       <label class="check" for="f-cotizatie"><input id="f-cotizatie" name="Accept cotizatie" type="checkbox" value="da" required><span>I understand the annual fee of 300 RON and the office contribution of 15 RON per month.</span></label>
-      <label class="check" for="f-gdpr"><input id="f-gdpr" name="Acord date" type="checkbox" value="da" required><span>I agree that JCI Brașov may use my data solely for the application process and to contact me about the organisation's activities.</span></label>
+      <label class="check" for="f-gdpr"><input id="f-gdpr" name="Acord date" type="checkbox" value="da" required><span>I agree that JCI Brașov may use my data solely for the application process and to contact me about the organisation's activities. See our <a href="/en/confidentialitate" target="_blank">privacy policy</a>.</span></label>
       <div class="form-msg" role="status"></div>
       <button class="btn btn-blue" type="submit" style="justify-content:center">Submit application</button>
       <p class="form-note">We'll be in touch within a few days for an introductory chat.</p>
@@ -176,7 +176,7 @@ document.querySelectorAll('form.signup').forEach(function(f){
         <li><a href="mailto:contact@jci-brasov.com">contact@jci-brasov.com</a></li>
       </ul>
     </div>
-    <div class="legal"><span>© 2026 JCI Brașov</span><span>Lead Connect Grow</span></div>
+    <div class="legal"><span>© 2026 JCI Brașov</span><span class="legal-links"><a href="/en/confidentialitate">Privacy policy</a><button type="button" class="cookie-link" data-cookie-settings>Cookie settings</button></span><span>Lead Connect Grow</span></div>
   </div>
 </footer>
 <script>

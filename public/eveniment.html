@@ -77,9 +77,9 @@
 @media(prefers-reduced-motion:reduce){#jchat .jc-fab{transition:none}}
 </style>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "inLanguage": "ro", "mainEntity": [{"@type": "Question", "name": "Cât costă participarea?", "acceptedAnswer": {"@type": "Answer", "text": "Nimic. Accesul este gratuit, iar evenimentul este susținut integral de parteneri. Înscrierea este necesară pentru a-ți păstra locul. Tot ce se oferă la standul Hillden este gratuit; consumația de la bar se achită separat."}}, {"@type": "Question", "name": "Trebuie să fiu membru JCI?", "acceptedAnswer": {"@type": "Answer", "text": "Nu. Evenimentul este deschis tuturor celor interesați de antreprenoriat, leadership și comunitate."}}, {"@type": "Question", "name": "Am peste 40 de ani. Pot veni?", "acceptedAnswer": {"@type": "Answer", "text": "Da. Membrii JCI au între 18 și 40 de ani, dar la eveniment sunt bineveniți toți: antreprenori, mentori, parteneri."}}, {"@type": "Question", "name": "Pot veni cu un coleg?", "acceptedAnswer": {"@type": "Answer", "text": "Da, cu condiția ca fiecare participant să se înscrie separat, ca să avem locurile și ecusoanele pregătite."}}, {"@type": "Question", "name": "Ce se întâmplă dacă se ocupă toate locurile?", "acceptedAnswer": {"@type": "Answer", "text": "Înscrierile primite după ocuparea sălii intră pe lista de așteptare și te anunțăm dacă se eliberează un loc."}}, {"@type": "Question", "name": "Unde are loc și cum ajung?", "acceptedAnswer": {"@type": "Answer", "text": "La CATTIA Brașov, Strada Institutului 35. Programul începe la 17:00, cu primirea invitaților și înregistrarea."}}, {"@type": "Question", "name": "Ce se întâmplă cu datele mele?", "acceptedAnswer": {"@type": "Answer", "text": "Le folosim doar pentru organizarea evenimentului și, dacă ai bifat, pentru invitații la evenimentele JCI Brașov. Numele, emailul și telefonul ajung la BCR Asigurări numai dacă ai bifat separat acordul pentru asta. Nu le transmitem altor organizații."}}]}</script>
-<!-- Meta Pixel Code -->
-<script src="/assets/js/meta-pixel.js" async></script>
-<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=1646950960458698&amp;ev=PageView&amp;noscript=1"></noscript>
+<!-- Meta Pixel Code (pornește doar cu acordul vizitatorului) -->
+<link rel="stylesheet" href="/assets/css/consent.css?v=a396e1ad">
+<script src="/assets/js/meta-pixel.js?v=c1d51058" async></script>
 <!-- End Meta Pixel Code -->
 </head>
 <body>
@@ -222,7 +222,7 @@
         <div class="field"><label for="i-prof">Te descrie cel mai bine</label><select id="i-prof" name="profil"><option value="">Alege</option><option>Antreprenor</option><option>Manager</option><option>Angajat</option><option>Student</option><option>Freelancer sau consultant</option><option>ONG sau sector public</option><option>Altul</option></select></div>
       </div>
       </details>
-      <label class="check"><input type="checkbox" name="acord" value="da" required><span>Sunt de acord ca JCI Brașov să folosească aceste date pentru organizarea evenimentului și pentru a mă contacta în legătură cu participarea.</span></label>
+      <label class="check"><input type="checkbox" name="acord" value="da" required><span>Sunt de acord ca JCI Brașov să folosească aceste date pentru organizarea evenimentului și pentru a mă contacta în legătură cu participarea. Detalii în <a href="/confidentialitate" target="_blank">politica de confidențialitate</a>.</span></label>
       <label class="check"><input type="checkbox" name="acord_marketing" value="da"><span>Vreau să primesc invitații la următoarele evenimente JCI Brașov.</span></label>
       <label class="check"><input type="checkbox" name="acord_bcr" value="da"><span>Doresc să fiu contactat de BCR Asigurări, partenerul evenimentului. JCI Brașov îi transmite doar numele, emailul și telefonul meu.</span></label>
       <button class="btn btn-blue" type="submit" data-busy="Se trimite…">Rezervă-mi locul gratuit</button>
@@ -276,7 +276,7 @@
       <div class="field"><label for="s-pachet">Pachetul de interes</label>
         <select id="s-pachet" name="Pachet"><option>Sponsor, 1.000 lei</option><option>Sponsor Premium, 2.000 lei</option><option>Parteneriat în regim de barter</option><option>Doresc mai multe detalii</option></select></div>
       <div class="field"><label for="s-mesaj">Mesaj</label><textarea id="s-mesaj" name="Mesaj" placeholder="Produsele sau serviciile pe care doriți să le promovați"></textarea></div>
-      <label class="check" for="s-gdpr"><input id="s-gdpr" name="Acord date" type="checkbox" value="da" required><span>Sunt de acord ca JCI Brașov să utilizeze aceste date exclusiv pentru a mă contacta în legătură cu parteneriatul.</span></label>
+      <label class="check" for="s-gdpr"><input id="s-gdpr" name="Acord date" type="checkbox" value="da" required><span>Sunt de acord ca JCI Brașov să utilizeze aceste date exclusiv pentru a mă contacta în legătură cu parteneriatul. Detalii în <a href="/confidentialitate" target="_blank">politica de confidențialitate</a>.</span></label>
       <div class="form-msg" role="status"></div>
       <button class="btn btn-blue" type="submit" style="justify-content:center">Trimiteți solicitarea</button>
     </form>
@@ -305,7 +305,7 @@
         <li><a href="mailto:contact@jci-brasov.com">contact@jci-brasov.com</a></li>
       </ul>
     </div>
-    <div class="legal"><span>© 2026 JCI Brașov</span><span>Lead Connect Grow</span></div>
+    <div class="legal"><span>© 2026 JCI Brașov</span><span class="legal-links"><a href="/confidentialitate">Politica de confidențialitate</a><button type="button" class="cookie-link" data-cookie-settings>Setări cookie-uri</button></span><span>Lead Connect Grow</span></div>
   </div>
 </footer>
 <script>

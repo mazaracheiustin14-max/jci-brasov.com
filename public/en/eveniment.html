@@ -77,9 +77,9 @@
 @media(prefers-reduced-motion:reduce){#jchat .jc-fab{transition:none}}
 </style>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "inLanguage": "en", "mainEntity": [{"@type": "Question", "name": "How much does it cost?", "acceptedAnswer": {"@type": "Answer", "text": "Nothing. Entry is free and the event is fully funded by our partners. Registration is required to hold your seat. Everything offered at the Hillden stand is free; drinks from the bar are paid separately."}}, {"@type": "Question", "name": "Do I need to be a JCI member?", "acceptedAnswer": {"@type": "Answer", "text": "No. The event is open to anyone interested in entrepreneurship, leadership and community."}}, {"@type": "Question", "name": "I am over 40. Can I attend?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. JCI members are aged 18 to 40, but everyone is welcome at the event: entrepreneurs, mentors and partners."}}, {"@type": "Question", "name": "Can I bring a colleague?", "acceptedAnswer": {"@type": "Answer", "text": "Yes, as long as each person registers separately so we can prepare seats and badges."}}, {"@type": "Question", "name": "What if all seats are taken?", "acceptedAnswer": {"@type": "Answer", "text": "Registrations received after the room is full go on a waiting list, and we will let you know if a seat becomes available."}}, {"@type": "Question", "name": "Where is it and how do I get there?", "acceptedAnswer": {"@type": "Answer", "text": "At CATTIA Brașov, Strada Institutului 35. The programme starts at 5:00 pm with arrivals and check-in."}}, {"@type": "Question", "name": "What happens to my data?", "acceptedAnswer": {"@type": "Answer", "text": "We use it only to organise the event and, if you opted in, to invite you to future JCI Brașov events. Your name, email and phone number go to BCR Asigurări only if you tick the separate consent box for it. We do not share it with other organisations."}}]}</script>
-<!-- Meta Pixel Code -->
-<script src="/assets/js/meta-pixel.js" async></script>
-<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=1646950960458698&amp;ev=PageView&amp;noscript=1"></noscript>
+<!-- Meta Pixel Code (pornește doar cu acordul vizitatorului) -->
+<link rel="stylesheet" href="/assets/css/consent.css?v=a396e1ad">
+<script src="/assets/js/meta-pixel.js?v=c1d51058" async></script>
 <!-- End Meta Pixel Code -->
 </head>
 <body>
@@ -222,7 +222,7 @@
         <div class="field"><label for="i-prof">Best describes you</label><select id="i-prof" name="profil"><option value="">Choose</option><option>Entrepreneur</option><option>Manager</option><option>Employee</option><option>Student</option><option>Freelancer or consultant</option><option>NGO or public sector</option><option>Other</option></select></div>
       </div>
       </details>
-      <label class="check"><input type="checkbox" name="acord" value="da" required><span>I agree that JCI Brașov may use this data to organise the event and to contact me about my attendance.</span></label>
+      <label class="check"><input type="checkbox" name="acord" value="da" required><span>I agree that JCI Brașov may use this data to organise the event and to contact me about my attendance. See our <a href="/en/confidentialitate" target="_blank">privacy policy</a>.</span></label>
       <label class="check"><input type="checkbox" name="acord_marketing" value="da"><span>I would like to receive invitations to future JCI Brașov events.</span></label>
       <label class="check"><input type="checkbox" name="acord_bcr" value="da"><span>I would like to be contacted by BCR Asigurări, the event partner. JCI Brașov shares only my name, email and phone number.</span></label>
       <button class="btn btn-blue" type="submit" data-busy="Sending…">Save my free seat</button>
@@ -276,7 +276,7 @@
       <div class="field"><label for="s-pachet">Package of interest</label>
         <select id="s-pachet" name="Pachet"><option>Sponsor, 1,000 RON</option><option>Premium Sponsor, 2,000 RON</option><option>Barter partnership</option><option>I would like more details</option></select></div>
       <div class="field"><label for="s-mesaj">Message</label><textarea id="s-mesaj" name="Mesaj" placeholder="The products or services you would like to promote"></textarea></div>
-      <label class="check" for="s-gdpr"><input id="s-gdpr" name="Acord date" type="checkbox" value="da" required><span>I agree that JCI Brașov may use this data solely to contact me about the partnership.</span></label>
+      <label class="check" for="s-gdpr"><input id="s-gdpr" name="Acord date" type="checkbox" value="da" required><span>I agree that JCI Brașov may use this data solely to contact me about the partnership. See our <a href="/en/confidentialitate" target="_blank">privacy policy</a>.</span></label>
       <div class="form-msg" role="status"></div>
       <button class="btn btn-blue" type="submit" style="justify-content:center">Submit request</button>
     </form>
@@ -305,7 +305,7 @@
         <li><a href="mailto:contact@jci-brasov.com">contact@jci-brasov.com</a></li>
       </ul>
     </div>
-    <div class="legal"><span>© 2026 JCI Brașov</span><span>Lead Connect Grow</span></div>
+    <div class="legal"><span>© 2026 JCI Brașov</span><span class="legal-links"><a href="/en/confidentialitate">Privacy policy</a><button type="button" class="cookie-link" data-cookie-settings>Cookie settings</button></span><span>Lead Connect Grow</span></div>
   </div>
 </footer>
 <script>
