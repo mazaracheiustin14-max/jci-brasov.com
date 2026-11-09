@@ -77,9 +77,23 @@
 @media(prefers-reduced-motion:reduce){#jchat .jc-fab{transition:none}}
 </style>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "inLanguage": "en", "mainEntity": [{"@type": "Question", "name": "How much does it cost?", "acceptedAnswer": {"@type": "Answer", "text": "Nothing. Entry is free and the event is fully funded by our partners. Registration is required to hold your seat. Everything offered at the Hillden stand is free; drinks from the bar are paid separately."}}, {"@type": "Question", "name": "Do I need to be a JCI member?", "acceptedAnswer": {"@type": "Answer", "text": "No. The event is open to anyone interested in entrepreneurship, leadership and community."}}, {"@type": "Question", "name": "I am over 40. Can I attend?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. JCI members are aged 18 to 40, but everyone is welcome at the event: entrepreneurs, mentors and partners."}}, {"@type": "Question", "name": "Can I bring a colleague?", "acceptedAnswer": {"@type": "Answer", "text": "Yes, as long as each person registers separately so we can prepare seats and badges."}}, {"@type": "Question", "name": "What if all seats are taken?", "acceptedAnswer": {"@type": "Answer", "text": "Registrations received after the room is full go on a waiting list, and we will let you know if a seat becomes available."}}, {"@type": "Question", "name": "Where is it and how do I get there?", "acceptedAnswer": {"@type": "Answer", "text": "At CATTIA Brașov, Strada Institutului 35. The programme starts at 5:00 pm with arrivals and check-in."}}, {"@type": "Question", "name": "What happens to my data?", "acceptedAnswer": {"@type": "Answer", "text": "We use it only to organise the event and, if you opted in, to invite you to future JCI Brașov events. Your name, email and phone number go to BCR Asigurări only if you tick the separate consent box for it. We do not share it with other organisations."}}]}</script>
-<!-- Meta Pixel Code (pornește doar cu acordul vizitatorului) -->
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('consent', (function(){try{var c=JSON.parse(localStorage.getItem('jci_consent'));return c&&c.v==='granted'&&Date.now()-c.t<15724800000?'grant':'revoke'}catch(e){return 'revoke'}})());
+fbq('init', '1646950960458698');
+window.jciPv='pv'+Date.now()+Math.random().toString(36).slice(2,8);
+fbq('track', 'PageView', {}, {eventID: window.jciPv});
+</script>
 <link rel="stylesheet" href="/assets/css/consent.css?v=a396e1ad">
-<script src="/assets/js/meta-pixel.js?v=c1d51058" async></script>
+<script src="/assets/js/meta-pixel.js?v=73431816" async></script>
 <!-- End Meta Pixel Code -->
 </head>
 <body>

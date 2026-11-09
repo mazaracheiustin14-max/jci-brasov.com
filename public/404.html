@@ -56,9 +56,23 @@
 }
 @media(prefers-reduced-motion:reduce){#jchat .jc-fab{transition:none}}
 </style>
-<!-- Meta Pixel Code (pornește doar cu acordul vizitatorului) -->
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('consent', (function(){try{var c=JSON.parse(localStorage.getItem('jci_consent'));return c&&c.v==='granted'&&Date.now()-c.t<15724800000?'grant':'revoke'}catch(e){return 'revoke'}})());
+fbq('init', '1646950960458698');
+window.jciPv='pv'+Date.now()+Math.random().toString(36).slice(2,8);
+fbq('track', 'PageView', {}, {eventID: window.jciPv});
+</script>
 <link rel="stylesheet" href="/assets/css/consent.css?v=a396e1ad">
-<script src="/assets/js/meta-pixel.js?v=c1d51058" async></script>
+<script src="/assets/js/meta-pixel.js?v=73431816" async></script>
 <!-- End Meta Pixel Code -->
 </head>
 <body>

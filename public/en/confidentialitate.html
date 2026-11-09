@@ -14,9 +14,23 @@
 <link rel="preload" href="/assets/fonts/plus-jakarta-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/plus-jakarta-sans-latin-ext-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../assets/css/style.css?v=a6da4e52">
-<!-- Meta Pixel Code (pornește doar cu acordul vizitatorului) -->
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('consent', (function(){try{var c=JSON.parse(localStorage.getItem('jci_consent'));return c&&c.v==='granted'&&Date.now()-c.t<15724800000?'grant':'revoke'}catch(e){return 'revoke'}})());
+fbq('init', '1646950960458698');
+window.jciPv='pv'+Date.now()+Math.random().toString(36).slice(2,8);
+fbq('track', 'PageView', {}, {eventID: window.jciPv});
+</script>
 <link rel="stylesheet" href="/assets/css/consent.css?v=a396e1ad">
-<script src="/assets/js/meta-pixel.js?v=c1d51058" async></script>
+<script src="/assets/js/meta-pixel.js?v=73431816" async></script>
 <!-- End Meta Pixel Code -->
 </head>
 <body>
@@ -94,7 +108,7 @@
     <tr><td>__cf_bm and similar</td><td>necessary cookie, Cloudflare</td><td>protecting the website against automated traffic, only when needed</td><td>up to 30 minutes</td></tr>
     <tr><td>_fbp, _fbc</td><td>marketing cookie, Meta</td><td>campaign measurement; set only after “Accept”</td><td>up to 90 days</td></tr>
   </table></div>
-  <p>Without your consent no Meta code is loaded. You can change your choice at any time from <button type="button" class="cookie-link" data-cookie-settings><u>Cookie settings</u></button>, also available in the footer of every page. If you withdraw consent, the Meta cookies on this website are deleted.</p>
+  <p>Without your consent the Meta Pixel stays blocked: the script is downloaded from Meta servers, but it sends no visit data and sets no cookies. You can change your choice at any time from <button type="button" class="cookie-link" data-cookie-settings><u>Cookie settings</u></button>, also available in the footer of every page. If you withdraw consent, the Meta cookies on this website are deleted.</p>
 
   <h3>6. Your rights</h3>
   <p>You have the right to access, rectify and erase your data, to restrict processing, to data portability and to object, as well as the right to withdraw consent at any time without affecting prior processing. To exercise them, write to <a href="mailto:contact@jci-brasov.com">contact@jci-brasov.com</a>; we reply within one month. If you believe your rights have been infringed, you may lodge a complaint with the Romanian data protection authority, ANSPDCP (<a href="https://www.dataprotection.ro" target="_blank" rel="noopener">dataprotection.ro</a>).</p>

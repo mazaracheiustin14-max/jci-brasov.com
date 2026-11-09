@@ -1,4 +1,4 @@
-/* Meta Pixel JCI Brașov (ID 1646950960458698), pornit DOAR după acordul vizitatorului (GDPR, ePrivacy).
+/* Meta Pixel JCI Brașov (ID 1646950960458698): codul de bază e inline în <head>, blocat până la acordul vizitatorului (GDPR, ePrivacy).
    Alegerea se păstrează 6 luni în localStorage („jci_consent”); butonul [data-cookie-settings] din subsol redeschide bannerul.
    Fișier extern, ca CSP să rămână fără 'unsafe-inline'. */
 (function () {
@@ -18,22 +18,18 @@
   }
   function set(v) { try { localStorage.setItem(K, JSON.stringify({ v: v, t: Date.now() })); } catch (e) {} }
 
-  function load() {
-    if (window.fbq) return;
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', ID);
-    fbq('track', 'PageView');
+  // Codul de bază Meta e inline în <head>, blocat cu fbq('consent','revoke'). Aici doar îl deblocăm.
+  function conversions() {
     var p = location.pathname.replace(/\.html$/, '').replace(/\/$/, '');
     if (/(^|\/)inscriere-confirmata$/.test(p)) fbq('track', 'CompleteRegistration', { content_name: 'Inscriere eveniment' });
     else if (/(^|\/)vip-confirmat$/.test(p)) fbq('track', 'CompleteRegistration', { content_name: 'Bilet VIP' });
     else if (/(^|\/)multumim$/.test(p)) fbq('track', 'Lead');
+  }
+  function grantNow() {
+    if (!window.fbq) return;
+    fbq('consent', 'grant');
+    fbq('track', 'PageView', {}, { eventID: window.jciPv }); // același eventID: Meta nu îl numără de două ori
+    conversions();
   }
 
   function clearMeta() {
@@ -61,17 +57,18 @@
     row.appendChild(no); row.appendChild(yes);
     box.appendChild(p); box.appendChild(row);
     document.body.appendChild(box);
-    yes.addEventListener('click', function () { set('granted'); hide(); load(); });
+    yes.addEventListener('click', function () { set('granted'); hide(); grantNow(); });
     no.addEventListener('click', function () {
-      var had = !!window.fbq;
+      var had = get() === 'granted';
       set('denied'); hide(); clearMeta();
+      if (window.fbq) fbq('consent', 'revoke');
       if (had) location.reload();
     });
   }
 
   function init() {
     var c = get();
-    if (c === 'granted') load();
+    if (c === 'granted') { if (window.fbq) conversions(); }
     else if (c === null) show();
     document.addEventListener('click', function (e) {
       var t = e.target.closest && e.target.closest('[data-cookie-settings]');

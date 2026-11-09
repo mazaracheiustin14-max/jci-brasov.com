@@ -14,9 +14,23 @@
 <link rel="preload" href="/assets/fonts/plus-jakarta-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/plus-jakarta-sans-latin-ext-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/css/style.css?v=a6da4e52">
-<!-- Meta Pixel Code (pornește doar cu acordul vizitatorului) -->
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('consent', (function(){try{var c=JSON.parse(localStorage.getItem('jci_consent'));return c&&c.v==='granted'&&Date.now()-c.t<15724800000?'grant':'revoke'}catch(e){return 'revoke'}})());
+fbq('init', '1646950960458698');
+window.jciPv='pv'+Date.now()+Math.random().toString(36).slice(2,8);
+fbq('track', 'PageView', {}, {eventID: window.jciPv});
+</script>
 <link rel="stylesheet" href="/assets/css/consent.css?v=a396e1ad">
-<script src="/assets/js/meta-pixel.js?v=c1d51058" async></script>
+<script src="/assets/js/meta-pixel.js?v=73431816" async></script>
 <!-- End Meta Pixel Code -->
 </head>
 <body>
@@ -94,7 +108,7 @@
     <tr><td>__cf_bm și altele similare</td><td>cookie necesar, Cloudflare</td><td>protecția site-ului împotriva traficului automat, doar când e cazul</td><td>până la 30 de minute</td></tr>
     <tr><td>_fbp, _fbc</td><td>cookie de marketing, Meta</td><td>măsurarea campaniilor; se setează doar după „Accept”</td><td>până la 90 de zile</td></tr>
   </table></div>
-  <p>Fără acordul tău nu se încarcă niciun cod Meta. Poți schimba oricând alegerea din linkul <button type="button" class="cookie-link" data-cookie-settings><u>Setări cookie-uri</u></button>, aflat și în subsolul fiecărei pagini. Dacă retragi acordul, cookie-urile Meta de pe acest site se șterg.</p>
+  <p>Fără acordul tău, pixelul Meta rămâne blocat: scriptul se descarcă de pe serverele Meta, dar nu trimite date despre vizită și nu setează cookie-uri. Poți schimba oricând alegerea din linkul <button type="button" class="cookie-link" data-cookie-settings><u>Setări cookie-uri</u></button>, aflat și în subsolul fiecărei pagini. Dacă retragi acordul, cookie-urile Meta de pe acest site se șterg.</p>
 
   <h3>6. Drepturile tale</h3>
   <p>Ai dreptul de acces la datele tale, de rectificare, de ștergere, de restricționare a prelucrării, de portabilitate și de opoziție, precum și dreptul de a-ți retrage oricând consimțământul, fără a afecta prelucrarea făcută până atunci. Pentru exercitarea lor scrie-ne la <a href="mailto:contact@jci-brasov.com">contact@jci-brasov.com</a>; răspundem în cel mult o lună. Dacă apreciezi că drepturile tale au fost încălcate, te poți adresa Autorității Naționale de Supraveghere a Prelucrării Datelor cu Caracter Personal (<a href="https://www.dataprotection.ro" target="_blank" rel="noopener">dataprotection.ro</a>).</p>

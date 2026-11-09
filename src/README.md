@@ -67,8 +67,9 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
   La BCR se transmit doar numele, emailul și telefonul celor cu `acord_bcr = 1`.
 
 ## Meta Pixel cu acord GDPR și politica de confidențialitate (9 nov 2026)
-- Pixel ID 1646950960458698, în `public/assets/js/meta-pixel.js`. Codul Meta se încarcă DOAR după „Accept” în bannerul de cookie-uri
-  (alegerea se ține 6 luni în localStorage, cheia `jci_consent`; „Refuz” șterge _fbp/_fbc). Fără `<noscript>` (ar urmări fără acord).
+- Pixel ID 1646950960458698. Codul de bază Meta e INLINE în <head> (altfel verificatorul Meta nu recunoaște instalarea), cu fbq('consent','revoke')
+  până la „Accept”; `public/assets/js/meta-pixel.js` face bannerul și fbq('consent','grant'). Alegerea se ține
+  (6 luni în localStorage, cheia `jci_consent`; „Refuz” șterge _fbp/_fbc). Fără `<noscript>` (ar urmări fără acord).
   Evenimente: PageView; CompleteRegistration pe inscriere-confirmata și vip-confirmat; Lead pe multumim.
 - `public/assets/css/consent.css`: bannerul (stânga jos, butoane egale) și stilul paginii de politică.
 - `src/confidentialitate-ro.html` / `-en.html`: conținutul politicii. `pixel.py` generează /confidentialitate și /en/confidentialitate
