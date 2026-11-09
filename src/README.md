@@ -77,3 +77,5 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
   leagă bifele de acord din formulare de politică, adaugă paginile în sitemap și domeniile Meta în CSP.
 - Ordine: după parteneri.py, ÎNAINTE de security.py (`security.py` pune connect.facebook.net în script-src). Idempotent.
 - Paginile private (/bilet, /c, /checkin, generate de worker) nu au pixel.
+- Unealta Meta „Configurează evenimente” (9 nov 2026): cere `Cross-Origin-Opener-Policy: unsafe-none` (fereastra Facebook comunică prin window.opener)
+  și domeniile *.facebook.com, *.facebook.net, *.fbcdn.net în script/style/font/img/connect/frame-src. Le pune `pixel.py` (și `security.py` la script-src).

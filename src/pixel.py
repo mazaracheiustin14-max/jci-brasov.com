@@ -102,12 +102,18 @@ def run():
             t = t.replace('</urlset>', add + '</urlset>')
             open(sm, 'w', encoding='utf8').write(t)
 
-    # CSP
+    # CSP + COOP: unealta Meta de configurare a evenimentelor deschide site-ul din fereastra Facebook (window.opener)
+    # și încarcă bara ei din domeniile Meta. COOP same-origin rupea legătura, iar CSP bloca cadrele/stilurile/imaginile.
     h = S + '_headers'
     t = open(h, encoding='utf8').read()
-    for d, hosts in (('img-src', ['https://www.facebook.com']),
-                     ('connect-src', ['https://www.facebook.com', 'https://connect.facebook.net'])):
+    t = t.replace('  Cross-Origin-Opener-Policy: same-origin\n', '  Cross-Origin-Opener-Policy: unsafe-none\n', 1)
+    FB = ['https://*.facebook.com', 'https://*.facebook.net', 'https://*.fbcdn.net']
+    for d, hosts in (('style-src', FB), ('font-src', FB), ('img-src', FB),
+                     ('connect-src', FB), ('frame-src', FB)):
         m = re.search(d + r" [^;]*", t)
+        if not m:
+            t = t.replace('; form-action', "; frame-src 'self'; form-action", 1)
+            m = re.search(d + r" [^;]*", t)
         v = m.group(0)
         for x in hosts:
             if x not in v.split():

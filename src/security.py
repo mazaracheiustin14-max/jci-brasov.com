@@ -15,7 +15,7 @@ def run():
             hashes.add("'sha256-" + base64.b64encode(hashlib.sha256(m.group(1).encode('utf8')).digest()).decode() + "'")
     h = S + '_headers'
     t = open(h, encoding='utf8').read()
-    src = "script-src 'self' " + ' '.join(sorted(hashes)) + " https://static.cloudflareinsights.com https://connect.facebook.net"
+    src = "script-src 'self' " + ' '.join(sorted(hashes)) + " https://static.cloudflareinsights.com https://connect.facebook.net https://*.facebook.net https://*.facebook.com"
     t = re.sub(r"script-src [^;]*", src, t, count=1)
     if 'X-Permitted-Cross-Domain-Policies' not in t:
         t = t.replace('  Cross-Origin-Opener-Policy: same-origin', '  Cross-Origin-Opener-Policy: same-origin\n  X-Permitted-Cross-Domain-Policies: none', 1)
