@@ -161,7 +161,7 @@ def seo(fn,title,desc):
             "location":{"@type":"Place","name":"CATTIA Brașov","address":{"@type":"PostalAddress","streetAddress":"Str. Institutului 35","addressLocality":"Brașov","addressCountry":"RO"}},
             "image":[img],
             "organizer":{"@type":"Organization","name":"JCI Brașov","url":SITE},
-            "performer":[{"@type":"Person","name":n} for n in ("Ioana Ceaușu","Bogdan Costaș","Rareș Zlătaru","Ciprian Văcaru","Sorin Peligrad","Florin Dragoslav")],
+            "performer":[{"@type":"Person","name":n} for n in ("Ioana Ceaușu","Bogdan Costaș","Rareș Zlătaru","Ciprian Văcaru","Sorin Peligrad","Florin Dragoslav","Veronica Costache")],
             "offers":{"@type":"Offer","price":"0","priceCurrency":"RON","availability":"https://schema.org/InStock","url":url,"validFrom":"2026-11-01T00:00:00+02:00"}}
         out+='\n<script type="application/ld+json">'+_json.dumps(ev,ensure_ascii=False)+'</script>'
     return out
