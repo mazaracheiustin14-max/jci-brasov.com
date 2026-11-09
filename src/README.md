@@ -65,3 +65,10 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
   în formularul de înscriere și întrebarea frecventă despre date actualizată.
 - D1: coloana nouă `inscrieri.acord_bcr` (0/1), salvată de `/api/inscriere`; exportul CSV din /checkin are coloana „Acord BCR”.
   La BCR se transmit doar numele, emailul și telefonul celor cu `acord_bcr = 1`.
+
+## Meta Pixel (9 nov 2026)
+- ID 1646950960458698. Codul stă în `public/assets/js/meta-pixel.js` (fișier extern, ca CSP să rămână fără 'unsafe-inline'):
+  PageView pe toate paginile, CompleteRegistration pe inscriere-confirmata și vip-confirmat, Lead pe multumim.
+- `pixel.py` rulează după parteneri.py și ÎNAINTE de security.py: pune scriptul și `<noscript>` deasupra `</head>` (RO/EN, fără previzualizările p-*)
+  și adaugă www.facebook.com / connect.facebook.net în img-src și connect-src. `security.py` adaugă connect.facebook.net în script-src.
+- Paginile private (/bilet, /c, /checkin, generate de worker) nu au pixel.
