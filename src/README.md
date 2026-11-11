@@ -80,3 +80,14 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - 9 nov 2026: bannerul e SCOS temporar (BANNER = False în pixel.py și meta-pixel.js): pixelul pornește cu fbq('consent','grant'). Pentru revenire: True în ambele, apoi pixel.py + security.py.
 - Unealta Meta „Configurează evenimente” (9 nov 2026): cere `Cross-Origin-Opener-Policy: unsafe-none` (fereastra Facebook comunică prin window.opener)
   și domeniile *.facebook.com, *.facebook.net, *.fbcdn.net în script/style/font/img/connect/frame-src. Le pune `pixel.py` (și `security.py` la script-src).
+
+## Blitz Networking: bloc, număr și mese la check-in (11 nov 2026)
+- La scanarea biletului (`/c/<cod>`) și la confirmarea manuală din panou, `worker/checkin.js` alocă automat blocul (A, B, C...),
+  numărul de pe ecuson (1–25) și masa pentru fiecare dintre cele 6 runde (3 în Blitz #1, 3 în Blitz #2). Ecranul arată ce se scrie pe ecuson.
+- Blocuri de câte 25, grila 5x5 peste Z5, cele 6 clase de drepte paralele = cele 6 runde: într-un bloc complet fiecare pereche se întâlnește
+  exact o dată (24 de contacte noi). În bloc incomplet nu există repetări, dar sunt mai puține contacte și grupe de 2–5 persoane.
+- Alocarea: blocul cu cei mai puțini oameni primește următoarea persoană, deci cei care sosesc împreună ajung în blocuri diferite.
+  Numărul de blocuri: D1, tabelul `setari`, cheia `blocuri` (implicit 4). Când toate blocurile sunt pline se deschide automat unul nou.
+- Coloane noi în `inscrieri`: `bloc`, `slot` (index unic pe eveniment, bloc, slot). Anularea intrării eliberează locul.
+- Panoul echipei arată câți oameni are fiecare bloc; exportul CSV conține blocul, numărul și cele 6 mese.
+- `FILL_ORDER` din worker este ordinea de ocupare a grilei, aleasă ca grupele să rămână echilibrate la blocuri incomplete.

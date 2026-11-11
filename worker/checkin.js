@@ -75,6 +75,74 @@ async function vipNumber(env, row) {
   } catch (e) { return null; }
 }
 
+// ---------- Blitz Networking: bloc, număr pe ecuson și grupele celor 6 runde ----------
+// Participanții sunt împărțiți în blocuri de câte 25 (litera A, B, C...), fiecare cu zona ei în sală. În bloc, fiecare
+// persoană ocupă un loc din grila 5x5 (numărul de pe ecuson, 1–25). Cele 6 runde (3 în Blitz #1, 3 în Blitz #2) sunt
+// cele 6 clase de drepte paralele din planul afin peste Z5: într-un bloc complet, fiecare pereche de persoane se
+// întâlnește exact o dată, adică 24 de contacte noi pentru fiecare. Locul se alocă la scanarea biletului: blocul cu cei
+// mai puțini oameni primește următoarea persoană, deci cei care sosesc împreună ajung în blocuri diferite.
+// Numărul de blocuri se poate schimba în D1, tabelul setari, cheia „blocuri” (implicit 4). Peste 25 de oameni
+// într-un bloc se deschide automat un bloc nou.
+const BLOC_SIZE = 25;
+const DEFAULT_BLOCKS = 4;
+const MAX_BLOCKS = 26;
+const BLOC_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+// Ordinea în care se ocupă punctele grilei, aleasă ca grupele să rămână echilibrate și când blocul nu e plin.
+const FILL_ORDER = [4, 3, 13, 10, 1, 23, 6, 21, 20, 12, 19, 0, 17, 18, 22, 8, 24, 2, 7, 16, 14, 11, 15, 5, 9];
+function blitzInfo(bloc, slot) {
+  if (!bloc || slot == null || slot < 0 || slot >= BLOC_SIZE) return null;
+  const p = FILL_ORDER[slot], x = p % 5, y = Math.floor(p / 5);
+  const grupe = [];
+  for (let k = 0; k < 5; k++) grupe.push((((y - k * x) % 5) + 5) % 5 + 1);
+  grupe.push(x + 1);
+  return { bloc: BLOC_LETTERS[bloc - 1], nr: slot + 1, grupe };
+}
+let blitzCols = false;
+async function ensureBlitzCols(env) {
+  if (blitzCols) return;
+  for (const col of ["bloc INTEGER", "slot INTEGER"]) {
+    try { await env.DB.prepare(`ALTER TABLE inscrieri ADD COLUMN ${col}`).run(); } catch (e) { /* există deja */ }
+  }
+  try { await env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_blitz_slot ON inscrieri(eveniment,bloc,slot) WHERE bloc IS NOT NULL").run(); } catch (e) { /* există deja */ }
+  // Se reține că schema e gata doar dacă interogarea pe coloanele noi funcționează.
+  await env.DB.prepare("SELECT bloc, slot FROM inscrieri LIMIT 1").first();
+  blitzCols = true;
+}
+async function assignBlitz(env, id) {
+  await ensureBlitzCols(env);
+  const cur = await env.DB.prepare("SELECT bloc, slot FROM inscrieri WHERE id=?").bind(id).first();
+  if (cur && cur.bloc) return blitzInfo(cur.bloc, cur.slot);
+  let nb = parseInt(await setting(env, "blocuri"), 10);
+  if (!(nb >= 1 && nb <= MAX_BLOCKS)) nb = DEFAULT_BLOCKS;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const rows = (await env.DB.prepare("SELECT bloc, slot FROM inscrieri WHERE eveniment=? AND bloc IS NOT NULL").bind(EVENT).all()).results || [];
+    const used = {};
+    for (const r of rows) (used[r.bloc] = used[r.bloc] || new Set()).add(r.slot);
+    const size = (b) => (used[b] ? used[b].size : 0);
+    let eff = nb;
+    const allFull = () => { for (let b = 1; b <= eff; b++) if (size(b) < BLOC_SIZE) return false; return true; };
+    while (eff < MAX_BLOCKS && allFull()) eff++;
+    let pick = 0, best = Infinity;
+    for (let b = 1; b <= eff; b++) {
+      if (eff > nb && b <= nb) continue; // blocurile de bază sunt pline, se umple blocul nou
+      if (size(b) < best) { best = size(b); pick = b; }
+    }
+    if (!pick || best >= BLOC_SIZE) return null;
+    const taken = used[pick] || new Set();
+    let slot = 0;
+    while (taken.has(slot)) slot++;
+    try {
+      const r = await env.DB.prepare("UPDATE inscrieri SET bloc=?, slot=? WHERE id=? AND bloc IS NULL").bind(pick, slot, id).run();
+      if (r.meta && r.meta.changes === 0) {
+        const c2 = await env.DB.prepare("SELECT bloc, slot FROM inscrieri WHERE id=?").bind(id).first();
+        return c2 && c2.bloc ? blitzInfo(c2.bloc, c2.slot) : null;
+      }
+      return blitzInfo(pick, slot);
+    } catch (e) { /* locul a fost luat chiar atunci de altă scanare, reîncerc */ }
+  }
+  return null;
+}
+
 // ---------- sesiunea echipei ----------
 function readCookie(request, name) {
   const c = request.headers.get("Cookie") || "";
@@ -117,7 +185,7 @@ export async function handleCheckin(request, env, url, overLimit) {
   if (m) {
     const s = await staffSession(request, env);
     if (!s) return Response.redirect(`${url.origin}/bilet/${m[1]}`, 302);
-    return scanPage(env, m[1], s);
+    return scanPage(env, m[1], s, url.searchParams.get("ok") === "1");
   }
 
   if (p === "/checkin" || p === "/checkin/") {
@@ -163,8 +231,10 @@ export async function handleCheckin(request, env, url, overLimit) {
 async function doCheckin(env, token, undo, s) {
   const row = await findByToken(env, token);
   if (!row) return json({ ok: false, error: "Cod necunoscut" }, 404);
+  await ensureBlitzCols(env);
   if (undo) {
-    await env.DB.prepare("UPDATE inscrieri SET prezent_la=NULL, prezent_de=NULL WHERE id=?").bind(row.id).run();
+    // Anularea eliberează și locul din bloc, ca următoarea persoană să îl primească.
+    await env.DB.prepare("UPDATE inscrieri SET prezent_la=NULL, prezent_de=NULL, bloc=NULL, slot=NULL WHERE id=?").bind(row.id).run();
     await env.DB.prepare("INSERT INTO checkin_log (inscriere_id,actiune,de) VALUES (?,?,?)").bind(row.id, "anulare", s.who).run();
     return json({ ok: true, undone: true });
   }
@@ -175,20 +245,25 @@ async function doCheckin(env, token, undo, s) {
     return json({ ok: false, already: true, ora: oraRo(again && again.prezent_la), de: again && again.prezent_de, nume: row.nume });
   }
   await env.DB.prepare("INSERT INTO checkin_log (inscriere_id,actiune,de) VALUES (?,?,?)").bind(row.id, "intrare", s.who).run();
-  return json({ ok: true, nume: row.nume, ora: oraRo(new Date().toISOString().slice(0, 19).replace("T", " ")) });
+  const loc = await assignBlitz(env, row.id);
+  return json({ ok: true, nume: row.nume, ora: oraRo(new Date().toISOString().slice(0, 19).replace("T", " ")), loc });
 }
 
 async function stats(env) {
   await ensureTokens(env);
+  await ensureBlitzCols(env);
   const t = await env.DB.prepare(
     "SELECT SUM(CASE WHEN status='confirmat' THEN 1 ELSE 0 END) AS inscrisi, SUM(CASE WHEN prezent_la IS NOT NULL THEN 1 ELSE 0 END) AS prezenti, SUM(CASE WHEN status='asteptare' THEN 1 ELSE 0 END) AS asteptare, SUM(CASE WHEN status='confirmat' AND primire_confirmata IS NOT NULL THEN 1 ELSE 0 END) AS confirmari, SUM(CASE WHEN status='confirmat' AND invitatie_trimisa IS NOT NULL AND invitatie_trimisa NOT LIKE 'exclus%' AND invitatie_trimisa NOT LIKE 'eroare%' THEN 1 ELSE 0 END) AS trimise FROM inscrieri WHERE eveniment=?"
   ).bind(EVENT).first();
   const last = await env.DB.prepare(
-    "SELECT nume, companie, prezent_la, prezent_de, token FROM inscrieri WHERE eveniment=? AND prezent_la IS NOT NULL ORDER BY prezent_la DESC LIMIT 12"
+    "SELECT nume, companie, prezent_la, prezent_de, token, bloc, slot FROM inscrieri WHERE eveniment=? AND prezent_la IS NOT NULL ORDER BY prezent_la DESC LIMIT 12"
   ).bind(EVENT).all();
+  const blk = await env.DB.prepare("SELECT bloc, COUNT(*) AS n FROM inscrieri WHERE eveniment=? AND bloc IS NOT NULL GROUP BY bloc ORDER BY bloc").bind(EVENT).all();
+  const locTxt = (r) => { const l = blitzInfo(r.bloc, r.slot); return l ? l.bloc + l.nr : ""; };
   return json({
     inscrisi: (t && t.inscrisi) || 0, confirmari: (t && t.confirmari) || 0, trimise: (t && t.trimise) || 0, prezenti: (t && t.prezenti) || 0, asteptare: (t && t.asteptare) || 0,
-    ultimii: (last.results || []).map((r) => ({ nume: r.nume, companie: r.companie, ora: oraRo(r.prezent_la), de: r.prezent_de, token: r.token })),
+    ultimii: (last.results || []).map((r) => ({ nume: r.nume, companie: r.companie, ora: oraRo(r.prezent_la), de: r.prezent_de, token: r.token, loc: locTxt(r) })),
+    blocuri: (blk.results || []).map((r) => ({ b: BLOC_LETTERS[r.bloc - 1], n: r.n })),
   });
 }
 
@@ -196,22 +271,25 @@ async function search(env, q) {
   q = q.trim().slice(0, 60);
   if (q.length < 2) return json({ rezultate: [] });
   await ensureTokens(env);
+  await ensureBlitzCols(env);
   const like = "%" + q.replace(/[%_]/g, "") + "%";
   const digits = q.replace(/\D/g, "");
   const r = await env.DB.prepare(
-    "SELECT nume, email, telefon, companie, status, sursa, prezent_la, primire_confirmata, token FROM inscrieri WHERE eveniment=? AND (nume LIKE ? OR email LIKE ? OR companie LIKE ? OR (? <> '' AND replace(replace(replace(telefon,' ',''),'+',''),'-','') LIKE ?)) ORDER BY nume LIMIT 15"
+    "SELECT nume, email, telefon, companie, status, sursa, prezent_la, primire_confirmata, token, bloc, slot FROM inscrieri WHERE eveniment=? AND (nume LIKE ? OR email LIKE ? OR companie LIKE ? OR (? <> '' AND replace(replace(replace(telefon,' ',''),'+',''),'-','') LIKE ?)) ORDER BY nume LIMIT 15"
   ).bind(EVENT, like, like, like, digits.length >= 4 ? digits : "", "%" + digits + "%").all();
   return json({
     rezultate: (r.results || []).map((x) => ({
       nume: x.nume, email: x.email, telefon: x.telefon, companie: x.companie, status: x.status,
       vip: (x.sursa || "").includes("VIP"), prezent: !!x.prezent_la, ora: oraRo(x.prezent_la), confirmat: !!x.primire_confirmata, token: x.token,
+      loc: (() => { const l = blitzInfo(x.bloc, x.slot); return l ? l.bloc + l.nr : ""; })(),
     })),
   });
 }
 
 async function exportCsv(env) {
+  await ensureBlitzCols(env);
   const r = await env.DB.prepare(
-    "SELECT nume,email,telefon,companie,functie,profil,status,sursa,acord_bcr,creat,invitatie_trimisa,primire_confirmata,prezent_la,prezent_de FROM inscrieri WHERE eveniment=? ORDER BY primire_confirmata IS NULL, nume"
+    "SELECT nume,email,telefon,companie,functie,profil,status,sursa,acord_bcr,creat,invitatie_trimisa,primire_confirmata,prezent_la,prezent_de,bloc,slot FROM inscrieri WHERE eveniment=? ORDER BY primire_confirmata IS NULL, nume"
   ).bind(EVENT).all();
   const cell = (v) => {
     let s = String(v == null ? "" : v);
@@ -219,11 +297,12 @@ async function exportCsv(env) {
     return '"' + s.replace(/"/g, '""') + '"';
   };
   const dataRo = (utc) => utc ? new Date(utc.replace(" ", "T") + "Z").toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
-  const head = ["Nume", "Email", "A confirmat primirea emailului", "Confirmat la", "Telefon", "Companie", "Funcție", "Profil", "Status", "Sursa", "Acord BCR", "Înscris la", "Invitație trimisă", "Prezent", "Ora intrării", "Confirmat de"];
+  const head = ["Nume", "Email", "A confirmat primirea emailului", "Confirmat la", "Telefon", "Companie", "Funcție", "Profil", "Status", "Sursa", "Acord BCR", "Înscris la", "Invitație trimisă", "Prezent", "Ora intrării", "Confirmat de", "Bloc", "Nr. ecuson", "Runda 1", "Runda 2", "Runda 3", "Runda 4", "Runda 5", "Runda 6"];
   const lines = [head.map(cell).join(";")];
   for (const x of r.results || []) {
+    const l = blitzInfo(x.bloc, x.slot);
     lines.push([x.nume, x.email, x.primire_confirmata ? "DA" : "NU", dataRo(x.primire_confirmata), x.telefon, x.companie, x.functie, x.profil, x.status, x.sursa, x.acord_bcr ? "DA" : "NU", dataRo(x.creat), dataRo(x.invitatie_trimisa),
-      x.prezent_la ? "DA" : "NU", oraRo(x.prezent_la), x.prezent_de].map(cell).join(";"));
+      x.prezent_la ? "DA" : "NU", oraRo(x.prezent_la), x.prezent_de, l ? l.bloc : "", l ? l.nr : "", ...(l ? l.grupe : ["", "", "", "", "", ""])].map(cell).join(";"));
   }
   return new Response("﻿" + lines.join("\r\n"), {
     headers: { ...SEC_HEADERS, "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="prezenta-beyond-the-initiative.csv"' },
@@ -303,6 +382,16 @@ body.vipb{background-color:#0B0920;background-image:radial-gradient(600px 420px 
 .vt .vq p{font-size:13.5px;color:#B9BBD6;text-align:center;line-height:1.5}.vt .vq p b{color:#FFE27A}
 .vt .ft{display:flex;justify-content:space-between;padding:12px 24px;background:rgba(239,196,15,.08);font-size:11px;font-weight:800;letter-spacing:.2em;color:#EFC40F;position:relative}
 @media (prefers-reduced-motion:reduce){.vt{animation:none}}
+.loc{background:#F5F7FB;color:#130F2D;border-radius:22px;padding:22px 20px;margin-top:14px;text-align:center;box-shadow:0 30px 70px -20px rgba(0,0,0,.6)}
+.loc .lab{display:block}
+.loc .big2{font-size:88px;font-weight:800;line-height:1;color:#1F4789;letter-spacing:-2px;margin:6px 0 2px}
+.loc .sub{font-size:15px;font-weight:700;color:#4A5068}
+.loc .rd{margin-top:18px;text-align:left}
+.loc .rg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.loc .rg div{background:#fff;border:1.5px solid #C9D1E2;border-radius:14px;padding:10px 4px;text-align:center}
+.loc .rg small{display:block;font-size:11px;font-weight:800;letter-spacing:.12em;color:#0097D7}
+.loc .rg b{display:block;font-size:34px;font-weight:800;line-height:1.1;color:#130F2D}
+.loc .txt{margin-top:16px;font-size:14px;font-weight:700;color:#130F2D;background:#EFC40F;border-radius:10px;padding:10px}
 .bar{height:10px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden;margin-top:14px}.bar i{display:block;height:100%;background:linear-gradient(90deg,#0097D7,#57BCBC)}
 `;
 function shell(title, inner, scripts = "", bodyClass = "") {
@@ -367,7 +456,17 @@ function vipTicket(row, token, en, T, no) {
   return shell(en ? "Your VIP ticket" : "Biletul tău VIP", inner, `<script src="/assets/js/qrcode.js"></script><script src="/assets/js/bilet.js"></script><script src="/assets/js/bilet-vip.js"></script>`, "vipb");
 }
 
-async function scanPage(env, token, s) {
+// Fișa de ecuson afișată echipei de la check-in după scanare: blocul, numărul și masa pentru fiecare dintre cele 6 runde.
+function locCard(l) {
+  if (!l) return `<div class="loc"><p class="lab">ECUSON</p><p class="sub" style="margin-top:8px">Nu s-a putut aloca un loc în bloc. Notează manual și anunță coordonatorul.</p></div>`;
+  const cells = (from) => l.grupe.slice(from, from + 3).map((g, i) => `<div><small>RUNDA ${from + i + 1}</small><b>${g}</b></div>`).join("");
+  return `<div class="loc"><p class="lab">SCRIE PE ECUSON</p><p class="big2">${l.bloc}${l.nr}</p><p class="sub">Blocul ${l.bloc}, numărul ${l.nr}</p>
+<div class="rd"><span class="lab">BLITZ #1, MASA</span><div class="rg">${cells(0)}</div></div>
+<div class="rd"><span class="lab">BLITZ #2, MASA</span><div class="rg">${cells(3)}</div></div>
+<p class="txt">${l.bloc}${l.nr} | ${l.grupe.slice(0, 3).join(" ")} | ${l.grupe.slice(3).join(" ")}</p></div>`;
+}
+
+async function scanPage(env, token, s, fresh) {
   const row = await findByToken(env, token);
   if (!row) return html(shell("Cod necunoscut", `<div class="state s-warn"><p class="k" style="color:#fff">COD NECUNOSCUT</p><h1>Invitația nu există</h1><p class="muted">Caută persoana după nume.</p></div><a class="btn b-blue mt" href="/checkin">Înapoi la panou</a>`), 404);
   const vip = await isVip(env, row);
@@ -376,7 +475,14 @@ async function scanPage(env, token, s) {
   if (row.status !== "confirmat" && row.status !== "test") {
     inner = `<div class="state s-warn"><p class="k" style="color:#fff">LISTĂ DE AȘTEPTARE</p>${info}<p class="muted mt">Persoana nu are loc confirmat.</p></div>`;
   } else if (row.prezent_la) {
-    inner = `<div class="state s-warn"><p class="k" style="color:#fff">INVITAȚIE DEJA FOLOSITĂ</p>${info}<p class="muted mt">Intrare confirmată la ora <b>${oraRo(row.prezent_la)}</b>${row.prezent_de ? ` de ${esc(row.prezent_de)}` : ""}.</p></div>`;
+    // Persoanele intrate înainte de introducerea blocurilor primesc loc la prima scanare ulterioară.
+    const loc = await assignBlitz(env, row.id);
+    const recent = Date.now() - new Date(row.prezent_la.replace(" ", "T") + "Z").getTime() < 10 * 60e3;
+    if (fresh && recent) {
+      inner = `<div class="state s-ok"><p class="k" style="color:#fff">INTRARE CONFIRMATĂ, ORA ${oraRo(row.prezent_la)}</p>${info}</div>${locCard(loc)}`;
+    } else {
+      inner = `<div class="state s-warn"><p class="k" style="color:#fff">INVITAȚIE DEJA FOLOSITĂ</p>${info}<p class="muted mt">Intrare confirmată la ora <b>${oraRo(row.prezent_la)}</b>${row.prezent_de ? ` de ${esc(row.prezent_de)}` : ""}.</p></div>${locCard(loc)}`;
+    }
   } else {
     inner = `<div class="state s-wait" id="st"><p class="k" style="color:#fff">INVITAȚIE VALIDĂ</p>${info}</div>
 <button class="btn b-green mt" id="go" data-token="${token}">Confirmă intrarea</button>`;
@@ -401,6 +507,7 @@ function dashboardPage(s) {
 <div class="card"><div class="row"><div><p class="lab">AU INTRAT</p><p class="big" id="pz">0</p></div><div><p class="lab">ÎNSCRIȘI</p><p class="big" id="ins" style="color:#B9BBD6">0</p></div></div>
 <div class="bar"><i id="bar" style="width:0"></i></div>
 <div class="row mt"><div><p class="lab">INVITAȚII TRIMISE</p><p class="val" style="color:#fff" id="tr">0</p></div><div><p class="lab">AU CONFIRMAT PRIMIREA</p><p class="val" style="color:#fff" id="cf">0</p></div></div><p class="muted mt" id="upd">Se actualizează automat.</p></div>
+<div class="card mt"><p class="lab">BLOCURI, CÂȚI AU PRIMIT ECUSON</p><p class="val" style="color:#fff" id="blk">Nimeni încă.</p></div>
 <div class="card mt"><p class="lab">CAUTĂ DUPĂ NUME, EMAIL SAU TELEFON</p><input id="q" class="mt" placeholder="ex. Popescu" autocomplete="off" enterkeyhint="search"><div id="rez"></div></div>
 <div class="card mt"><p class="lab">ULTIMELE INTRĂRI</p><div id="ult"><p class="muted mt">Nimeni încă.</p></div></div>
 <a class="btn b-ghost mt" href="/api/echipa/export.csv">Descarcă lista de prezență (Excel)</a>
