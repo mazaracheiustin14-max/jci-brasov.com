@@ -42,7 +42,7 @@
       if ($("tr")) { $("tr").textContent = j.trimise; $("cf").textContent = j.confirmari; }
       $("bar").style.width = (j.inscrisi ? Math.min(100, Math.round(100 * j.prezenti / j.inscrisi)) : 0) + "%";
       $("upd").textContent = "Actualizat la " + new Date().toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) + (j.asteptare ? ". Pe lista de așteptare: " + j.asteptare : "");
-      if ($("blk")) $("blk").textContent = j.blocuri && j.blocuri.length ? j.blocuri.map(function (b) { return "Bloc " + b.b + ": " + b.n; }).join(", ") : "Nimeni încă.";
+      if ($("blk")) $("blk").textContent = j.blocuri && j.blocuri.length ? j.blocuri.map(function (b) { return "Bloc " + b.b + (b.nume ? " (" + b.nume + ")" : "") + ": " + b.n; }).join(", ") : "Nimeni încă.";
       $("ult").innerHTML = j.ultimii.length ? j.ultimii.map(function (x) {
         return '<div class="res"><span><b>' + esc(x.nume) + "</b><small>" + esc(x.ora) + (x.loc ? ", ecuson " + esc(x.loc) : "") + (x.de ? ", de " + esc(x.de) : "") + (x.companie ? ", " + esc(x.companie) : "") +
           '</small></span><button data-undo="' + esc(x.token) + '" style="background:transparent;border:1px solid rgba(255,255,255,.3)">Anulează</button></div>';

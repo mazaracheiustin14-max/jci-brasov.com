@@ -87,6 +87,8 @@ const BLOC_SIZE = 25;
 const DEFAULT_BLOCKS = 4;
 const MAX_BLOCKS = 26;
 const BLOC_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+// Numele blocurilor (doar etichetă de anunțat în sală, codurile rămân litera și numerele): povestea grupului, de la idee la orizont.
+const BLOC_NAMES = ["Scânteia", "Busola", "Puntea", "Urcușul", "Vârful", "Orizontul", "Farul", "Zorii"];
 // Ordinea în care se ocupă punctele grilei, aleasă ca grupele să rămână echilibrate și când blocul nu e plin.
 const FILL_ORDER = [4, 3, 13, 10, 1, 23, 6, 21, 20, 12, 19, 0, 17, 18, 22, 8, 24, 2, 7, 16, 14, 11, 15, 5, 9];
 function blitzInfo(bloc, slot) {
@@ -95,7 +97,7 @@ function blitzInfo(bloc, slot) {
   const grupe = [];
   for (let k = 0; k < 5; k++) grupe.push((((y - k * x) % 5) + 5) % 5 + 1);
   grupe.push(x + 1);
-  return { bloc: BLOC_LETTERS[bloc - 1], nr: slot + 1, grupe };
+  return { bloc: BLOC_LETTERS[bloc - 1], nume: BLOC_NAMES[bloc - 1] || "", nr: slot + 1, grupe };
 }
 let blitzCols = false;
 async function ensureBlitzCols(env) {
@@ -263,7 +265,7 @@ async function stats(env) {
   return json({
     inscrisi: (t && t.inscrisi) || 0, confirmari: (t && t.confirmari) || 0, trimise: (t && t.trimise) || 0, prezenti: (t && t.prezenti) || 0, asteptare: (t && t.asteptare) || 0,
     ultimii: (last.results || []).map((r) => ({ nume: r.nume, companie: r.companie, ora: oraRo(r.prezent_la), de: r.prezent_de, token: r.token, loc: locTxt(r) })),
-    blocuri: (blk.results || []).map((r) => ({ b: BLOC_LETTERS[r.bloc - 1], n: r.n })),
+    blocuri: (blk.results || []).map((r) => ({ b: BLOC_LETTERS[r.bloc - 1], nume: BLOC_NAMES[r.bloc - 1] || "", n: r.n })),
   });
 }
 
@@ -297,12 +299,12 @@ async function exportCsv(env) {
     return '"' + s.replace(/"/g, '""') + '"';
   };
   const dataRo = (utc) => utc ? new Date(utc.replace(" ", "T") + "Z").toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
-  const head = ["Nume", "Email", "A confirmat primirea emailului", "Confirmat la", "Telefon", "Companie", "Funcție", "Profil", "Status", "Sursa", "Acord BCR", "Înscris la", "Invitație trimisă", "Prezent", "Ora intrării", "Confirmat de", "Bloc", "Nr. ecuson", "Runda 1", "Runda 2", "Runda 3", "Runda 4", "Runda 5", "Runda 6"];
+  const head = ["Nume", "Email", "A confirmat primirea emailului", "Confirmat la", "Telefon", "Companie", "Funcție", "Profil", "Status", "Sursa", "Acord BCR", "Înscris la", "Invitație trimisă", "Prezent", "Ora intrării", "Confirmat de", "Bloc", "Nume bloc", "Nr. ecuson", "Runda 1", "Runda 2", "Runda 3", "Runda 4", "Runda 5", "Runda 6"];
   const lines = [head.map(cell).join(";")];
   for (const x of r.results || []) {
     const l = blitzInfo(x.bloc, x.slot);
     lines.push([x.nume, x.email, x.primire_confirmata ? "DA" : "NU", dataRo(x.primire_confirmata), x.telefon, x.companie, x.functie, x.profil, x.status, x.sursa, x.acord_bcr ? "DA" : "NU", dataRo(x.creat), dataRo(x.invitatie_trimisa),
-      x.prezent_la ? "DA" : "NU", oraRo(x.prezent_la), x.prezent_de, l ? l.bloc : "", l ? l.nr : "", ...(l ? l.grupe : ["", "", "", "", "", ""])].map(cell).join(";"));
+      x.prezent_la ? "DA" : "NU", oraRo(x.prezent_la), x.prezent_de, l ? l.bloc : "", l ? l.nume : "", l ? l.nr : "", ...(l ? l.grupe.map((g) => l.bloc + g) : ["", "", "", "", "", ""])].map(cell).join(";"));
   }
   return new Response("﻿" + lines.join("\r\n"), {
     headers: { ...SEC_HEADERS, "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="prezenta-beyond-the-initiative.csv"' },
@@ -459,11 +461,12 @@ function vipTicket(row, token, en, T, no) {
 // Fișa de ecuson afișată echipei de la check-in după scanare: blocul, numărul și masa pentru fiecare dintre cele 6 runde.
 function locCard(l) {
   if (!l) return `<div class="loc"><p class="lab">ECUSON</p><p class="sub" style="margin-top:8px">Nu s-a putut aloca un loc în bloc. Notează manual și anunță coordonatorul.</p></div>`;
-  const cells = (from) => l.grupe.slice(from, from + 3).map((g, i) => `<div><small>RUNDA ${from + i + 1}</small><b>${g}</b></div>`).join("");
-  return `<div class="loc"><p class="lab">SCRIE PE ECUSON</p><p class="big2">${l.bloc}${l.nr}</p><p class="sub">Blocul ${l.bloc}, numărul ${l.nr}</p>
-<div class="rd"><span class="lab">BLITZ #1, MASA</span><div class="rg">${cells(0)}</div></div>
-<div class="rd"><span class="lab">BLITZ #2, MASA</span><div class="rg">${cells(3)}</div></div>
-<p class="txt">${l.bloc}${l.nr} | ${l.grupe.slice(0, 3).join(" ")} | ${l.grupe.slice(3).join(" ")}</p></div>`;
+  const cells = (from) => l.grupe.slice(from, from + 3).map((g, i) => `<div><small>RUNDA ${from + i + 1}</small><b>${l.bloc}${g}</b></div>`).join("");
+  const mese = l.grupe.map((g) => l.bloc + g);
+  return `<div class="loc"><p class="lab">SCRIE PE ECUSON</p><p class="big2">${l.bloc}${l.nr}</p><p class="sub">${l.nume ? `Blocul ${esc(l.nume)} (${l.bloc}), ` : `Blocul ${l.bloc}, `}numărul ${l.nr}</p>
+<div class="rd"><span class="lab">BLITZ #1, MESELE</span><div class="rg">${cells(0)}</div></div>
+<div class="rd"><span class="lab">BLITZ #2, MESELE</span><div class="rg">${cells(3)}</div></div>
+<p class="txt">${l.bloc}${l.nr} | ${mese.slice(0, 3).join(" ")} | ${mese.slice(3).join(" ")}</p></div>`;
 }
 
 async function scanPage(env, token, s, fresh) {
