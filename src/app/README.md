@@ -39,11 +39,13 @@ src/app/js/00-util.js            constante, formatare, date
            45-acces.js           intrare cu cod, acorduri, formular de profil
            50-director-profil.js ecrane: director, profil
            55-finante.js         ecrane: tablou, cotizații, donații, cheltuieli
+           58-structura.js       structură (filiale, președinți), conducerea filialei, predarea funcției, excluderea
            60-foi-finante.js     foi: membri, cotizații, donații, cheltuieli
            70-actiuni.js         onAct(act, id): toate butoanele
            80-catalog.js         catalogul vizual /app?ui
            90-pornire.js         start()
 src/app/img/                     logo.png, icon.png
+src/app/etape/                   proiectul tehnic al fiecărei etape (E1.md ...)
 src/app/tests/                   teste (vezi mai jos)
 worker/app.js                    API-ul /api/app/* și regulile de acces
 ```
@@ -58,6 +60,8 @@ Totul e în același spațiu global: o funcție nouă se pune în fișierul teme
 - Formular: `openSheet(html, async function (fd) { ... })`; erorile cu `fieldErr("...")`; la final `closeSheet()` și `toast("...")`.
 - Date: `col("cale")` citește, `S.store.set(cale, id, obiect)` scrie, `put(cale, id, obiect, acțiune, rezumat)` scrie și
   trece în jurnal. Abonarea la o cale nouă: `sub("cale")` în `subscribeAll()` sau `ensureLeadSubs()` (`20-stare.js`).
+- Operație de structură (roluri, filiale, excluderi): `adminOp({ op, ... })` în interfață, `admin()` în `worker/app.js`.
+  Rolurile și lista filialelor nu se scriu niciodată direct.
 - Colecție nouă pe server: se adaugă în `COLLS` și în `canRead` / `canWrite` din `worker/app.js`, cu teste în
   `tests/t_backend.mjs` pentru fiecare rol care are voie și fiecare rol care nu are voie.
 - Date de probă pentru modul demonstrativ: `demoSeed` în `15-stocare.js`.

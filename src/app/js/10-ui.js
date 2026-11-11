@@ -87,6 +87,8 @@ function row(o) {
 function openSheet(html, onSubmit) {
   var s = document.getElementById("sheet");
   s.innerHTML = html;
+  /* un mesaj rămas pe ecran nu are voie să acopere foaia (de exemplu un cod abia generat) */
+  document.getElementById("toast").style.display = "none";
   document.getElementById("sheetwrap").classList.add("open");
   var f = s.querySelector("form");
   if (f && onSubmit)

@@ -1,6 +1,7 @@
 "use strict";
 /* ===================== utilitare ===================== */
-var BRANCHES = ["Brașov", "Cluj", "București"];
+/* Lista vine din colecția branchlist (20-stare.js); se rescrie pe loc, ca variabila să rămână aceeași. */
+var BRANCHES = [];
 var DOMAINS = [
   "IT și tehnologie",
   "Juridic",
@@ -28,7 +29,14 @@ var CATS = [
   "Acțiuni caritabile și implicare comunitară",
   "Alte cheltuieli",
 ];
-var ROLE_LABEL = { national: "Moderator", president: "Președinte", treasurer: "Trezorier", member: "Membru" };
+var ROLE_LABEL = {
+  mod: "Administrator",
+  national: "Președinte național",
+  president: "Președinte",
+  treasurer: "Vicepreședinte trezorier",
+  board: "Conducere",
+  member: "Membru",
+};
 var FEE_STATE = {
   neplatita: ["Neplătită", "warn", "clock"],
   platita: ["Plătită", "good", "check"],

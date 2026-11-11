@@ -1,5 +1,20 @@
 /* Randarea paginii: antet, navigare, alegerea ecranului */
 function tabsFor() {
+  var rl = myRole().role;
+  if (rl === "mod") return [["structura", "Structură", "build"]];
+  if (rl === "national")
+    return [
+      ["director", "Director", "dir"],
+      ["structura", "Structură", "build"],
+      ["profil", "Profilul meu", "me"],
+    ];
+  if (rl === "board")
+    return [
+      ["director", "Director", "dir"],
+      ["donatii", "Donații", "gift"],
+      ["cheltuieli", "Cheltuieli", "spend"],
+      ["profil", "Profilul meu", "me"],
+    ];
   if (!isLead())
     return [
       ["director", "Director", "dir"],
@@ -21,11 +36,11 @@ function render() {
     S._stale = true;
     return;
   }
-  if (document.getElementById("gateform") && S.D.profiles !== undefined && !myProfile() && !isLead()) {
+  if (document.getElementById("gateform") && S.D.profiles !== undefined && !myProfile() && needsGate()) {
     S._stale = true;
     return;
   }
-  if (document.getElementById("loginform") && S.me && !isLead() && badgeState(badgeOf(S.me.id)) === "none" && !localClaim()) {
+  if (document.getElementById("loginform") && S.me && needsGate() && badgeState(badgeOf(S.me.id)) === "none" && !localClaim()) {
     S._stale = true;
     return;
   }
@@ -35,6 +50,7 @@ function render() {
     !S.err.profiles &&
     !S.err.roles &&
     (S.D.profiles === undefined ||
+      (S.D.branchlist === undefined && !S.err.branchlist) ||
       S.D.roles === undefined ||
       S.D.badges === undefined ||
       (S.me && S.D["data/users/" + S.me.id] === undefined && !S.err["data/users/" + S.me.id]));
@@ -60,7 +76,7 @@ function render() {
   }
   var r = myRole();
   var prof = myProfile();
-  if (!isLead()) {
+  if (needsGate()) {
     var bd0 = badgeOf(S.me.id),
       bst = badgeState(bd0);
     if (bst === "excluded") {
@@ -88,29 +104,25 @@ function render() {
   }
   var tabs = tabsFor();
   if (
-    S.tab !== "profil" &&
+    (S.tab !== "profil" || isMod()) &&
     !tabs.some(function (t) {
       return t[0] === S.tab;
     })
   )
     S.tab = tabs[0][0];
   var head = '<header class="top">' + logoHtml() + "";
-  if (r.role === "national")
-    head +=
-      '<select class="branch" id="brsel" aria-label="Filiala">' +
-      BRANCHES.map(function (b) {
-        return "<option" + (b === curBranch() ? " selected" : "") + ">" + esc(b) + "</option>";
-      }).join("") +
-      "</select>";
-  else if (isLead()) head += '<span class="small" style="color:var(--hero-ink)">' + esc(r.branch) + "</span>";
+  if (scopeBranches().length) head += '<span class="small" style="color:var(--hero-ink)">' + esc(r.branch) + "</span>";
   head +=
     '<button class="ibtn" data-act="theme" aria-label="Schimbă tema">' +
     svg("sun", 22) +
     "</button>" +
     (S.server ? '<button class="ibtn" data-act="logout" aria-label="Ieși din cont">' + svg("out", 22) + "</button>" : "") +
-    '<button class="ibtn" data-act="goprofil" aria-label="Profilul meu"><span class="avatar">' +
-    esc(initials(prof ? prof.name : ROLE_LABEL[r.role])) +
-    "</span></button></header>";
+    (isMod()
+      ? ""
+      : '<button class="ibtn" data-act="goprofil" aria-label="Profilul meu"><span class="avatar">' +
+        esc(initials(prof ? prof.name : roleTitle(r))) +
+        "</span></button>") +
+    "</header>";
   var demo = demoBarHtml();
   var nav =
     '<nav class="tabs" aria-label="Navigare">' +
@@ -133,10 +145,12 @@ function render() {
   var body;
   if (S.tab === "director") body = vDirector();
   else if (S.tab === "profil") body = vProfile();
+  else if (S.tab === "structura") body = vStructure();
   else if (S.tab === "tablou") body = vDash();
   else if (S.tab === "cotizatii") body = vFees();
   else if (S.tab === "donatii") body = vDon();
-  else body = vExp();
+  else if (S.tab === "cheltuieli") body = vExp();
+  else body = vDirector();
   var note =
     (S.note ? '<div class="notice">' + esc(S.note) + "</div>" : "") +
     (S.err.roles ? '<div class="notice">Nu am putut citi rolurile. Reîncarcă pagina; până atunci apari ca membru.</div>' : "");

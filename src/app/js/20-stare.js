@@ -17,6 +17,7 @@ var S = {
   expFilter: "Toate",
   theme: null,
   note: "",
+  nm: {} /* nume învățate în sesiune (liste de candidați, persoane numite), pentru conturi fără profil citibil */,
 };
 
 S.server =
@@ -38,21 +39,38 @@ function lsSet(k, v) {
 
 function myRole() {
   var me = S.me;
-  if (!me) return { role: "member", branch: "" };
+  if (!me) return { role: "member", branch: "", title: "" };
   var r = (S.D.roles || []).filter(function (x) {
     return x.id === me.id;
   })[0];
-  if (r) return { role: r.role, branch: r.branch || "" };
-  if (me.isOwner) return { role: "national", branch: "" };
-  return { role: "member", branch: "" };
+  if (r) return { role: r.role, branch: r.branch || "", title: r.title || "" };
+  if (me.isOwner) return { role: "mod", branch: "", title: "" };
+  return { role: "member", branch: "", title: "" };
+}
+/* Funcția afișată: titlul din rol, dacă există, altfel denumirea implicită. */
+function roleTitle(r) {
+  return (r && r.title) || ROLE_LABEL[r && r.role] || "";
 }
 function canWrite() {
   var r = myRole().role;
   return r === "president" || r === "treasurer";
 }
-function canSeeRoles() {
-  if (S.server) return !!(S.me && S.me.isOwner);
-  return myRole().role === "national" || (S.me && S.me.isOwner);
+function isMod() {
+  return myRole().role === "mod";
+}
+function isNational() {
+  return myRole().role === "national";
+}
+/* Rolul unui membru din evidența filialei: în server cheia rolului e id-ul membrului, în demonstrativ e id-ul contului. */
+function roleOfMember(m) {
+  return (
+    (S.D.roles || []).filter(function (x) {
+      return x.id === m.id || (m.userId && x.id === m.userId);
+    })[0] || null
+  );
+}
+function isSelf(m) {
+  return !!S.me && (m.id === S.me.id || m.userId === S.me.id);
 }
 var WRITE_ACTS = {
   newfee: 1,
@@ -67,13 +85,21 @@ var WRITE_ACTS = {
   expappr: 1,
   exppay: 1,
 };
+/* Conducerea care lucrează cu evidența filialei: președinte și trezorier. */
 function isLead() {
   var r = myRole().role;
-  return r === "national" || r === "president" || r === "treasurer";
+  return r === "president" || r === "treasurer";
+}
+function isBoard() {
+  return myRole().role === "board";
+}
+/* Intră prin ecranul de acorduri și profil: toți, în afară de administratorul tehnic și de conducerea cu evidență. */
+function needsGate() {
+  return !isMod() && !isLead();
 }
 function scopeBranches() {
   var r = myRole();
-  return r.role === "national" ? BRANCHES : r.branch ? [r.branch] : [];
+  return (r.role === "president" || r.role === "treasurer" || r.role === "board") && r.branch ? [r.branch] : [];
 }
 function curBranch() {
   var sb = scopeBranches();
@@ -137,25 +163,27 @@ function badgeOf(id) {
   })[0];
 }
 function nameOf(id) {
+  var r = (S.D.roles || []).filter(function (x) {
+    return x.id === id;
+  })[0];
+  if (r && r.name) return r.name;
   var p = (S.D.profiles || []).filter(function (x) {
     return x.id === id;
   })[0];
   if (p) return p.name;
-  var r = (S.D.roles || []).filter(function (x) {
-    return x.id === id;
-  })[0];
   var rm = null;
   BRANCHES.forEach(function (b) {
     (S.D["branches/" + b + "/members"] || []).forEach(function (m) {
-      if (m.id === id) rm = m;
+      if (m.id === id || m.userId === id) rm = m;
     });
   });
   if (rm) return rm.name;
-  if (S.me && id === S.me.id && S.me.isOwner) return "Moderator";
-  return r ? ROLE_LABEL[r.role] : "necunoscut";
+  if (S.nm[id]) return S.nm[id];
+  if (S.me && id === S.me.id && S.me.isOwner) return ROLE_LABEL.mod;
+  return r ? roleTitle(r) : "necunoscut";
 }
 function donorName(d) {
-  return d.anonymous ? "Donator anonim" : myRole().role === "national" ? "Donator (nume vizibil doar conducerii filialei)" : d.donor;
+  return d.anonymous ? "Donator anonim" : d.donor;
 }
 function col(p) {
   return S.D[p] || [];
@@ -172,11 +200,49 @@ function sub(path) {
       S.D[path] = rows;
       delete S.err[path];
     }
-    if (path === "roles") ensureLeadSubs();
+    if (path === "branchlist" && rows) syncBranches(rows);
+    if (path === "roles" && rows) {
+      var sig = myRole().role + "|" + myRole().branch;
+      if (S._sig && S._sig !== sig) {
+        /* funcția mea s-a schimbat (predare, retragere): abonările se refac după noul rol */
+        S._sig = sig;
+        setTimeout(subscribeAll, 0);
+        return;
+      }
+      S._sig = sig;
+      ensureLeadSubs();
+    }
     schedule();
   });
 }
+/* branchlist -> BRANCHES: aceeași variabilă, rescrisă pe loc, în ordine alfabetică */
+function syncBranches(rows) {
+  var names = rows
+    .map(function (x) {
+      return String(x.name || "");
+    })
+    .filter(Boolean)
+    .sort(function (a, c) {
+      return norm(a) < norm(c) ? -1 : norm(a) > norm(c) ? 1 : 0;
+    });
+  BRANCHES.length = 0;
+  names.forEach(function (n) {
+    BRANCHES.push(n);
+  });
+}
 function ensureLeadSubs() {
+  var rl = myRole().role;
+  if (rl === "mod" || rl === "national") {
+    sub("audit");
+    return;
+  }
+  if (rl === "board") {
+    scopeBranches().forEach(function (b) {
+      sub("branches/" + b + "/donations");
+      sub("branches/" + b + "/expenses");
+    });
+    return;
+  }
   if (!isLead()) return;
   if (!S.server) sub("claims");
   sub("audit");
@@ -191,6 +257,8 @@ function subscribeAll() {
   S.D = {};
   S.err = {};
   subbed = {};
+  S._sig = "";
+  sub("branchlist");
   sub("profiles");
   sub("badges");
   sub("roles");
@@ -258,4 +326,31 @@ async function put(path, id, obj, action, summary) {
     toast("Atenție: modificarea a fost salvată, dar jurnalul nu a putut fi scris. Notează-o separat.");
   }
   return true;
+}
+
+/* Operații de structură: POST /api/app/admin. La succes reîmprospătează datele și întoarce răspunsul; la eroare arată mesajul și întoarce null. */
+async function adminOp(body) {
+  if (!S.server) {
+    toast("În modul demonstrativ, structura nu se poate modifica.");
+    return null;
+  }
+  var r;
+  try {
+    r = await svPost("/api/app/admin", body);
+  } catch (e) {
+    toast("Nu am putut contacta serverul. Încearcă din nou.");
+    return null;
+  }
+  if (r.status === 401) {
+    location.reload();
+    return null;
+  }
+  if (r.status !== 200 || !r.body || r.body.error) {
+    toast((r.body && r.body.error) || "Operația a fost refuzată.");
+    return null;
+  }
+  await safe(function () {
+    return S.store.refresh();
+  });
+  return r.body;
 }

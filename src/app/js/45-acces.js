@@ -62,9 +62,11 @@ function demoBarHtml() {
   return (
     '<div class="demo-bar"><span>Mod demonstrativ: date fictive, nimic nu se salvează. Cod de probă pentru membru nou: DEMO-A2B3-C4D5.</span><label>Vezi ca <select id="demorole" aria-label="Vezi ca">' +
     [
-      ["u-nat", "Moderator"],
+      ["u-nat", "Președinte național"],
       ["u-pres-bv", "Președinte Brașov"],
-      ["u-trez-bv", "Trezorier Brașov"],
+      ["u-pres-cj", "Președinte Cluj"],
+      ["u-trez-bv", "Vicepreședinte trezorier Brașov"],
+      ["u-board-bv", "Conducere Brașov"],
       ["u-m1", "Membru"],
       ["u-new", "Membru nou, fără cod"],
       ["u-m5", "Membru exclus"],
@@ -87,7 +89,7 @@ function renderLogin() {
     '<div class="gate"><div class="gate-top">' +
     logoHtml() +
     '</div><div class="gate-in" style="margin-top:120px"><h1>Intră în aplicație</h1><p class="small" style="margin:8px 0 16px">Introdu codul de membru primit de la președintele filialei tale la înscriere.</p><form id="loginform"><div class="field"><label for="lg_code">Codul de membru</label><input type="text" id="lg_code" name="code" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" maxlength="20"></div><div class="err" id="lgerr"></div><div class="sheet-acts"><button class="btn" type="submit">Continuă</button></div></form>' +
-    '<div class="sec-h"><h2>Ești președinte sau trezorier?</h2></div><p class="small">Contul de conducere îl creează moderatorul aplicației. Trimite-i codul contului tău:</p><p class="num" style="overflow-wrap:anywhere;font-family:monospace;margin:8px 0">' +
+    '<div class="sec-h"><h2>Ai o funcție de conducere?</h2></div><p class="small">Contul de conducere îl creează persoana care te numește în funcție. Trimite-i codul contului tău:</p><p class="num" style="overflow-wrap:anywhere;font-family:monospace;margin:8px 0">' +
     esc(S.me.id) +
     '</p><button class="btn sec sm" data-act="copyid">Copiază codul contului</button></div></div>'
   );
@@ -103,15 +105,25 @@ function renderWaiting(cl) {
   );
 }
 function renderExcluded(bd) {
+  var txt =
+    bd.reason === "manual"
+      ? "Contul tău a fost suspendat de conducerea filialei" +
+        (bd.branch ? " " + esc(bd.branch) : "") +
+        ". Pentru detalii, contactează președintele filialei."
+      : "Calitatea ta de membru a expirat la " +
+        dro(bd.validUntil) +
+        ", iar de peste 3 luni cotizația nu a fost achitată, deci contul a fost scos automat din aplicație. Accesul revine după plata cotizației. Contactează președintele filialei" +
+        (bd.branch ? " " + esc(bd.branch) : "") +
+        ".";
   return (
     demoBarHtml() +
     '<div class="gate"><div class="gate-top">' +
     logoHtml() +
-    '</div><div class="gate-in" style="margin-top:120px"><h1>Accesul tău a fost suspendat</h1><p style="margin:12px 0">Calitatea ta de membru a expirat la ' +
-    dro(bd.validUntil) +
-    ", iar de peste 3 luni cotizația nu a fost achitată, deci contul a fost scos automat din aplicație. Accesul revine după plata cotizației. Contactează președintele filialei" +
-    (bd.branch ? " " + esc(bd.branch) : "") +
-    ".</p></div></div>"
+    '</div><div class="gate-in" style="margin-top:120px"><h1>Accesul tău a fost suspendat</h1><p style="margin:12px 0">' +
+    txt +
+    "</p>" +
+    (S.server ? '<div class="sheet-acts"><button class="btn sec" data-act="logout">Ieși din cont</button></div>' : "") +
+    "</div></div>"
   );
 }
 function bindLogin() {
@@ -146,8 +158,8 @@ function renderServerLogin() {
   return (
     '<div class="gate"><div class="gate-top">' +
     logoHtml() +
-    '</div><div class="gate-in" style="margin-top:120px"><h1>Intră în aplicație</h1><p class="small" style="margin:8px 0 16px">Introdu codul de membru primit de la președintele filialei tale. Președinții și trezorierii intră tot cu un cod, primit de la moderator.</p><form id="svform"><div class="field"><label for="lg_code">Codul de membru</label><input type="text" id="lg_code" name="code" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" maxlength="20"></div><div class="err" id="lgerr" role="alert"></div><div class="sheet-acts"><button class="btn" type="submit">Continuă</button></div></form>' +
-    '<details style="margin-top:24px"><summary class="small">Moderator</summary><form id="modform" style="margin-top:12px"><div class="field"><label for="lg_key">Cheia moderatorului</label><input type="password" id="lg_key" name="key" autocomplete="off"></div><div class="err" id="mderr" role="alert"></div><div class="sheet-acts"><button class="btn sec" type="submit">Intră ca moderator</button></div></form></details></div></div>'
+    '</div><div class="gate-in" style="margin-top:120px"><h1>Intră în aplicație</h1><p class="small" style="margin:8px 0 16px">Introdu codul de membru primit de la președintele filialei tale. Conducerea intră tot cu un cod, primit de la persoana care a numit-o în funcție.</p><form id="svform"><div class="field"><label for="lg_code">Codul de membru</label><input type="text" id="lg_code" name="code" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" maxlength="20"></div><div class="err" id="lgerr" role="alert"></div><div class="sheet-acts"><button class="btn" type="submit">Continuă</button></div></form>' +
+    '<details style="margin-top:24px"><summary class="small">Administrator tehnic</summary><form id="modform" style="margin-top:12px"><div class="field"><label for="lg_key">Cheia administratorului</label><input type="password" id="lg_key" name="key" autocomplete="off"></div><div class="err" id="mderr" role="alert"></div><div class="sheet-acts"><button class="btn sec" type="submit">Intră ca administrator</button></div></form></details></div></div>'
   );
 }
 function svPost(url, body) {

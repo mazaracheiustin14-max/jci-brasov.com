@@ -16,7 +16,14 @@ async function start() {
         return {};
       });
       if (rs.status === 200) {
-        S.me = { id: String(js.id), isOwner: js.isOwner === true, name: String(js.name || ""), branch: String(js.branch || "") };
+        S.me = {
+          id: String(js.id),
+          isOwner: js.isOwner === true,
+          name: String(js.name || ""),
+          branch: String(js.branch || ""),
+          role: String(js.role || ""),
+          title: String(js.title || ""),
+        };
         S.store = makeHttpStore();
         S.mode = "ready";
         var hs = location.hash.replace("#", "");

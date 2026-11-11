@@ -1,7 +1,7 @@
 /* Ecrane: profilul meu, directorul membrilor */
 function vProfile() {
   if (S.server && S.me.isOwner)
-    return '<div class="page-head"><h1>Contul meu</h1></div><p class="small" style="margin-bottom:16px">Ești conectat ca moderator.</p><button class="btn sec" data-act="logout">Ieși din cont</button>';
+    return '<div class="page-head"><h1>Contul meu</h1></div><p class="small" style="margin-bottom:16px">Ești conectat ca administrator tehnic.</p><button class="btn sec" data-act="logout">Ieși din cont</button>';
   var p = myProfile() || {};
   var priv =
     col("data/users/" + S.me.id).filter(function (x) {
@@ -32,6 +32,7 @@ function vProfile() {
     '<div class="sec-h"><h2>Ce date public</h2></div>' +
     consentBlock(p.consent) +
     '<div class="sheet-acts"><button class="btn" type="submit">Salvează alegerile</button></div></form>' +
+    myFunctionBlock() +
     '<div class="sec-h"><h2>Drepturile tale</h2></div><p class="small">Poți descărca datele tale sau poți șterge profilul. Evidențele financiare se păstrează restrâns pe perioada legală. Pentru cereri speciale (obiecție, restricționare) scrie conducerii filialei.</p>' +
     '<div class="acts"><button class="btn sec" data-act="export">Descarcă datele mele</button><button class="btn crit" data-act="delprofile">Șterge profilul</button></div>' +
     (S.server

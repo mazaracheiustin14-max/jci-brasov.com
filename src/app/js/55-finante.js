@@ -92,34 +92,13 @@ function vDash() {
         .join("") +
       "</div>"
     : emptyBox("Nicio cheltuială plătită", "Nu există cheltuieli plătite în această filială.", "", "");
-  if (role.role === "national") {
+  if (role.role === "president") {
     h +=
       '<div class="sec-h"><h2>Setări filială</h2></div><p class="small" style="margin-bottom:8px">Sold inițial: ' +
       fmt(getSettings(b).opening) +
       " RON. Cotizația anuală: " +
       fmt(getSettings(b).feeDue) +
       ' RON.</p><button class="btn sec sm" data-act="settings">Modifică setările</button>';
-    h +=
-      '<div class="sec-h"><h2>Comparație pe filiale</h2></div><div class="tw"><table class="cmp"><thead><tr><th>Filiala</th><th>Cotizații</th><th>Restanțieri</th><th>Donații</th><th>Cheltuieli</th><th>Sold</th></tr></thead><tbody>' +
-      BRANCHES.map(function (x) {
-        var q = report(x);
-        return (
-          "<tr><td>" +
-          esc(x) +
-          '</td><td class="num">' +
-          fmt(q.incasat) +
-          '</td><td class="num">' +
-          q.restanti.length +
-          '</td><td class="num">' +
-          fmt(q.donatii) +
-          '</td><td class="num">' +
-          fmt(q.cheltPlatit) +
-          '</td><td class="num">' +
-          fmt(q.sold) +
-          "</td></tr>"
-        );
-      }).join("") +
-      "</tbody></table></div>";
   }
   h += '<div class="sec-h"><h2>Valabilitatea calității de membru</h2></div>';
   var vrows = [];
@@ -181,26 +160,7 @@ function vDash() {
         "</div>"
       : '<p class="small" style="margin-bottom:16px">Nicio cerere în așteptare.</p>';
   }
-  if (canSeeRoles()) {
-    h +=
-      '<div class="sec-h"><h2>Roluri conducere</h2></div><div class="list">' +
-      col("roles")
-        .map(function (x) {
-          return row({
-            act: "role",
-            id: x.id,
-            avatar: nameOf(x.id),
-            title: nameOf(x.id),
-            meta: esc(
-              (ROLE_LABEL[x.role] || x.role) +
-                (x.branch ? " | " + x.branch : "") +
-                (x.until ? " | mandat până la " + dro(x.until) + (x.until < today() ? " (EXPIRAT)" : "") : ""),
-            ),
-          });
-        })
-        .join("") +
-      '</div><button class="btn sec" data-act="newrole">Atribuie un rol</button>';
-  }
+  h += leadershipBlock(b);
   var au = col("audit")
     .slice()
     .sort(function (a, c) {
@@ -247,7 +207,9 @@ function vFees() {
       ? canWrite()
         ? '<button class="btn sm" data-act="newfee">Adaugă cotizație</button>'
         : ""
-      : '<button class="btn sm" data-act="newmember">Adaugă membru</button>') +
+      : myRole().role === "president"
+        ? '<button class="btn sm" data-act="newmember">Adaugă membru</button>'
+        : "") +
     "</div>";
   h +=
     '<div class="chips"><button class="chip" data-act="fv" data-id="fees" aria-pressed="' +
@@ -283,8 +245,13 @@ function vFees() {
                 id: m.id,
                 avatar: m.name,
                 title: m.name,
+                stripe: m.excluded ? "crit" : "",
                 meta: m.userId ? (S.server ? "Cont activ" : "Cont legat") : S.server ? "Cont neactivat" : "Fără cont în aplicație",
-                right: badgeState(bd) === "active" ? '<span class="seal">' + svg("seal", 14) + "Membru activ</span>" : "",
+                right: m.excluded
+                  ? uiTag("Exclus", "crit")
+                  : badgeState(bd) === "active"
+                    ? '<span class="seal">' + svg("seal", 14) + "Membru activ</span>"
+                    : "",
               });
             })
             .join("") +
@@ -292,7 +259,7 @@ function vFees() {
         : emptyBox(
             "Niciun membru în evidență",
             "Adaugă membrii filialei ca să le poți înregistra cotizațiile.",
-            "Adaugă membru",
+            myRole().role === "president" ? "Adaugă membru" : "",
             "newmember",
           ))
     );

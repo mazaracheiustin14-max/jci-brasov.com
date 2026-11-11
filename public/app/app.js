@@ -1,6 +1,7 @@
 "use strict";
 /* ===================== utilitare ===================== */
-var BRANCHES = ["Brașov", "Cluj", "București"];
+/* Lista vine din colecția branchlist (20-stare.js); se rescrie pe loc, ca variabila să rămână aceeași. */
+var BRANCHES = [];
 var DOMAINS = [
   "IT și tehnologie",
   "Juridic",
@@ -28,7 +29,14 @@ var CATS = [
   "Acțiuni caritabile și implicare comunitară",
   "Alte cheltuieli",
 ];
-var ROLE_LABEL = { national: "Moderator", president: "Președinte", treasurer: "Trezorier", member: "Membru" };
+var ROLE_LABEL = {
+  mod: "Administrator",
+  national: "Președinte național",
+  president: "Președinte",
+  treasurer: "Vicepreședinte trezorier",
+  board: "Conducere",
+  member: "Membru",
+};
 var FEE_STATE = {
   neplatita: ["Neplătită", "warn", "clock"],
   platita: ["Plătită", "good", "check"],
@@ -255,6 +263,8 @@ function row(o) {
 function openSheet(html, onSubmit) {
   var s = document.getElementById("sheet");
   s.innerHTML = html;
+  /* un mesaj rămas pe ecran nu are voie să acopere foaia (de exemplu un cod abia generat) */
+  document.getElementById("toast").style.display = "none";
   document.getElementById("sheetwrap").classList.add("open");
   var f = s.querySelector("form");
   if (f && onSubmit)
@@ -647,6 +657,7 @@ function makeHttpStore() {
     inflight = false,
     again = false,
     started = false,
+    gen = 0,
     lastPull = 0,
     lastAct = Date.now();
   /* Economie de cereri: actualizare la 60 s doar cât pagina e vizibilă și omul a fost activ în ultimele 3 minute. */
@@ -686,9 +697,11 @@ function makeHttpStore() {
     if (!paths.length) return Promise.resolve();
     inflight = true;
     lastPull = Date.now();
+    var g = gen;
     return post("/api/app/pull", { paths: paths, revs: revs })
       .then(function (r) {
         inflight = false;
+        if (g !== gen) return; /* abonările au fost refăcute între timp: răspunsul e depășit */
         if (r.status === 401 || (r.status === 403 && r.body && r.body.excluded)) {
           location.reload();
           return;
@@ -785,6 +798,7 @@ function makeHttpStore() {
       if (Date.now() - lastPull > minAge) pull();
     },
     reset: function () {
+      gen++;
       subs = {};
       revs = {};
       clearTimeout(timer);
@@ -847,6 +861,13 @@ function demoSeed(put) {
     ["m6", "Elena Barbu", "București", "Educație și training", "Skill Lab", "Traininguri pentru echipe"],
   ];
   var ids = {};
+  [
+    ["brasov", "Brașov"],
+    ["cluj", "Cluj"],
+    ["bucuresti", "București"],
+  ].forEach(function (b) {
+    put("branchlist", b[0], { name: b[1], createdAt: "2026-01-01", createdBy: "u-nat" });
+  });
   P.forEach(function (p, i) {
     var id = "u-" + p[0];
     ids[p[0]] = id;
@@ -875,7 +896,9 @@ function demoSeed(put) {
     });
   });
   ["Bianca Rusu", "Dan Pavel", "Sorin Matei", "Carmen Lupu", "Paul Georgescu"].forEach(function (n, i) {
-    put("branches/Brașov/members", "rb" + i, { name: n, branch: "Brașov", userId: "", validUntil: i === 0 ? "2026-09-30" : "2026-12-31" });
+    var mo = { name: n, branch: "Brașov", userId: "", validUntil: i === 0 ? "2026-09-30" : "2026-12-31" };
+    if (i === 4) mo.excluded = true;
+    put("branches/Brașov/members", "rb" + i, mo);
   });
   put("branches/Brașov/codes", "DEMOA2B3C4D5", {
     memberId: "rb0",
@@ -1017,9 +1040,26 @@ function demoSeed(put) {
     }),
   );
   put("branches/Brașov/settings", "main", { opening: 0 });
-  put("roles", "u-nat", { role: "national", branch: "" });
-  put("roles", "u-pres-bv", { role: "president", branch: "Brașov" });
-  put("roles", "u-trez-bv", { role: "treasurer", branch: "Brașov" });
+  put("roles", "u-nat", { role: "national", branch: "Brașov", title: "Președinte național", since: "2026-11-01" });
+  put("roles", "u-pres-bv", { role: "president", branch: "Brașov", title: "Președinte", since: "2026-11-01" });
+  put("roles", "u-pres-cj", { role: "president", branch: "Cluj", title: "Președinte", since: "2026-11-01" });
+  put("roles", "u-trez-bv", { role: "treasurer", branch: "Brașov", title: "Vicepreședinte trezorier", since: "2026-11-01" });
+  put("roles", "u-board-bv", { role: "board", branch: "Brașov", title: "Vicepreședinte comunicare", since: "2026-11-01" });
+  [
+    ["u-nat", "Președinte național (probă)", "Brașov"],
+    ["u-pres-cj", "Președinte Cluj (probă)", "Cluj"],
+    ["u-board-bv", "Conducere Brașov (probă)", "Brașov"],
+  ].forEach(function (x) {
+    put("profiles", x[0], {
+      name: x[1],
+      branch: x[2],
+      domain: "Alte domenii",
+      firm: "",
+      offer: "",
+      consent: { directory: false, phone: false, email: false, offer: false, version: CONSENT_VERSION },
+    });
+    put("badges", x[0], { verified: true, active: true, validUntil: "2027-12-31", excluded: false, branch: x[2] });
+  });
   put("profiles", "u-pres-bv", {
     name: "Iustin Măzărache",
     branch: "Brașov",
@@ -1056,6 +1096,7 @@ var S = {
   expFilter: "Toate",
   theme: null,
   note: "",
+  nm: {} /* nume învățate în sesiune (liste de candidați, persoane numite), pentru conturi fără profil citibil */,
 };
 
 S.server =
@@ -1077,21 +1118,38 @@ function lsSet(k, v) {
 
 function myRole() {
   var me = S.me;
-  if (!me) return { role: "member", branch: "" };
+  if (!me) return { role: "member", branch: "", title: "" };
   var r = (S.D.roles || []).filter(function (x) {
     return x.id === me.id;
   })[0];
-  if (r) return { role: r.role, branch: r.branch || "" };
-  if (me.isOwner) return { role: "national", branch: "" };
-  return { role: "member", branch: "" };
+  if (r) return { role: r.role, branch: r.branch || "", title: r.title || "" };
+  if (me.isOwner) return { role: "mod", branch: "", title: "" };
+  return { role: "member", branch: "", title: "" };
+}
+/* Funcția afișată: titlul din rol, dacă există, altfel denumirea implicită. */
+function roleTitle(r) {
+  return (r && r.title) || ROLE_LABEL[r && r.role] || "";
 }
 function canWrite() {
   var r = myRole().role;
   return r === "president" || r === "treasurer";
 }
-function canSeeRoles() {
-  if (S.server) return !!(S.me && S.me.isOwner);
-  return myRole().role === "national" || (S.me && S.me.isOwner);
+function isMod() {
+  return myRole().role === "mod";
+}
+function isNational() {
+  return myRole().role === "national";
+}
+/* Rolul unui membru din evidența filialei: în server cheia rolului e id-ul membrului, în demonstrativ e id-ul contului. */
+function roleOfMember(m) {
+  return (
+    (S.D.roles || []).filter(function (x) {
+      return x.id === m.id || (m.userId && x.id === m.userId);
+    })[0] || null
+  );
+}
+function isSelf(m) {
+  return !!S.me && (m.id === S.me.id || m.userId === S.me.id);
 }
 var WRITE_ACTS = {
   newfee: 1,
@@ -1106,13 +1164,21 @@ var WRITE_ACTS = {
   expappr: 1,
   exppay: 1,
 };
+/* Conducerea care lucrează cu evidența filialei: președinte și trezorier. */
 function isLead() {
   var r = myRole().role;
-  return r === "national" || r === "president" || r === "treasurer";
+  return r === "president" || r === "treasurer";
+}
+function isBoard() {
+  return myRole().role === "board";
+}
+/* Intră prin ecranul de acorduri și profil: toți, în afară de administratorul tehnic și de conducerea cu evidență. */
+function needsGate() {
+  return !isMod() && !isLead();
 }
 function scopeBranches() {
   var r = myRole();
-  return r.role === "national" ? BRANCHES : r.branch ? [r.branch] : [];
+  return (r.role === "president" || r.role === "treasurer" || r.role === "board") && r.branch ? [r.branch] : [];
 }
 function curBranch() {
   var sb = scopeBranches();
@@ -1176,25 +1242,27 @@ function badgeOf(id) {
   })[0];
 }
 function nameOf(id) {
+  var r = (S.D.roles || []).filter(function (x) {
+    return x.id === id;
+  })[0];
+  if (r && r.name) return r.name;
   var p = (S.D.profiles || []).filter(function (x) {
     return x.id === id;
   })[0];
   if (p) return p.name;
-  var r = (S.D.roles || []).filter(function (x) {
-    return x.id === id;
-  })[0];
   var rm = null;
   BRANCHES.forEach(function (b) {
     (S.D["branches/" + b + "/members"] || []).forEach(function (m) {
-      if (m.id === id) rm = m;
+      if (m.id === id || m.userId === id) rm = m;
     });
   });
   if (rm) return rm.name;
-  if (S.me && id === S.me.id && S.me.isOwner) return "Moderator";
-  return r ? ROLE_LABEL[r.role] : "necunoscut";
+  if (S.nm[id]) return S.nm[id];
+  if (S.me && id === S.me.id && S.me.isOwner) return ROLE_LABEL.mod;
+  return r ? roleTitle(r) : "necunoscut";
 }
 function donorName(d) {
-  return d.anonymous ? "Donator anonim" : myRole().role === "national" ? "Donator (nume vizibil doar conducerii filialei)" : d.donor;
+  return d.anonymous ? "Donator anonim" : d.donor;
 }
 function col(p) {
   return S.D[p] || [];
@@ -1211,11 +1279,49 @@ function sub(path) {
       S.D[path] = rows;
       delete S.err[path];
     }
-    if (path === "roles") ensureLeadSubs();
+    if (path === "branchlist" && rows) syncBranches(rows);
+    if (path === "roles" && rows) {
+      var sig = myRole().role + "|" + myRole().branch;
+      if (S._sig && S._sig !== sig) {
+        /* funcția mea s-a schimbat (predare, retragere): abonările se refac după noul rol */
+        S._sig = sig;
+        setTimeout(subscribeAll, 0);
+        return;
+      }
+      S._sig = sig;
+      ensureLeadSubs();
+    }
     schedule();
   });
 }
+/* branchlist -> BRANCHES: aceeași variabilă, rescrisă pe loc, în ordine alfabetică */
+function syncBranches(rows) {
+  var names = rows
+    .map(function (x) {
+      return String(x.name || "");
+    })
+    .filter(Boolean)
+    .sort(function (a, c) {
+      return norm(a) < norm(c) ? -1 : norm(a) > norm(c) ? 1 : 0;
+    });
+  BRANCHES.length = 0;
+  names.forEach(function (n) {
+    BRANCHES.push(n);
+  });
+}
 function ensureLeadSubs() {
+  var rl = myRole().role;
+  if (rl === "mod" || rl === "national") {
+    sub("audit");
+    return;
+  }
+  if (rl === "board") {
+    scopeBranches().forEach(function (b) {
+      sub("branches/" + b + "/donations");
+      sub("branches/" + b + "/expenses");
+    });
+    return;
+  }
   if (!isLead()) return;
   if (!S.server) sub("claims");
   sub("audit");
@@ -1230,6 +1336,8 @@ function subscribeAll() {
   S.D = {};
   S.err = {};
   subbed = {};
+  S._sig = "";
+  sub("branchlist");
   sub("profiles");
   sub("badges");
   sub("roles");
@@ -1297,6 +1405,33 @@ async function put(path, id, obj, action, summary) {
     toast("Atenție: modificarea a fost salvată, dar jurnalul nu a putut fi scris. Notează-o separat.");
   }
   return true;
+}
+
+/* Operații de structură: POST /api/app/admin. La succes reîmprospătează datele și întoarce răspunsul; la eroare arată mesajul și întoarce null. */
+async function adminOp(body) {
+  if (!S.server) {
+    toast("În modul demonstrativ, structura nu se poate modifica.");
+    return null;
+  }
+  var r;
+  try {
+    r = await svPost("/api/app/admin", body);
+  } catch (e) {
+    toast("Nu am putut contacta serverul. Încearcă din nou.");
+    return null;
+  }
+  if (r.status === 401) {
+    location.reload();
+    return null;
+  }
+  if (r.status !== 200 || !r.body || r.body.error) {
+    toast((r.body && r.body.error) || "Operația a fost refuzată.");
+    return null;
+  }
+  await safe(function () {
+    return S.store.refresh();
+  });
+  return r.body;
 }
 /* Calcule: rapoarte, valabilitate, verificări (pilotul vechi) */
 function activeRows(p) {
@@ -1507,6 +1642,21 @@ async function autoProcess() {
 }
 /* Randarea paginii: antet, navigare, alegerea ecranului */
 function tabsFor() {
+  var rl = myRole().role;
+  if (rl === "mod") return [["structura", "Structură", "build"]];
+  if (rl === "national")
+    return [
+      ["director", "Director", "dir"],
+      ["structura", "Structură", "build"],
+      ["profil", "Profilul meu", "me"],
+    ];
+  if (rl === "board")
+    return [
+      ["director", "Director", "dir"],
+      ["donatii", "Donații", "gift"],
+      ["cheltuieli", "Cheltuieli", "spend"],
+      ["profil", "Profilul meu", "me"],
+    ];
   if (!isLead())
     return [
       ["director", "Director", "dir"],
@@ -1528,11 +1678,11 @@ function render() {
     S._stale = true;
     return;
   }
-  if (document.getElementById("gateform") && S.D.profiles !== undefined && !myProfile() && !isLead()) {
+  if (document.getElementById("gateform") && S.D.profiles !== undefined && !myProfile() && needsGate()) {
     S._stale = true;
     return;
   }
-  if (document.getElementById("loginform") && S.me && !isLead() && badgeState(badgeOf(S.me.id)) === "none" && !localClaim()) {
+  if (document.getElementById("loginform") && S.me && needsGate() && badgeState(badgeOf(S.me.id)) === "none" && !localClaim()) {
     S._stale = true;
     return;
   }
@@ -1542,6 +1692,7 @@ function render() {
     !S.err.profiles &&
     !S.err.roles &&
     (S.D.profiles === undefined ||
+      (S.D.branchlist === undefined && !S.err.branchlist) ||
       S.D.roles === undefined ||
       S.D.badges === undefined ||
       (S.me && S.D["data/users/" + S.me.id] === undefined && !S.err["data/users/" + S.me.id]));
@@ -1567,7 +1718,7 @@ function render() {
   }
   var r = myRole();
   var prof = myProfile();
-  if (!isLead()) {
+  if (needsGate()) {
     var bd0 = badgeOf(S.me.id),
       bst = badgeState(bd0);
     if (bst === "excluded") {
@@ -1595,29 +1746,25 @@ function render() {
   }
   var tabs = tabsFor();
   if (
-    S.tab !== "profil" &&
+    (S.tab !== "profil" || isMod()) &&
     !tabs.some(function (t) {
       return t[0] === S.tab;
     })
   )
     S.tab = tabs[0][0];
   var head = '<header class="top">' + logoHtml() + "";
-  if (r.role === "national")
-    head +=
-      '<select class="branch" id="brsel" aria-label="Filiala">' +
-      BRANCHES.map(function (b) {
-        return "<option" + (b === curBranch() ? " selected" : "") + ">" + esc(b) + "</option>";
-      }).join("") +
-      "</select>";
-  else if (isLead()) head += '<span class="small" style="color:var(--hero-ink)">' + esc(r.branch) + "</span>";
+  if (scopeBranches().length) head += '<span class="small" style="color:var(--hero-ink)">' + esc(r.branch) + "</span>";
   head +=
     '<button class="ibtn" data-act="theme" aria-label="Schimbă tema">' +
     svg("sun", 22) +
     "</button>" +
     (S.server ? '<button class="ibtn" data-act="logout" aria-label="Ieși din cont">' + svg("out", 22) + "</button>" : "") +
-    '<button class="ibtn" data-act="goprofil" aria-label="Profilul meu"><span class="avatar">' +
-    esc(initials(prof ? prof.name : ROLE_LABEL[r.role])) +
-    "</span></button></header>";
+    (isMod()
+      ? ""
+      : '<button class="ibtn" data-act="goprofil" aria-label="Profilul meu"><span class="avatar">' +
+        esc(initials(prof ? prof.name : roleTitle(r))) +
+        "</span></button>") +
+    "</header>";
   var demo = demoBarHtml();
   var nav =
     '<nav class="tabs" aria-label="Navigare">' +
@@ -1640,10 +1787,12 @@ function render() {
   var body;
   if (S.tab === "director") body = vDirector();
   else if (S.tab === "profil") body = vProfile();
+  else if (S.tab === "structura") body = vStructure();
   else if (S.tab === "tablou") body = vDash();
   else if (S.tab === "cotizatii") body = vFees();
   else if (S.tab === "donatii") body = vDon();
-  else body = vExp();
+  else if (S.tab === "cheltuieli") body = vExp();
+  else body = vDirector();
   var note =
     (S.note ? '<div class="notice">' + esc(S.note) + "</div>" : "") +
     (S.err.roles ? '<div class="notice">Nu am putut citi rolurile. Reîncarcă pagina; până atunci apari ca membru.</div>' : "");
@@ -1723,9 +1872,11 @@ function demoBarHtml() {
   return (
     '<div class="demo-bar"><span>Mod demonstrativ: date fictive, nimic nu se salvează. Cod de probă pentru membru nou: DEMO-A2B3-C4D5.</span><label>Vezi ca <select id="demorole" aria-label="Vezi ca">' +
     [
-      ["u-nat", "Moderator"],
+      ["u-nat", "Președinte național"],
       ["u-pres-bv", "Președinte Brașov"],
-      ["u-trez-bv", "Trezorier Brașov"],
+      ["u-pres-cj", "Președinte Cluj"],
+      ["u-trez-bv", "Vicepreședinte trezorier Brașov"],
+      ["u-board-bv", "Conducere Brașov"],
       ["u-m1", "Membru"],
       ["u-new", "Membru nou, fără cod"],
       ["u-m5", "Membru exclus"],
@@ -1748,7 +1899,7 @@ function renderLogin() {
     '<div class="gate"><div class="gate-top">' +
     logoHtml() +
     '</div><div class="gate-in" style="margin-top:120px"><h1>Intră în aplicație</h1><p class="small" style="margin:8px 0 16px">Introdu codul de membru primit de la președintele filialei tale la înscriere.</p><form id="loginform"><div class="field"><label for="lg_code">Codul de membru</label><input type="text" id="lg_code" name="code" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" maxlength="20"></div><div class="err" id="lgerr"></div><div class="sheet-acts"><button class="btn" type="submit">Continuă</button></div></form>' +
-    '<div class="sec-h"><h2>Ești președinte sau trezorier?</h2></div><p class="small">Contul de conducere îl creează moderatorul aplicației. Trimite-i codul contului tău:</p><p class="num" style="overflow-wrap:anywhere;font-family:monospace;margin:8px 0">' +
+    '<div class="sec-h"><h2>Ai o funcție de conducere?</h2></div><p class="small">Contul de conducere îl creează persoana care te numește în funcție. Trimite-i codul contului tău:</p><p class="num" style="overflow-wrap:anywhere;font-family:monospace;margin:8px 0">' +
     esc(S.me.id) +
     '</p><button class="btn sec sm" data-act="copyid">Copiază codul contului</button></div></div>'
   );
@@ -1764,15 +1915,25 @@ function renderWaiting(cl) {
   );
 }
 function renderExcluded(bd) {
+  var txt =
+    bd.reason === "manual"
+      ? "Contul tău a fost suspendat de conducerea filialei" +
+        (bd.branch ? " " + esc(bd.branch) : "") +
+        ". Pentru detalii, contactează președintele filialei."
+      : "Calitatea ta de membru a expirat la " +
+        dro(bd.validUntil) +
+        ", iar de peste 3 luni cotizația nu a fost achitată, deci contul a fost scos automat din aplicație. Accesul revine după plata cotizației. Contactează președintele filialei" +
+        (bd.branch ? " " + esc(bd.branch) : "") +
+        ".";
   return (
     demoBarHtml() +
     '<div class="gate"><div class="gate-top">' +
     logoHtml() +
-    '</div><div class="gate-in" style="margin-top:120px"><h1>Accesul tău a fost suspendat</h1><p style="margin:12px 0">Calitatea ta de membru a expirat la ' +
-    dro(bd.validUntil) +
-    ", iar de peste 3 luni cotizația nu a fost achitată, deci contul a fost scos automat din aplicație. Accesul revine după plata cotizației. Contactează președintele filialei" +
-    (bd.branch ? " " + esc(bd.branch) : "") +
-    ".</p></div></div>"
+    '</div><div class="gate-in" style="margin-top:120px"><h1>Accesul tău a fost suspendat</h1><p style="margin:12px 0">' +
+    txt +
+    "</p>" +
+    (S.server ? '<div class="sheet-acts"><button class="btn sec" data-act="logout">Ieși din cont</button></div>' : "") +
+    "</div></div>"
   );
 }
 function bindLogin() {
@@ -1807,8 +1968,8 @@ function renderServerLogin() {
   return (
     '<div class="gate"><div class="gate-top">' +
     logoHtml() +
-    '</div><div class="gate-in" style="margin-top:120px"><h1>Intră în aplicație</h1><p class="small" style="margin:8px 0 16px">Introdu codul de membru primit de la președintele filialei tale. Președinții și trezorierii intră tot cu un cod, primit de la moderator.</p><form id="svform"><div class="field"><label for="lg_code">Codul de membru</label><input type="text" id="lg_code" name="code" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" maxlength="20"></div><div class="err" id="lgerr" role="alert"></div><div class="sheet-acts"><button class="btn" type="submit">Continuă</button></div></form>' +
-    '<details style="margin-top:24px"><summary class="small">Moderator</summary><form id="modform" style="margin-top:12px"><div class="field"><label for="lg_key">Cheia moderatorului</label><input type="password" id="lg_key" name="key" autocomplete="off"></div><div class="err" id="mderr" role="alert"></div><div class="sheet-acts"><button class="btn sec" type="submit">Intră ca moderator</button></div></form></details></div></div>'
+    '</div><div class="gate-in" style="margin-top:120px"><h1>Intră în aplicație</h1><p class="small" style="margin:8px 0 16px">Introdu codul de membru primit de la președintele filialei tale. Conducerea intră tot cu un cod, primit de la persoana care a numit-o în funcție.</p><form id="svform"><div class="field"><label for="lg_code">Codul de membru</label><input type="text" id="lg_code" name="code" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" maxlength="20"></div><div class="err" id="lgerr" role="alert"></div><div class="sheet-acts"><button class="btn" type="submit">Continuă</button></div></form>' +
+    '<details style="margin-top:24px"><summary class="small">Administrator tehnic</summary><form id="modform" style="margin-top:12px"><div class="field"><label for="lg_key">Cheia administratorului</label><input type="password" id="lg_key" name="key" autocomplete="off"></div><div class="err" id="mderr" role="alert"></div><div class="sheet-acts"><button class="btn sec" type="submit">Intră ca administrator</button></div></form></details></div></div>'
   );
 }
 function svPost(url, body) {
@@ -1953,7 +2114,7 @@ async function saveProfile(fd) {
 /* Ecrane: profilul meu, directorul membrilor */
 function vProfile() {
   if (S.server && S.me.isOwner)
-    return '<div class="page-head"><h1>Contul meu</h1></div><p class="small" style="margin-bottom:16px">Ești conectat ca moderator.</p><button class="btn sec" data-act="logout">Ieși din cont</button>';
+    return '<div class="page-head"><h1>Contul meu</h1></div><p class="small" style="margin-bottom:16px">Ești conectat ca administrator tehnic.</p><button class="btn sec" data-act="logout">Ieși din cont</button>';
   var p = myProfile() || {};
   var priv =
     col("data/users/" + S.me.id).filter(function (x) {
@@ -1984,6 +2145,7 @@ function vProfile() {
     '<div class="sec-h"><h2>Ce date public</h2></div>' +
     consentBlock(p.consent) +
     '<div class="sheet-acts"><button class="btn" type="submit">Salvează alegerile</button></div></form>' +
+    myFunctionBlock() +
     '<div class="sec-h"><h2>Drepturile tale</h2></div><p class="small">Poți descărca datele tale sau poți șterge profilul. Evidențele financiare se păstrează restrâns pe perioada legală. Pentru cereri speciale (obiecție, restricționare) scrie conducerii filialei.</p>' +
     '<div class="acts"><button class="btn sec" data-act="export">Descarcă datele mele</button><button class="btn crit" data-act="delprofile">Șterge profilul</button></div>' +
     (S.server
@@ -2200,34 +2362,13 @@ function vDash() {
         .join("") +
       "</div>"
     : emptyBox("Nicio cheltuială plătită", "Nu există cheltuieli plătite în această filială.", "", "");
-  if (role.role === "national") {
+  if (role.role === "president") {
     h +=
       '<div class="sec-h"><h2>Setări filială</h2></div><p class="small" style="margin-bottom:8px">Sold inițial: ' +
       fmt(getSettings(b).opening) +
       " RON. Cotizația anuală: " +
       fmt(getSettings(b).feeDue) +
       ' RON.</p><button class="btn sec sm" data-act="settings">Modifică setările</button>';
-    h +=
-      '<div class="sec-h"><h2>Comparație pe filiale</h2></div><div class="tw"><table class="cmp"><thead><tr><th>Filiala</th><th>Cotizații</th><th>Restanțieri</th><th>Donații</th><th>Cheltuieli</th><th>Sold</th></tr></thead><tbody>' +
-      BRANCHES.map(function (x) {
-        var q = report(x);
-        return (
-          "<tr><td>" +
-          esc(x) +
-          '</td><td class="num">' +
-          fmt(q.incasat) +
-          '</td><td class="num">' +
-          q.restanti.length +
-          '</td><td class="num">' +
-          fmt(q.donatii) +
-          '</td><td class="num">' +
-          fmt(q.cheltPlatit) +
-          '</td><td class="num">' +
-          fmt(q.sold) +
-          "</td></tr>"
-        );
-      }).join("") +
-      "</tbody></table></div>";
   }
   h += '<div class="sec-h"><h2>Valabilitatea calității de membru</h2></div>';
   var vrows = [];
@@ -2289,26 +2430,7 @@ function vDash() {
         "</div>"
       : '<p class="small" style="margin-bottom:16px">Nicio cerere în așteptare.</p>';
   }
-  if (canSeeRoles()) {
-    h +=
-      '<div class="sec-h"><h2>Roluri conducere</h2></div><div class="list">' +
-      col("roles")
-        .map(function (x) {
-          return row({
-            act: "role",
-            id: x.id,
-            avatar: nameOf(x.id),
-            title: nameOf(x.id),
-            meta: esc(
-              (ROLE_LABEL[x.role] || x.role) +
-                (x.branch ? " | " + x.branch : "") +
-                (x.until ? " | mandat până la " + dro(x.until) + (x.until < today() ? " (EXPIRAT)" : "") : ""),
-            ),
-          });
-        })
-        .join("") +
-      '</div><button class="btn sec" data-act="newrole">Atribuie un rol</button>';
-  }
+  h += leadershipBlock(b);
   var au = col("audit")
     .slice()
     .sort(function (a, c) {
@@ -2355,7 +2477,9 @@ function vFees() {
       ? canWrite()
         ? '<button class="btn sm" data-act="newfee">Adaugă cotizație</button>'
         : ""
-      : '<button class="btn sm" data-act="newmember">Adaugă membru</button>') +
+      : myRole().role === "president"
+        ? '<button class="btn sm" data-act="newmember">Adaugă membru</button>'
+        : "") +
     "</div>";
   h +=
     '<div class="chips"><button class="chip" data-act="fv" data-id="fees" aria-pressed="' +
@@ -2391,8 +2515,13 @@ function vFees() {
                 id: m.id,
                 avatar: m.name,
                 title: m.name,
+                stripe: m.excluded ? "crit" : "",
                 meta: m.userId ? (S.server ? "Cont activ" : "Cont legat") : S.server ? "Cont neactivat" : "Fără cont în aplicație",
-                right: badgeState(bd) === "active" ? '<span class="seal">' + svg("seal", 14) + "Membru activ</span>" : "",
+                right: m.excluded
+                  ? uiTag("Exclus", "crit")
+                  : badgeState(bd) === "active"
+                    ? '<span class="seal">' + svg("seal", 14) + "Membru activ</span>"
+                    : "",
               });
             })
             .join("") +
@@ -2400,7 +2529,7 @@ function vFees() {
         : emptyBox(
             "Niciun membru în evidență",
             "Adaugă membrii filialei ca să le poți înregistra cotizațiile.",
-            "Adaugă membru",
+            myRole().role === "president" ? "Adaugă membru" : "",
             "newmember",
           ))
     );
@@ -2571,6 +2700,396 @@ function vExp() {
       .join("") +
     '</div><button class="btn sec sm" data-act="csvexp">Copiază CSV</button>'
   );
+}
+/* Structură: președinte național, filiale, funcții de conducere, predarea funcției, excluderea unui membru.
+   Toate schimbările trec prin adminOp() (20-stare.js); drepturile le verifică serverul. */
+function byName(a, c) {
+  return norm(a.name) < norm(c.name) ? -1 : norm(a.name) > norm(c.name) ? 1 : 0;
+}
+function rememberNames(list) {
+  (list || []).forEach(function (x) {
+    if (x && x.id && x.name) S.nm[x.id] = String(x.name);
+  });
+}
+/* Numele unui cont din roluri: profil, evidență sau nume învățat în sesiune; altfel o mențiune clară. */
+function structName(id) {
+  var n = nameOf(id);
+  var r = (S.D.roles || []).filter(function (x) {
+    return x.id === id;
+  })[0];
+  return r && n === roleTitle(r) ? "Profil necompletat" : n;
+}
+function errActs(okLabel) {
+  return (
+    '<div class="err" id="sheeterr"></div><div class="sheet-acts"><button class="btn" type="submit">' +
+    esc(okLabel) +
+    '</button><button class="btn sec" type="button" data-act="closesheet">Anulează</button></div>'
+  );
+}
+function roleOfBranch(role, b) {
+  return (
+    (S.D.roles || []).filter(function (x) {
+      return x.role === role && (role === "national" || x.branch === b);
+    })[0] || null
+  );
+}
+
+/* ---- ecranul Structură (administrator tehnic și președinte național) ---- */
+function vStructure() {
+  var me = myRole();
+  var nat = roleOfBranch("national");
+  var h = '<div class="page-head"><h1>Structură</h1></div>';
+  h += uiSection("Președinte național");
+  h +=
+    '<div class="list">' +
+    row({
+      avatar: nat ? structName(nat.id) : "",
+      title: nat ? structName(nat.id) : "Nenumit",
+      meta: esc(nat ? roleTitle(nat) : "Nicio persoană în această funcție"),
+    }) +
+    "</div>";
+  var acts = "";
+  if (me.role === "mod") {
+    acts +=
+      '<button class="btn" data-act="natset">' +
+      (nat ? "Înlocuiește președintele național" : "Numește președintele național") +
+      "</button>";
+    if (nat) acts += '<button class="btn sec" data-act="natcode" data-id="' + esc(nat.id) + '">Cod nou de intrare</button>';
+  }
+  if (me.role === "national") acts += '<button class="btn sec" data-act="handover">Predă funcția</button>';
+  if (acts) h += '<div class="acts">' + acts + "</div>";
+
+  h += uiSection("Filiale", '<button class="btn sm" data-act="addbranch">Adaugă filială</button>');
+  h += BRANCHES.length
+    ? '<div class="list">' +
+      BRANCHES.map(function (b) {
+        var p = roleOfBranch("president", b);
+        return row({
+          act: "branch",
+          id: b,
+          avatar: b,
+          title: b,
+          meta: esc(p ? "Președinte: " + structName(p.id) : "Fără președinte"),
+          right: p ? "" : uiTag("Fără președinte", "warn"),
+        });
+      }).join("") +
+      "</div>"
+    : emptyBox("Nicio filială", "Adaugă prima filială, cu președintele ei.", "Adaugă filială", "addbranch");
+
+  var au = col("audit")
+    .filter(function (a) {
+      return a.path === "roles" || a.path === "branchlist";
+    })
+    .sort(function (a, c) {
+      return a.at < c.at ? 1 : -1;
+    })
+    .slice(0, 20);
+  h += uiSection("Jurnal");
+  h += au.length
+    ? '<div class="list">' +
+      au
+        .map(function (a) {
+          return row({ title: a.summary || a.action, meta: esc((a.byName || "") + " | " + fmtAt(a.at)) });
+        })
+        .join("") +
+      "</div>"
+    : '<p class="small">Nicio modificare de structură înregistrată.</p>';
+  return h;
+}
+
+/* ---- administrator tehnic: președintele național ---- */
+function sheetSetNational() {
+  openSheet(
+    '<h2>Numește președintele național</h2><p class="small">Persoana nouă se adaugă în evidența filialei alese și primește un cod de intrare. Un singur președinte național: cel de acum își pierde funcția și rămâne membru.</p><form>' +
+      sel("branch", BRANCHES, BRANCHES[0], "Filiala", "ns_b") +
+      inp("name", "Numele complet", "", "text", "ns_n", 'maxlength="100" autocomplete="off"') +
+      errActs("Numește"),
+    async function (fd) {
+      var name = String(fd.get("name") || "").trim();
+      if (name.length < 2) return fieldErr("Scrie numele complet, de cel puțin 2 caractere.");
+      var res = await adminOp({ op: "setNational", branch: String(fd.get("branch") || ""), name: name });
+      if (!res) return;
+      if (res.memberId) S.nm[res.memberId] = name;
+      if (res.code) showCode(name, res.code, res.expires);
+      else {
+        closeSheet();
+        toast("Președintele național a fost numit.");
+      }
+    },
+  );
+}
+/* Cod nou de intrare pentru o funcție de conducere. id = id-ul membrului. */
+async function doLeaderCode(id) {
+  var res = await adminOp({ op: "leaderCode", memberId: id });
+  if (!res || !res.code) return;
+  showCode(structName(id), res.code, res.expires);
+}
+
+/* ---- filiale ---- */
+function sheetAddBranch() {
+  openSheet(
+    '<h2>Adaugă filială</h2><p class="small">Filiala nouă pornește cu președintele ei, care primește un cod de intrare.</p><form>' +
+      inp("name", "Denumirea filialei", "", "text", "ab_n", 'maxlength="40" autocomplete="off"') +
+      inp("presidentName", "Numele președintelui", "", "text", "ab_p", 'maxlength="100" autocomplete="off"') +
+      errActs("Adaugă"),
+    async function (fd) {
+      var name = String(fd.get("name") || "").trim();
+      var pn = String(fd.get("presidentName") || "").trim();
+      if (name.length < 2 || name.length > 40) return fieldErr("Denumirea filialei are între 2 și 40 de caractere.");
+      if (pn.length < 2) return fieldErr("Scrie numele președintelui, de cel puțin 2 caractere.");
+      var res = await adminOp({ op: "addBranch", name: name, presidentName: pn });
+      if (!res) return;
+      if (res.memberId) S.nm[res.memberId] = pn;
+      if (res.code) showCode(pn, res.code, res.expires);
+      else {
+        closeSheet();
+        toast("Filiala a fost adăugată.");
+      }
+    },
+  );
+}
+function sheetBranch(b) {
+  var p = roleOfBranch("president", b);
+  openSheet(
+    "<h2>" +
+      esc(b) +
+      '</h2><p class="small">' +
+      esc(p ? "Președinte: " + structName(p.id) : "Filiala nu are președinte.") +
+      '</p><div class="acts"><button class="btn" data-act="setpres" data-id="' +
+      esc(b) +
+      '">Schimbă președintele</button>' +
+      (p ? '<button class="btn sec" data-act="prescode" data-id="' + esc(p.id) + '">Cod nou pentru președinte</button>' : "") +
+      '</div><div class="sheet-acts"><button class="btn sec" data-act="closesheet">Închide</button></div>',
+  );
+}
+async function sheetSetPresident(b) {
+  var res = await adminOp({ op: "candidates", for: "president", branch: b });
+  if (!res) return;
+  var list = (res.list || []).slice().sort(byName);
+  rememberNames(list);
+  var cur = roleOfBranch("president", b);
+  var nat = roleOfBranch("national");
+  var opts = [["", "Persoană nouă (scrie numele mai jos)"]].concat(
+    list
+      .filter(function (c) {
+        return !(cur && c.id === cur.id) && !(nat && c.id === nat.id);
+      })
+      .map(function (c) {
+        return [c.id, c.name + (c.active ? "" : " (cont neactivat)")];
+      }),
+  );
+  openSheet(
+    "<h2>Schimbă președintele, " +
+      esc(b) +
+      '</h2><p class="small">Președintele de acum își pierde funcția și rămâne membru. Dacă noul președinte nu are cont activat, primește un cod de intrare.</p><form>' +
+      sel("memberId", opts, "", "Din evidența filialei", "sp_m") +
+      inp("name", "Sau numele unei persoane noi", "", "text", "sp_n", 'maxlength="100" autocomplete="off"') +
+      errActs("Schimbă președintele"),
+    async function (fd) {
+      var mid = String(fd.get("memberId") || "");
+      var name = String(fd.get("name") || "").trim();
+      var body = { op: "setPresident", branch: b };
+      if (mid) body.memberId = mid;
+      else if (name.length >= 2) body.name = name;
+      else return fieldErr("Alege un membru din listă sau scrie numele unei persoane noi.");
+      var res2 = await adminOp(body);
+      if (!res2) return;
+      var shown = mid ? S.nm[mid] || "președintele nou" : name;
+      if (res2.memberId && !mid) S.nm[res2.memberId] = name;
+      if (res2.code) showCode(shown, res2.code, res2.expires);
+      else {
+        closeSheet();
+        toast("Președintele filialei a fost schimbat.");
+      }
+    },
+  );
+}
+
+/* ---- predarea funcției (orice rol cu funcție) ---- */
+async function sheetHandover() {
+  var r = myRole();
+  var res = await adminOp({ op: "candidates", for: "handover" });
+  if (!res) return;
+  var list = (res.list || []).slice().sort(byName);
+  rememberNames(list);
+  if (!list.length) {
+    toast("Nu există niciun membru cu cont activat căruia să-i poți preda funcția.");
+    return;
+  }
+  var what =
+    r.role === "president"
+      ? "funcția de președinte al filialei " + r.branch
+      : r.role === "national"
+        ? "funcția de președinte național"
+        : "funcția „" + roleTitle(r) + "”";
+  openSheet(
+    "<h2>Predă funcția</h2><p>Predai " +
+      esc(what) +
+      ". Persoana aleasă o primește imediat, iar tu rămâi membru, cu drepturile unui membru.</p><form>" +
+      sel(
+        "to",
+        list.map(function (c) {
+          return [c.id, c.name + (r.role === "national" && c.branch ? " (" + c.branch + ")" : "")];
+        }),
+        "",
+        "Cui predai funcția",
+        "ho_to",
+      ) +
+      '<label class="check"><input type="checkbox" name="ok"><span>Confirm că vreau să predau funcția. Schimbarea se aplică imediat.</span></label>' +
+      errActs("Predă funcția"),
+    async function (fd) {
+      if (!fd.get("ok")) return fieldErr("Bifează confirmarea ca să predai funcția.");
+      var to = String(fd.get("to") || "");
+      if (!to) return fieldErr("Alege persoana căreia îi predai funcția.");
+      var res2 = await adminOp({ op: "handover", to: to });
+      if (!res2) return;
+      closeSheet();
+      toast("Funcția a fost predată. Ai rămas membru.");
+    },
+  );
+}
+/* "Funcția mea", în Profilul meu, pentru vicepreședintele trezorier și celelalte funcții de conducere. */
+function myFunctionBlock() {
+  var r = myRole();
+  if (r.role !== "treasurer" && r.role !== "board") return "";
+  return (
+    uiSection("Funcția mea") +
+    uiKV([
+      ["Funcția", roleTitle(r)],
+      ["Filiala", r.branch],
+    ]) +
+    '<p class="small" style="margin:12px 0">Poți preda funcția unui alt membru al filialei. După predare rămâi membru.</p><button class="btn sec" data-act="handover">Predă funcția</button>'
+  );
+}
+
+/* ---- președintele filialei: conducerea ---- */
+function leadershipBlock(b) {
+  var isPres = myRole().role === "president";
+  var order = { president: 0, treasurer: 1, board: 2 };
+  var rs = col("roles")
+    .filter(function (x) {
+      return x.branch === b && order[x.role] !== undefined;
+    })
+    .sort(function (a, c) {
+      return order[a.role] - order[c.role];
+    });
+  var h = uiSection("Conducerea filialei", isPres ? '<button class="btn sm" data-act="newrole">Numește în funcție</button>' : "");
+  h += rs.length
+    ? '<div class="list">' +
+      rs
+        .map(function (x) {
+          return row({
+            act: isPres && x.role !== "president" ? "role" : "",
+            id: x.id,
+            avatar: structName(x.id),
+            title: structName(x.id),
+            meta: esc(roleTitle(x)),
+          });
+        })
+        .join("") +
+      "</div>"
+    : '<p class="small">Nicio funcție de conducere înregistrată.</p>';
+  if (isPres) h += '<div class="acts"><button class="btn sec" data-act="handover">Predă funcția de președinte</button></div>';
+  return h;
+}
+function sheetNewRole() {
+  var b = curBranch();
+  var ms = col("branches/" + b + "/members")
+    .filter(function (m) {
+      var r = roleOfMember(m);
+      return !m.excluded && !isSelf(m) && !(r && (r.role === "national" || r.role === "president"));
+    })
+    .sort(byName);
+  if (!ms.length) {
+    toast("Nu există membri cărora să le poți atribui o funcție. Adaugă mai întâi membri în evidență.");
+    return;
+  }
+  openSheet(
+    '<h2>Numește în funcție</h2><p class="small">Funcția se aplică imediat. Membrul își activează contul cu un cod de intrare, generat din fișa lui.</p><form>' +
+      sel(
+        "memberId",
+        ms.map(function (m) {
+          return [m.id, m.name + (m.userId ? "" : " (cont neactivat)")];
+        }),
+        "",
+        "Membrul",
+        "nr_m",
+      ) +
+      sel(
+        "role",
+        [
+          ["treasurer", "Vicepreședinte trezorier"],
+          ["board", "Altă funcție de conducere"],
+        ],
+        "treasurer",
+        "Funcția",
+        "nr_r",
+      ) +
+      inp("title", "Titlul funcției (pentru altă funcție de conducere)", "", "text", "nr_t", 'maxlength="60" autocomplete="off"') +
+      errActs("Numește"),
+    async function (fd) {
+      var role = String(fd.get("role") || "");
+      var title = String(fd.get("title") || "").trim();
+      var body = { op: "setRole", memberId: String(fd.get("memberId") || ""), role: role };
+      if (!body.memberId) return fieldErr("Alege membrul.");
+      if (role === "board") {
+        if (title.length < 2 || title.length > 60) return fieldErr("Titlul funcției are între 2 și 60 de caractere.");
+        body.title = title;
+      }
+      var res = await adminOp(body);
+      if (!res) return;
+      closeSheet();
+      toast("Funcția a fost atribuită.");
+    },
+  );
+}
+function sheetRole(id) {
+  var x = col("roles").filter(function (y) {
+    return y.id === id;
+  })[0];
+  if (!x) return;
+  openSheet(
+    "<h2>" +
+      esc(structName(id)) +
+      '</h2><p class="small">' +
+      esc(roleTitle(x)) +
+      '</p><p class="small" style="margin-top:8px">Dacă retragi funcția, persoana rămâne membru al filialei.</p><div class="acts"><button class="btn crit" data-act="roleoff" data-id="' +
+      esc(id) +
+      '">Retrage funcția</button></div><div class="sheet-acts"><button class="btn sec" data-act="closesheet">Închide</button></div>',
+  );
+}
+async function doRoleOff(id) {
+  var res = await adminOp({ op: "setRole", memberId: id, role: "member" });
+  if (!res) return;
+  closeSheet();
+  toast("Funcția a fost retrasă.");
+}
+
+/* ---- excluderea și reactivarea unui membru (președintele filialei) ---- */
+function sheetExclude(id) {
+  var m = col("branches/" + (S._mb || curBranch()) + "/members").filter(function (x) {
+    return x.id === id;
+  })[0];
+  if (!m) return;
+  openSheet(
+    "<h2>Exclude din aplicație: " +
+      esc(m.name) +
+      '</h2><p>Contul lui este suspendat imediat: nu mai poate intra, nici cu un cod nou, și nu mai apare în director. Nimic nu se șterge, iar contul se poate reactiva oricând, exact cum era.</p><div class="sheet-acts"><button class="btn crit" data-act="exclude2" data-id="' +
+      esc(id) +
+      '">Exclude</button><button class="btn sec" data-act="closesheet">Renunț</button></div>',
+  );
+}
+async function doExclude(id) {
+  var res = await adminOp({ op: "exclude", memberId: id });
+  if (!res) return;
+  closeSheet();
+  toast("Membrul a fost exclus din aplicație.");
+}
+async function doReactivate(id) {
+  var res = await adminOp({ op: "reactivate", memberId: id });
+  if (!res) return;
+  closeSheet();
+  toast("Contul a fost reactivat.");
 }
 /* Foi (formulare și detalii): membri, cotizații, donații, cheltuieli */
 function showCode(name, cd, exp) {
@@ -3040,12 +3559,8 @@ async function onAct(act, id) {
       return;
     }
   }
-  if (act === "settings" && myRole().role !== "national") {
-    toast("Doar administratorul național modifică setările.");
-    return;
-  }
-  if ((act === "newrole" || act === "role") && !canSeeRoles()) {
-    toast("Doar proprietarul poate atribui roluri.");
+  if (act === "settings" && myRole().role !== "president") {
+    toast("Doar președintele filialei modifică setările.");
     return;
   }
   switch (act) {
@@ -3060,6 +3575,7 @@ async function onAct(act, id) {
     case "demo":
       S.store = makeMemStore(demoSeed);
       S.me = { id: "u-nat", isOwner: false };
+      S.tab = "director";
       S.mode = "ready";
       S.err = {};
       subscribeAll();
@@ -3384,7 +3900,10 @@ async function onAct(act, id) {
       })[0];
       if (!m) break;
       S._mb = mb;
-      var canCode = S.server ? S.me.isOwner || myRole().role === "president" : myRole().role === "president";
+      var isPres = myRole().role === "president";
+      var mRole = roleOfMember(m);
+      var canCode = isPres && !m.excluded;
+      var canExclude = isPres && !isSelf(m) && !(mRole && mRole.role === "national");
       var mv = memberValidity(mb, m);
       var linkTxt = S.server
         ? m.userId
@@ -3399,10 +3918,14 @@ async function onAct(act, id) {
           '</h2><p class="small">' +
           linkTxt +
           (mv.vu ? " Valabil până la " + dro(mv.vu) + "." : "") +
-          "</p><form>" +
-          inp("validUntil", "Calitatea de membru valabilă până la", m.validUntil || "", "date", "mvu") +
-          (S.server ? "" : inp("userId", "Codul contului", m.userId || "", "text", "mu", 'autocomplete="off"')) +
-          '<div class="sheet-acts"><button class="btn" type="submit">Salvează</button><button class="btn sec" type="button" data-act="closesheet">Închide</button></div></form>' +
+          "</p>" +
+          (m.excluded ? '<div class="notice">Contul este suspendat de conducerea filialei.</div>' : "") +
+          (isPres
+            ? "<form>" +
+              inp("validUntil", "Calitatea de membru valabilă până la", m.validUntil || "", "date", "mvu") +
+              (S.server ? "" : inp("userId", "Codul contului", m.userId || "", "text", "mu", 'autocomplete="off"')) +
+              '<div class="sheet-acts"><button class="btn" type="submit">Salvează</button><button class="btn sec" type="button" data-act="closesheet">Închide</button></div></form>'
+            : '<div class="sheet-acts"><button class="btn sec" data-act="closesheet">Închide</button></div>') +
           (canCode && (S.server || !m.userId)
             ? '<div class="sec-h"><h2>Cod de înscriere</h2></div><p class="small">' +
               (S.server && m.userId
@@ -3411,22 +3934,35 @@ async function onAct(act, id) {
               'Codul e valabil 14 zile și se poate folosi o singură dată.</p><button class="btn sec" data-act="gencode" data-id="' +
               esc(m.id) +
               '">Generează cod</button>'
+            : "") +
+          (canExclude
+            ? '<div class="sec-h"><h2>Acces în aplicație</h2></div><p class="small">' +
+              (m.excluded
+                ? "Reactivarea readuce contul exact cum era."
+                : "Excluderea suspendă contul imediat. Nimic nu se șterge, iar contul se poate reactiva oricând.") +
+              '</p><div class="acts">' +
+              (m.excluded
+                ? '<button class="btn" data-act="reactivate" data-id="' + esc(m.id) + '">Reactivează</button>'
+                : '<button class="btn crit" data-act="exclude" data-id="' + esc(m.id) + '">Exclude din aplicație</button>') +
+              "</div>"
             : ""),
-        async function (fd) {
-          var u = S.server ? m.userId || "" : String(fd.get("userId") || "").trim();
-          var o = Object.assign({}, m);
-          delete o.id;
-          o.userId = u;
-          var vu = String(fd.get("validUntil") || "");
-          if (vu) o.validUntil = vu;
-          if (await put("branches/" + mb + "/members", id, o, "update", "Date membru actualizate: " + m.name)) {
-            if (u) {
-              await recomputeBadge(mb, id, Object.assign({ id: id }, o));
+        isPres
+          ? async function (fd) {
+              var u = S.server ? m.userId || "" : String(fd.get("userId") || "").trim();
+              var o = Object.assign({}, m);
+              delete o.id;
+              o.userId = u;
+              var vu = String(fd.get("validUntil") || "");
+              if (vu) o.validUntil = vu;
+              if (await put("branches/" + mb + "/members", id, o, "update", "Date membru actualizate: " + m.name)) {
+                if (u) {
+                  await recomputeBadge(mb, id, Object.assign({ id: id }, o));
+                }
+                closeSheet();
+                toast("Modificările au fost salvate.");
+              }
             }
-            closeSheet();
-            toast("Modificările au fost salvate.");
-          }
-        },
+          : undefined,
       );
       break;
     }
@@ -3475,62 +4011,45 @@ async function onAct(act, id) {
         await S.store.del("data/users/" + S.me.id, "claim");
       } catch (e) {}
       break;
-    case "handover": {
-      var old = col("roles").filter(function (x) {
-        return x.id === id;
-      })[0];
-      if (!old) break;
-      var cands2 = S.server
-        ? col("branches/" + old.branch + "/members")
-            .filter(function (m) {
-              return m.id !== id;
-            })
-            .map(function (m) {
-              return [m.id, m.name];
-            })
-        : (S.D.profiles || [])
-            .filter(function (p) {
-              return p.id !== id;
-            })
-            .map(function (p) {
-              return [p.id, p.name];
-            });
-      openSheet(
-        "<h2>Predă mandatul de președinte, " +
-          esc(old.branch) +
-          '</h2><p class="small">Noul președinte primește rolul, iar președintele actual îl pierde. ' +
-          (S.server
-            ? "Schimbarea se aplică imediat. Dacă noul președinte nu are încă un cont activ, generează-i un cod de înscriere din fișa lui."
-            : "Accesul real la date îl dai tu, din pagina de partajare a platformei.") +
-          "</p><form>" +
-          sel("uid", cands2, "", "Noul președinte" + (S.server ? " (din evidența filialei)" : " (după profil)"), "hu") +
-          (S.server ? "" : inp("uid2", "Sau codul contului", "", "text", "hu2", 'autocomplete="off"')) +
-          inp("until", "Mandat până la", new Date().getFullYear() + 1 + "-12-31", "date", "hun") +
-          '<div class="err" id="sheeterr"></div><div class="sheet-acts"><button class="btn" type="submit">Predă mandatul</button><button class="btn sec" type="button" data-act="closesheet">Anulează</button></div></form>',
-        async function (fd) {
-          var nu = S.server ? fd.get("uid") : String(fd.get("uid2") || "").trim() || fd.get("uid");
-          if (!nu) return fieldErr("Alege noul președinte.");
-          if (nu === id) return fieldErr("Alege o altă persoană.");
-          try {
-            await S.store.set("roles", nu, {
-              role: "president",
-              branch: old.branch,
-              since: today(),
-              until: fd.get("until") || defaultValid(),
-            });
-            await S.store.del("roles", id);
-            await safe(function () {
-              return audit("roles", nu, "role", "Mandat predat pentru filiala " + old.branch + ": " + nameOf(id) + " către " + nameOf(nu));
-            });
-            closeSheet();
-            toast("Mandatul a fost predat.");
-          } catch (e) {
-            toast(S.server ? "Nu am putut preda mandatul." : "Doar proprietarul poate atribui roluri.");
-          }
-        },
-      );
+    case "handover":
+      sheetHandover();
       break;
-    }
+    case "newrole":
+      sheetNewRole();
+      break;
+    case "role":
+      sheetRole(id);
+      break;
+    case "roleoff":
+      doRoleOff(id);
+      break;
+    case "exclude":
+      sheetExclude(id);
+      break;
+    case "exclude2":
+      doExclude(id);
+      break;
+    case "reactivate":
+      doReactivate(id);
+      break;
+    case "natset":
+      sheetSetNational();
+      break;
+    case "natcode":
+      doLeaderCode(id);
+      break;
+    case "addbranch":
+      sheetAddBranch();
+      break;
+    case "branch":
+      sheetBranch(id);
+      break;
+    case "setpres":
+      sheetSetPresident(id);
+      break;
+    case "prescode":
+      doLeaderCode(id);
+      break;
     case "claim": {
       var c = col("claims").filter(function (x) {
         return x.id === id;
@@ -3590,90 +4109,6 @@ async function onAct(act, id) {
       );
       break;
     }
-    case "newrole":
-    case "role": {
-      var ex = id
-        ? col("roles").filter(function (x) {
-            return x.id === id;
-          })[0]
-        : null;
-      var cands = S.server
-        ? [].concat.apply(
-            [],
-            BRANCHES.map(function (bb) {
-              return col("branches/" + bb + "/members").map(function (m) {
-                return [m.id, m.name + " (" + bb + ")"];
-              });
-            }),
-          )
-        : (S.D.profiles || []).map(function (p) {
-            return [p.id, p.name];
-          });
-      openSheet(
-        "<h2>" +
-          (ex ? "Rol: " + esc(nameOf(id)) : "Atribuie un rol") +
-          '</h2><p class="small">' +
-          (S.server
-            ? "Rolul se aplică imediat și se verifică pe server. Persoana trebuie să fie în evidența unei filiale; după ce primește rolul, generează-i un cod de înscriere din fișa ei."
-            : "Rolul controlează ce vede interfața. Accesul real la date îl dă nivelul din invitația platformei, pe care îl stabilești din pagina de partajare.") +
-          "</p><form>" +
-          (ex
-            ? ""
-            : sel("uid", cands, "", "Persoana" + (S.server ? " (din evidența filialelor)" : " (după profil)"), "ru") +
-              (S.server ? "" : inp("uid2", "Sau codul contului", "", "text", "ru2", 'autocomplete="off"')) +
-              (S.me.isOwner && !S.server
-                ? '<button class="btn sec sm" type="button" data-act="fillme" style="margin:-8px 0 12px">Folosește contul meu</button><p class="help" style="margin-top:-4px;margin-bottom:12px">Ca să înregistrezi cotizații, donații și cheltuieli, ai nevoie de rolul de președinte sau trezorier.</p>'
-                : "")) +
-          sel(
-            "role",
-            [
-              ["president", "Președinte"],
-              ["treasurer", "Trezorier"],
-              ["national", "Moderator"],
-              ["member", "Membru (retrage rolul)"],
-            ],
-            ex ? ex.role : "treasurer",
-            "Rol",
-            "rr",
-          ) +
-          sel("branch", BRANCHES, ex ? ex.branch : BRANCHES[0], "Filiala", "rb") +
-          inp("until", "Mandat până la (la președinte)", ex && ex.until ? ex.until : defaultValid(), "date", "run") +
-          (ex && ex.role === "president"
-            ? '<button class="btn sec sm" type="button" data-act="handover" data-id="' +
-              esc(id) +
-              '" style="margin-bottom:12px">Predă mandatul unui nou președinte</button>'
-            : "") +
-          '<div class="err" id="sheeterr"></div><div class="sheet-acts"><button class="btn" type="submit">Salvează</button><button class="btn sec" type="button" data-act="closesheet">Anulează</button></div></form>',
-        async function (fd) {
-          var target = ex ? id : S.server ? fd.get("uid") : String(fd.get("uid2") || "").trim() || fd.get("uid");
-          if (!target) return fieldErr("Alege persoana.");
-          try {
-            if (fd.get("role") === "member") await S.store.del("roles", target);
-            else
-              await S.store.set("roles", target, {
-                role: fd.get("role"),
-                branch: fd.get("role") === "national" ? "" : fd.get("branch"),
-                since: ex && ex.since ? ex.since : today(),
-                until: fd.get("role") === "president" ? fd.get("until") || defaultValid() : "",
-              });
-            await safe(function () {
-              return audit(
-                "roles",
-                target,
-                "role",
-                (fd.get("role") === "member" ? "Rol retras: " : "Rol atribuit (" + (ROLE_LABEL[fd.get("role")] || fd.get("role")) + "): ") +
-                  nameOf(target),
-              );
-            });
-            closeSheet();
-            toast("Modificările au fost salvate.");
-          } catch (e) {
-            toast(S.server ? "Nu am putut salva rolul." : "Doar proprietarul poate atribui roluri.");
-          }
-        },
-      );
-      break;
-    }
     case "csvfees":
       copyText(
         csv(
@@ -3701,15 +4136,7 @@ async function onAct(act, id) {
         csv(
           [["donator", "suma", "data", "scop", "tip", "document", "anulat"]].concat(
             col("branches/" + b + "/donations").map(function (d) {
-              return [
-                d.anonymous ? "Anonim" : myRole().role === "national" ? "(ascuns)" : d.donor,
-                d.amount / 100,
-                d.date,
-                d.purpose,
-                d.type,
-                d.doc,
-                d.anulat ? "da" : "nu",
-              ];
+              return [d.anonymous ? "Anonim" : d.donor, d.amount / 100, d.date, d.purpose, d.type, d.doc, d.anulat ? "da" : "nu"];
             }),
           ),
         ),
@@ -4051,7 +4478,14 @@ async function start() {
         return {};
       });
       if (rs.status === 200) {
-        S.me = { id: String(js.id), isOwner: js.isOwner === true, name: String(js.name || ""), branch: String(js.branch || "") };
+        S.me = {
+          id: String(js.id),
+          isOwner: js.isOwner === true,
+          name: String(js.name || ""),
+          branch: String(js.branch || ""),
+          role: String(js.role || ""),
+          title: String(js.title || ""),
+        };
         S.store = makeHttpStore();
         S.mode = "ready";
         var hs = location.hash.replace("#", "");

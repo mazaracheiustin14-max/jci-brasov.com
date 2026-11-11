@@ -62,6 +62,7 @@ function makeHttpStore() {
     inflight = false,
     again = false,
     started = false,
+    gen = 0,
     lastPull = 0,
     lastAct = Date.now();
   /* Economie de cereri: actualizare la 60 s doar cât pagina e vizibilă și omul a fost activ în ultimele 3 minute. */
@@ -101,9 +102,11 @@ function makeHttpStore() {
     if (!paths.length) return Promise.resolve();
     inflight = true;
     lastPull = Date.now();
+    var g = gen;
     return post("/api/app/pull", { paths: paths, revs: revs })
       .then(function (r) {
         inflight = false;
+        if (g !== gen) return; /* abonările au fost refăcute între timp: răspunsul e depășit */
         if (r.status === 401 || (r.status === 403 && r.body && r.body.excluded)) {
           location.reload();
           return;
@@ -200,6 +203,7 @@ function makeHttpStore() {
       if (Date.now() - lastPull > minAge) pull();
     },
     reset: function () {
+      gen++;
       subs = {};
       revs = {};
       clearTimeout(timer);
@@ -262,6 +266,13 @@ function demoSeed(put) {
     ["m6", "Elena Barbu", "București", "Educație și training", "Skill Lab", "Traininguri pentru echipe"],
   ];
   var ids = {};
+  [
+    ["brasov", "Brașov"],
+    ["cluj", "Cluj"],
+    ["bucuresti", "București"],
+  ].forEach(function (b) {
+    put("branchlist", b[0], { name: b[1], createdAt: "2026-01-01", createdBy: "u-nat" });
+  });
   P.forEach(function (p, i) {
     var id = "u-" + p[0];
     ids[p[0]] = id;
@@ -290,7 +301,9 @@ function demoSeed(put) {
     });
   });
   ["Bianca Rusu", "Dan Pavel", "Sorin Matei", "Carmen Lupu", "Paul Georgescu"].forEach(function (n, i) {
-    put("branches/Brașov/members", "rb" + i, { name: n, branch: "Brașov", userId: "", validUntil: i === 0 ? "2026-09-30" : "2026-12-31" });
+    var mo = { name: n, branch: "Brașov", userId: "", validUntil: i === 0 ? "2026-09-30" : "2026-12-31" };
+    if (i === 4) mo.excluded = true;
+    put("branches/Brașov/members", "rb" + i, mo);
   });
   put("branches/Brașov/codes", "DEMOA2B3C4D5", {
     memberId: "rb0",
@@ -432,9 +445,26 @@ function demoSeed(put) {
     }),
   );
   put("branches/Brașov/settings", "main", { opening: 0 });
-  put("roles", "u-nat", { role: "national", branch: "" });
-  put("roles", "u-pres-bv", { role: "president", branch: "Brașov" });
-  put("roles", "u-trez-bv", { role: "treasurer", branch: "Brașov" });
+  put("roles", "u-nat", { role: "national", branch: "Brașov", title: "Președinte național", since: "2026-11-01" });
+  put("roles", "u-pres-bv", { role: "president", branch: "Brașov", title: "Președinte", since: "2026-11-01" });
+  put("roles", "u-pres-cj", { role: "president", branch: "Cluj", title: "Președinte", since: "2026-11-01" });
+  put("roles", "u-trez-bv", { role: "treasurer", branch: "Brașov", title: "Vicepreședinte trezorier", since: "2026-11-01" });
+  put("roles", "u-board-bv", { role: "board", branch: "Brașov", title: "Vicepreședinte comunicare", since: "2026-11-01" });
+  [
+    ["u-nat", "Președinte național (probă)", "Brașov"],
+    ["u-pres-cj", "Președinte Cluj (probă)", "Cluj"],
+    ["u-board-bv", "Conducere Brașov (probă)", "Brașov"],
+  ].forEach(function (x) {
+    put("profiles", x[0], {
+      name: x[1],
+      branch: x[2],
+      domain: "Alte domenii",
+      firm: "",
+      offer: "",
+      consent: { directory: false, phone: false, email: false, offer: false, version: CONSENT_VERSION },
+    });
+    put("badges", x[0], { verified: true, active: true, validUntil: "2027-12-31", excluded: false, branch: x[2] });
+  });
   put("profiles", "u-pres-bv", {
     name: "Iustin Măzărache",
     branch: "Brașov",

@@ -63,12 +63,8 @@ async function onAct(act, id) {
       return;
     }
   }
-  if (act === "settings" && myRole().role !== "national") {
-    toast("Doar administratorul național modifică setările.");
-    return;
-  }
-  if ((act === "newrole" || act === "role") && !canSeeRoles()) {
-    toast("Doar proprietarul poate atribui roluri.");
+  if (act === "settings" && myRole().role !== "president") {
+    toast("Doar președintele filialei modifică setările.");
     return;
   }
   switch (act) {
@@ -83,6 +79,7 @@ async function onAct(act, id) {
     case "demo":
       S.store = makeMemStore(demoSeed);
       S.me = { id: "u-nat", isOwner: false };
+      S.tab = "director";
       S.mode = "ready";
       S.err = {};
       subscribeAll();
@@ -407,7 +404,10 @@ async function onAct(act, id) {
       })[0];
       if (!m) break;
       S._mb = mb;
-      var canCode = S.server ? S.me.isOwner || myRole().role === "president" : myRole().role === "president";
+      var isPres = myRole().role === "president";
+      var mRole = roleOfMember(m);
+      var canCode = isPres && !m.excluded;
+      var canExclude = isPres && !isSelf(m) && !(mRole && mRole.role === "national");
       var mv = memberValidity(mb, m);
       var linkTxt = S.server
         ? m.userId
@@ -422,10 +422,14 @@ async function onAct(act, id) {
           '</h2><p class="small">' +
           linkTxt +
           (mv.vu ? " Valabil până la " + dro(mv.vu) + "." : "") +
-          "</p><form>" +
-          inp("validUntil", "Calitatea de membru valabilă până la", m.validUntil || "", "date", "mvu") +
-          (S.server ? "" : inp("userId", "Codul contului", m.userId || "", "text", "mu", 'autocomplete="off"')) +
-          '<div class="sheet-acts"><button class="btn" type="submit">Salvează</button><button class="btn sec" type="button" data-act="closesheet">Închide</button></div></form>' +
+          "</p>" +
+          (m.excluded ? '<div class="notice">Contul este suspendat de conducerea filialei.</div>' : "") +
+          (isPres
+            ? "<form>" +
+              inp("validUntil", "Calitatea de membru valabilă până la", m.validUntil || "", "date", "mvu") +
+              (S.server ? "" : inp("userId", "Codul contului", m.userId || "", "text", "mu", 'autocomplete="off"')) +
+              '<div class="sheet-acts"><button class="btn" type="submit">Salvează</button><button class="btn sec" type="button" data-act="closesheet">Închide</button></div></form>'
+            : '<div class="sheet-acts"><button class="btn sec" data-act="closesheet">Închide</button></div>') +
           (canCode && (S.server || !m.userId)
             ? '<div class="sec-h"><h2>Cod de înscriere</h2></div><p class="small">' +
               (S.server && m.userId
@@ -434,22 +438,35 @@ async function onAct(act, id) {
               'Codul e valabil 14 zile și se poate folosi o singură dată.</p><button class="btn sec" data-act="gencode" data-id="' +
               esc(m.id) +
               '">Generează cod</button>'
+            : "") +
+          (canExclude
+            ? '<div class="sec-h"><h2>Acces în aplicație</h2></div><p class="small">' +
+              (m.excluded
+                ? "Reactivarea readuce contul exact cum era."
+                : "Excluderea suspendă contul imediat. Nimic nu se șterge, iar contul se poate reactiva oricând.") +
+              '</p><div class="acts">' +
+              (m.excluded
+                ? '<button class="btn" data-act="reactivate" data-id="' + esc(m.id) + '">Reactivează</button>'
+                : '<button class="btn crit" data-act="exclude" data-id="' + esc(m.id) + '">Exclude din aplicație</button>') +
+              "</div>"
             : ""),
-        async function (fd) {
-          var u = S.server ? m.userId || "" : String(fd.get("userId") || "").trim();
-          var o = Object.assign({}, m);
-          delete o.id;
-          o.userId = u;
-          var vu = String(fd.get("validUntil") || "");
-          if (vu) o.validUntil = vu;
-          if (await put("branches/" + mb + "/members", id, o, "update", "Date membru actualizate: " + m.name)) {
-            if (u) {
-              await recomputeBadge(mb, id, Object.assign({ id: id }, o));
+        isPres
+          ? async function (fd) {
+              var u = S.server ? m.userId || "" : String(fd.get("userId") || "").trim();
+              var o = Object.assign({}, m);
+              delete o.id;
+              o.userId = u;
+              var vu = String(fd.get("validUntil") || "");
+              if (vu) o.validUntil = vu;
+              if (await put("branches/" + mb + "/members", id, o, "update", "Date membru actualizate: " + m.name)) {
+                if (u) {
+                  await recomputeBadge(mb, id, Object.assign({ id: id }, o));
+                }
+                closeSheet();
+                toast("Modificările au fost salvate.");
+              }
             }
-            closeSheet();
-            toast("Modificările au fost salvate.");
-          }
-        },
+          : undefined,
       );
       break;
     }
@@ -498,62 +515,45 @@ async function onAct(act, id) {
         await S.store.del("data/users/" + S.me.id, "claim");
       } catch (e) {}
       break;
-    case "handover": {
-      var old = col("roles").filter(function (x) {
-        return x.id === id;
-      })[0];
-      if (!old) break;
-      var cands2 = S.server
-        ? col("branches/" + old.branch + "/members")
-            .filter(function (m) {
-              return m.id !== id;
-            })
-            .map(function (m) {
-              return [m.id, m.name];
-            })
-        : (S.D.profiles || [])
-            .filter(function (p) {
-              return p.id !== id;
-            })
-            .map(function (p) {
-              return [p.id, p.name];
-            });
-      openSheet(
-        "<h2>Predă mandatul de președinte, " +
-          esc(old.branch) +
-          '</h2><p class="small">Noul președinte primește rolul, iar președintele actual îl pierde. ' +
-          (S.server
-            ? "Schimbarea se aplică imediat. Dacă noul președinte nu are încă un cont activ, generează-i un cod de înscriere din fișa lui."
-            : "Accesul real la date îl dai tu, din pagina de partajare a platformei.") +
-          "</p><form>" +
-          sel("uid", cands2, "", "Noul președinte" + (S.server ? " (din evidența filialei)" : " (după profil)"), "hu") +
-          (S.server ? "" : inp("uid2", "Sau codul contului", "", "text", "hu2", 'autocomplete="off"')) +
-          inp("until", "Mandat până la", new Date().getFullYear() + 1 + "-12-31", "date", "hun") +
-          '<div class="err" id="sheeterr"></div><div class="sheet-acts"><button class="btn" type="submit">Predă mandatul</button><button class="btn sec" type="button" data-act="closesheet">Anulează</button></div></form>',
-        async function (fd) {
-          var nu = S.server ? fd.get("uid") : String(fd.get("uid2") || "").trim() || fd.get("uid");
-          if (!nu) return fieldErr("Alege noul președinte.");
-          if (nu === id) return fieldErr("Alege o altă persoană.");
-          try {
-            await S.store.set("roles", nu, {
-              role: "president",
-              branch: old.branch,
-              since: today(),
-              until: fd.get("until") || defaultValid(),
-            });
-            await S.store.del("roles", id);
-            await safe(function () {
-              return audit("roles", nu, "role", "Mandat predat pentru filiala " + old.branch + ": " + nameOf(id) + " către " + nameOf(nu));
-            });
-            closeSheet();
-            toast("Mandatul a fost predat.");
-          } catch (e) {
-            toast(S.server ? "Nu am putut preda mandatul." : "Doar proprietarul poate atribui roluri.");
-          }
-        },
-      );
+    case "handover":
+      sheetHandover();
       break;
-    }
+    case "newrole":
+      sheetNewRole();
+      break;
+    case "role":
+      sheetRole(id);
+      break;
+    case "roleoff":
+      doRoleOff(id);
+      break;
+    case "exclude":
+      sheetExclude(id);
+      break;
+    case "exclude2":
+      doExclude(id);
+      break;
+    case "reactivate":
+      doReactivate(id);
+      break;
+    case "natset":
+      sheetSetNational();
+      break;
+    case "natcode":
+      doLeaderCode(id);
+      break;
+    case "addbranch":
+      sheetAddBranch();
+      break;
+    case "branch":
+      sheetBranch(id);
+      break;
+    case "setpres":
+      sheetSetPresident(id);
+      break;
+    case "prescode":
+      doLeaderCode(id);
+      break;
     case "claim": {
       var c = col("claims").filter(function (x) {
         return x.id === id;
@@ -613,90 +613,6 @@ async function onAct(act, id) {
       );
       break;
     }
-    case "newrole":
-    case "role": {
-      var ex = id
-        ? col("roles").filter(function (x) {
-            return x.id === id;
-          })[0]
-        : null;
-      var cands = S.server
-        ? [].concat.apply(
-            [],
-            BRANCHES.map(function (bb) {
-              return col("branches/" + bb + "/members").map(function (m) {
-                return [m.id, m.name + " (" + bb + ")"];
-              });
-            }),
-          )
-        : (S.D.profiles || []).map(function (p) {
-            return [p.id, p.name];
-          });
-      openSheet(
-        "<h2>" +
-          (ex ? "Rol: " + esc(nameOf(id)) : "Atribuie un rol") +
-          '</h2><p class="small">' +
-          (S.server
-            ? "Rolul se aplică imediat și se verifică pe server. Persoana trebuie să fie în evidența unei filiale; după ce primește rolul, generează-i un cod de înscriere din fișa ei."
-            : "Rolul controlează ce vede interfața. Accesul real la date îl dă nivelul din invitația platformei, pe care îl stabilești din pagina de partajare.") +
-          "</p><form>" +
-          (ex
-            ? ""
-            : sel("uid", cands, "", "Persoana" + (S.server ? " (din evidența filialelor)" : " (după profil)"), "ru") +
-              (S.server ? "" : inp("uid2", "Sau codul contului", "", "text", "ru2", 'autocomplete="off"')) +
-              (S.me.isOwner && !S.server
-                ? '<button class="btn sec sm" type="button" data-act="fillme" style="margin:-8px 0 12px">Folosește contul meu</button><p class="help" style="margin-top:-4px;margin-bottom:12px">Ca să înregistrezi cotizații, donații și cheltuieli, ai nevoie de rolul de președinte sau trezorier.</p>'
-                : "")) +
-          sel(
-            "role",
-            [
-              ["president", "Președinte"],
-              ["treasurer", "Trezorier"],
-              ["national", "Moderator"],
-              ["member", "Membru (retrage rolul)"],
-            ],
-            ex ? ex.role : "treasurer",
-            "Rol",
-            "rr",
-          ) +
-          sel("branch", BRANCHES, ex ? ex.branch : BRANCHES[0], "Filiala", "rb") +
-          inp("until", "Mandat până la (la președinte)", ex && ex.until ? ex.until : defaultValid(), "date", "run") +
-          (ex && ex.role === "president"
-            ? '<button class="btn sec sm" type="button" data-act="handover" data-id="' +
-              esc(id) +
-              '" style="margin-bottom:12px">Predă mandatul unui nou președinte</button>'
-            : "") +
-          '<div class="err" id="sheeterr"></div><div class="sheet-acts"><button class="btn" type="submit">Salvează</button><button class="btn sec" type="button" data-act="closesheet">Anulează</button></div></form>',
-        async function (fd) {
-          var target = ex ? id : S.server ? fd.get("uid") : String(fd.get("uid2") || "").trim() || fd.get("uid");
-          if (!target) return fieldErr("Alege persoana.");
-          try {
-            if (fd.get("role") === "member") await S.store.del("roles", target);
-            else
-              await S.store.set("roles", target, {
-                role: fd.get("role"),
-                branch: fd.get("role") === "national" ? "" : fd.get("branch"),
-                since: ex && ex.since ? ex.since : today(),
-                until: fd.get("role") === "president" ? fd.get("until") || defaultValid() : "",
-              });
-            await safe(function () {
-              return audit(
-                "roles",
-                target,
-                "role",
-                (fd.get("role") === "member" ? "Rol retras: " : "Rol atribuit (" + (ROLE_LABEL[fd.get("role")] || fd.get("role")) + "): ") +
-                  nameOf(target),
-              );
-            });
-            closeSheet();
-            toast("Modificările au fost salvate.");
-          } catch (e) {
-            toast(S.server ? "Nu am putut salva rolul." : "Doar proprietarul poate atribui roluri.");
-          }
-        },
-      );
-      break;
-    }
     case "csvfees":
       copyText(
         csv(
@@ -724,15 +640,7 @@ async function onAct(act, id) {
         csv(
           [["donator", "suma", "data", "scop", "tip", "document", "anulat"]].concat(
             col("branches/" + b + "/donations").map(function (d) {
-              return [
-                d.anonymous ? "Anonim" : myRole().role === "national" ? "(ascuns)" : d.donor,
-                d.amount / 100,
-                d.date,
-                d.purpose,
-                d.type,
-                d.doc,
-                d.anulat ? "da" : "nu",
-              ];
+              return [d.anonymous ? "Anonim" : d.donor, d.amount / 100, d.date, d.purpose, d.type, d.doc, d.anulat ? "da" : "nu"];
             }),
           ),
         ),
