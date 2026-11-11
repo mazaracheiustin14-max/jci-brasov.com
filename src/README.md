@@ -89,6 +89,8 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - Alocarea pe valuri (WAVES în worker: 3, 2, 1, apoi câte unul): întâi se umplu A, B, C, apoi D, E, apoi F. În val, persoana nouă merge în blocul cu cei
   mai puțini oameni (la egalitate, la întâmplare), deci cei care sosesc împreună ajung în blocuri diferite, iar la prezență mică primele blocuri sunt pline.
   Un loc eliberat prin anulare într-un val anterior se ocupă primul.
+  Cei care intră în aceeași perioadă (FRIEND_WINDOW_S, 3 minute) sunt împrăștiați în blocuri diferite; la scanări în aceeași fracțiune de secundă,
+  persoana cu id-ul mai mare se mută dacă a nimerit în același bloc (spreadFriends). Limită: în valul B-C cu 2 blocuri sau în F cu un singur bloc, trei prieteni nu pot fi separați.
 - Coloane noi în `inscrieri`: `bloc`, `slot` (index unic pe eveniment, bloc, slot). Anularea intrării eliberează locul.
 - Blocurile au nume (BLOC_NAMES: Scânteia, Busola, Puntea, Urcușul, Vârful, Orizontul, Farul, Zorii), doar ca etichetă; codurile rămân litera și numerele (persoana C7, mesele C1 până la C5). Panoul echipei arată câți oameni are fiecare bloc; exportul CSV conține blocul, numărul și cele 6 mese.
 - `FILL_ORDER` din worker este ordinea de ocupare a grilei, aleasă ca grupele să rămână echilibrate la blocuri incomplete.

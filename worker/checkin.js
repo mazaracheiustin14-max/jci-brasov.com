@@ -115,32 +115,81 @@ async function ensureBlitzCols(env) {
   if (!ix) throw new Error("lipsește indexul unic idx_blitz_slot");
   blitzCols = true;
 }
+// Cei care intră în aceeași perioadă scurtă pot fi prieteni: sunt împrăștiați în blocuri diferite, ca să se vadă la Blitz Networking.
+const FRIEND_WINDOW_S = 180;
+async function blitzState(env, id) {
+  const rows = (await env.DB.prepare(
+    "SELECT bloc, slot, CASE WHEN prezent_la >= datetime('now', ?) THEN 1 ELSE 0 END AS rec FROM inscrieri WHERE eveniment=? AND bloc IS NOT NULL AND id<>?"
+  ).bind(`-${FRIEND_WINDOW_S} seconds`, EVENT, id).all()).results || [];
+  const used = {}, rec = {};
+  for (const r of rows) {
+    (used[r.bloc] = used[r.bloc] || new Set()).add(r.slot);
+    if (r.rec) rec[r.bloc] = (rec[r.bloc] || 0) + 1;
+  }
+  return { used, size: (b) => (used[b] ? used[b].size : 0), rec: (b) => rec[b] || 0 };
+}
+// Intervalele de blocuri ale valurilor: [1..3], [4..5], [6], apoi câte unul.
+function waveRanges() {
+  const out = []; let from = 1, w = 0;
+  while (from <= MAX_BLOCKS) { const len = w < WAVES.length ? WAVES[w] : 1; out.push([from, Math.min(MAX_BLOCKS, from + len - 1)]); from += len; w++; }
+  return out;
+}
+function openIn(st, [from, to]) {
+  const open = [];
+  for (let b = from; b <= to; b++) if (st.size(b) < BLOC_SIZE) open.push(b);
+  return open;
+}
+// Între blocurile deschise ale valului: cele cu cel mult un om peste minim, apoi cel cu cei mai puțini sosiți recent,
+// apoi cel mai puțin plin, apoi la întâmplare.
+function chooseBlock(open, st) {
+  const min = Math.min(...open.map(st.size));
+  const cand = open.filter((b) => st.size(b) <= min + 1);
+  const minRec = Math.min(...cand.map(st.rec));
+  const c2 = cand.filter((b) => st.rec(b) === minRec);
+  const minSize = Math.min(...c2.map(st.size));
+  const c3 = c2.filter((b) => st.size(b) === minSize);
+  return c3[Math.floor(Math.random() * c3.length)];
+}
+function firstFree(st, b) {
+  const taken = st.used[b] || new Set();
+  let slot = 0;
+  while (taken.has(slot)) slot++;
+  return slot;
+}
+// Două scanări în aceeași fracțiune de secundă citesc aceeași stare și pot alege același bloc. După alocare, persoana cu id-ul
+// mai mare verifică dacă a nimerit în același bloc cu cineva sosit chiar atunci și, dacă există alt bloc mai liber de sosiți recent, se mută.
+async function spreadFriends(env, id, pick) {
+  const near = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM inscrieri WHERE eveniment=? AND bloc=? AND id<? AND prezent_la >= datetime('now','-20 seconds')"
+  ).bind(EVENT, pick, id).first();
+  if (!near || !near.n) return null;
+  const st = await blitzState(env, id);
+  const range = waveRanges().find(([f, t]) => pick >= f && pick <= t);
+  const open = openIn(st, range).filter((b) => b !== pick);
+  if (!open.length) return null;
+  const better = open.filter((b) => st.rec(b) < st.rec(pick) && st.size(b) <= st.size(pick) + 1);
+  if (!better.length) return null;
+  const alt = chooseBlock(better, st);
+  const slot = firstFree(st, alt);
+  const cur = await env.DB.prepare("SELECT slot FROM inscrieri WHERE id=? AND bloc=?").bind(id, pick).first();
+  if (!cur) return null;
+  const r = await env.DB.prepare("UPDATE inscrieri SET bloc=?, slot=? WHERE id=? AND bloc=? AND slot=?").bind(alt, slot, id, pick, cur.slot).run();
+  return r.meta && r.meta.changes ? blitzInfo(alt, slot) : null;
+}
 async function assignBlitz(env, id) {
   await ensureBlitzCols(env);
   const cur = await env.DB.prepare("SELECT bloc, slot FROM inscrieri WHERE id=?").bind(id).first();
   if (cur && cur.bloc) return blitzInfo(cur.bloc, cur.slot);
   for (let attempt = 0; attempt < 40; attempt++) {
-    const rows = (await env.DB.prepare("SELECT bloc, slot FROM inscrieri WHERE eveniment=? AND bloc IS NOT NULL").bind(EVENT).all()).results || [];
-    const used = {};
-    for (const r of rows) (used[r.bloc] = used[r.bloc] || new Set()).add(r.slot);
-    const size = (b) => (used[b] ? used[b].size : 0);
+    const st = await blitzState(env, id);
     // primul val care nu e plin
-    let pick = 0, from = 1, w = 0;
-    while (from <= MAX_BLOCKS && !pick) {
-      const len = w < WAVES.length ? WAVES[w] : 1;
-      const open = [];
-      for (let b = from; b < from + len && b <= MAX_BLOCKS; b++) if (size(b) < BLOC_SIZE) open.push(b);
-      if (open.length) {
-        const min = Math.min(...open.map(size));
-        const ties = open.filter((b) => size(b) === min);
-        pick = ties[Math.floor(Math.random() * ties.length)];
-      }
-      from += len; w++;
+    let pick = 0;
+    for (const range of waveRanges()) {
+      const open = openIn(st, range);
+      if (open.length) { pick = chooseBlock(open, st); break; }
     }
     if (!pick) return null;
-    const taken = used[pick] || new Set();
-    let slot = 0;
-    while (taken.has(slot)) slot++;
+    const slot = firstFree(st, pick);
     try {
       // Doar persoanele prezente primesc loc: o anulare făcută între timp nu lasă un loc ocupat degeaba.
       const r = await env.DB.prepare("UPDATE inscrieri SET bloc=?, slot=? WHERE id=? AND bloc IS NULL AND prezent_la IS NOT NULL").bind(pick, slot, id).run();
@@ -148,6 +197,7 @@ async function assignBlitz(env, id) {
         const c2 = await env.DB.prepare("SELECT bloc, slot FROM inscrieri WHERE id=?").bind(id).first();
         return c2 && c2.bloc ? blitzInfo(c2.bloc, c2.slot) : null;
       }
+      try { const moved = await spreadFriends(env, id, pick); if (moved) return moved; } catch (e) { console.warn("spreadFriends", e && e.message); }
       return blitzInfo(pick, slot);
     } catch (e) {
       if (!/UNIQUE/i.test(String((e && e.message) || e))) throw e; // doar conflictul de loc se reîncearcă
