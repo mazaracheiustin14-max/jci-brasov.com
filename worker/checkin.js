@@ -108,15 +108,18 @@ async function ensureBlitzCols(env) {
     try { await env.DB.prepare(`ALTER TABLE inscrieri ADD COLUMN ${col}`).run(); } catch (e) { /* există deja */ }
   }
   try { await env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_blitz_slot ON inscrieri(eveniment,bloc,slot) WHERE bloc IS NOT NULL").run(); } catch (e) { /* există deja */ }
-  // Se reține că schema e gata doar dacă interogarea pe coloanele noi funcționează.
+  // Se reține că schema e gata doar dacă interogarea pe coloanele noi funcționează și indexul unic există:
+  // fără el, două scanări simultane ar putea primi același loc.
   await env.DB.prepare("SELECT bloc, slot FROM inscrieri LIMIT 1").first();
+  const ix = await env.DB.prepare("SELECT 1 AS x FROM sqlite_master WHERE type='index' AND name='idx_blitz_slot'").first();
+  if (!ix) throw new Error("lipsește indexul unic idx_blitz_slot");
   blitzCols = true;
 }
 async function assignBlitz(env, id) {
   await ensureBlitzCols(env);
   const cur = await env.DB.prepare("SELECT bloc, slot FROM inscrieri WHERE id=?").bind(id).first();
   if (cur && cur.bloc) return blitzInfo(cur.bloc, cur.slot);
-  for (let attempt = 0; attempt < 6; attempt++) {
+  for (let attempt = 0; attempt < 40; attempt++) {
     const rows = (await env.DB.prepare("SELECT bloc, slot FROM inscrieri WHERE eveniment=? AND bloc IS NOT NULL").bind(EVENT).all()).results || [];
     const used = {};
     for (const r of rows) (used[r.bloc] = used[r.bloc] || new Set()).add(r.slot);
@@ -139,13 +142,16 @@ async function assignBlitz(env, id) {
     let slot = 0;
     while (taken.has(slot)) slot++;
     try {
-      const r = await env.DB.prepare("UPDATE inscrieri SET bloc=?, slot=? WHERE id=? AND bloc IS NULL").bind(pick, slot, id).run();
+      // Doar persoanele prezente primesc loc: o anulare făcută între timp nu lasă un loc ocupat degeaba.
+      const r = await env.DB.prepare("UPDATE inscrieri SET bloc=?, slot=? WHERE id=? AND bloc IS NULL AND prezent_la IS NOT NULL").bind(pick, slot, id).run();
       if (r.meta && r.meta.changes === 0) {
         const c2 = await env.DB.prepare("SELECT bloc, slot FROM inscrieri WHERE id=?").bind(id).first();
         return c2 && c2.bloc ? blitzInfo(c2.bloc, c2.slot) : null;
       }
       return blitzInfo(pick, slot);
-    } catch (e) { /* locul a fost luat chiar atunci de altă scanare, reîncerc */ }
+    } catch (e) {
+      if (!/UNIQUE/i.test(String((e && e.message) || e))) throw e; // doar conflictul de loc se reîncearcă
+    }
   }
   return null;
 }
@@ -238,7 +244,8 @@ export async function handleCheckin(request, env, url, overLimit) {
 async function doCheckin(env, token, undo, s) {
   const row = await findByToken(env, token);
   if (!row) return json({ ok: false, error: "Cod necunoscut" }, 404);
-  await ensureBlitzCols(env);
+  if (row.status !== "confirmat" && row.status !== "test") return json({ ok: false, error: "Persoana nu are loc confirmat" }, 409);
+  try { await ensureBlitzCols(env); } catch (e) { console.warn("ensureBlitzCols", e && e.message); }
   if (undo) {
     // Anularea eliberează și locul din bloc, ca următoarea persoană să îl primească.
     await env.DB.prepare("UPDATE inscrieri SET prezent_la=NULL, prezent_de=NULL, bloc=NULL, slot=NULL WHERE id=?").bind(row.id).run();
@@ -252,7 +259,8 @@ async function doCheckin(env, token, undo, s) {
     return json({ ok: false, already: true, ora: oraRo(again && again.prezent_la), de: again && again.prezent_de, nume: row.nume });
   }
   await env.DB.prepare("INSERT INTO checkin_log (inscriere_id,actiune,de) VALUES (?,?,?)").bind(row.id, "intrare", s.who).run();
-  const loc = await assignBlitz(env, row.id);
+  let loc = null;
+  try { loc = await assignBlitz(env, row.id); } catch (e) { console.warn("assignBlitz", e && e.message); }
   return json({ ok: true, nume: row.nume, ora: oraRo(new Date().toISOString().slice(0, 19).replace("T", " ")), loc });
 }
 
@@ -484,9 +492,10 @@ async function scanPage(env, token, s, fresh) {
     inner = `<div class="state s-warn"><p class="k" style="color:#fff">LISTĂ DE AȘTEPTARE</p>${info}<p class="muted mt">Persoana nu are loc confirmat.</p></div>`;
   } else if (row.prezent_la) {
     // Persoanele intrate înainte de introducerea blocurilor primesc loc la prima scanare ulterioară.
-    const loc = await assignBlitz(env, row.id);
+    let loc = null;
+    try { loc = await assignBlitz(env, row.id); } catch (e) { console.warn("assignBlitz", e && e.message); }
     const recent = Date.now() - new Date(row.prezent_la.replace(" ", "T") + "Z").getTime() < 10 * 60e3;
-    if (fresh && recent) {
+    if (fresh && recent && row.prezent_de === s.who) {
       inner = `<div class="state s-ok"><p class="k" style="color:#fff">INTRARE CONFIRMATĂ, ORA ${oraRo(row.prezent_la)}</p>${info}</div>${locCard(loc)}`;
     } else {
       inner = `<div class="state s-warn"><p class="k" style="color:#fff">INVITAȚIE DEJA FOLOSITĂ</p>${info}<p class="muted mt">Intrare confirmată la ora <b>${oraRo(row.prezent_la)}</b>${row.prezent_de ? ` de ${esc(row.prezent_de)}` : ""}.</p></div>${locCard(loc)}`;
