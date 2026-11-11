@@ -81,10 +81,12 @@ async function vipNumber(env, row) {
 // cele 6 clase de drepte paralele din planul afin peste Z5: într-un bloc complet, fiecare pereche de persoane se
 // întâlnește exact o dată, adică 24 de contacte noi pentru fiecare. Locul se alocă la scanarea biletului: blocul cu cei
 // mai puțini oameni primește următoarea persoană, deci cei care sosesc împreună ajung în blocuri diferite.
-// Numărul de blocuri se poate schimba în D1, tabelul setari, cheia „blocuri” (implicit 4). Peste 25 de oameni
-// într-un bloc se deschide automat un bloc nou.
+// Blocurile se umplu pe valuri: întâi primele 3 (A, B, C), apoi următoarele 2 (D, E), apoi F, apoi câte unul. În cadrul valului,
+// persoana nouă merge în blocul cu cei mai puțini oameni (la egalitate, alegere la întâmplare), deci cei care sosesc împreună
+// ajung în blocuri diferite, iar dacă nu vin toți, primele blocuri sunt cele pline și echipele sunt formate.
+// Când cineva e anulat și se eliberează un loc dintr-un val anterior, următoarea persoană îl ocupă.
 const BLOC_SIZE = 25;
-const DEFAULT_BLOCKS = 4;
+const WAVES = [3, 2, 1]; // mărimile valurilor; după ele, câte un bloc pe rând
 const MAX_BLOCKS = 26;
 const BLOC_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 // Numele blocurilor (doar etichetă de anunțat în sală, codurile rămân litera și numerele): povestea grupului, de la idee la orizont.
@@ -114,22 +116,25 @@ async function assignBlitz(env, id) {
   await ensureBlitzCols(env);
   const cur = await env.DB.prepare("SELECT bloc, slot FROM inscrieri WHERE id=?").bind(id).first();
   if (cur && cur.bloc) return blitzInfo(cur.bloc, cur.slot);
-  let nb = parseInt(await setting(env, "blocuri"), 10);
-  if (!(nb >= 1 && nb <= MAX_BLOCKS)) nb = DEFAULT_BLOCKS;
   for (let attempt = 0; attempt < 6; attempt++) {
     const rows = (await env.DB.prepare("SELECT bloc, slot FROM inscrieri WHERE eveniment=? AND bloc IS NOT NULL").bind(EVENT).all()).results || [];
     const used = {};
     for (const r of rows) (used[r.bloc] = used[r.bloc] || new Set()).add(r.slot);
     const size = (b) => (used[b] ? used[b].size : 0);
-    let eff = nb;
-    const allFull = () => { for (let b = 1; b <= eff; b++) if (size(b) < BLOC_SIZE) return false; return true; };
-    while (eff < MAX_BLOCKS && allFull()) eff++;
-    let pick = 0, best = Infinity;
-    for (let b = 1; b <= eff; b++) {
-      if (eff > nb && b <= nb) continue; // blocurile de bază sunt pline, se umple blocul nou
-      if (size(b) < best) { best = size(b); pick = b; }
+    // primul val care nu e plin
+    let pick = 0, from = 1, w = 0;
+    while (from <= MAX_BLOCKS && !pick) {
+      const len = w < WAVES.length ? WAVES[w] : 1;
+      const open = [];
+      for (let b = from; b < from + len && b <= MAX_BLOCKS; b++) if (size(b) < BLOC_SIZE) open.push(b);
+      if (open.length) {
+        const min = Math.min(...open.map(size));
+        const ties = open.filter((b) => size(b) === min);
+        pick = ties[Math.floor(Math.random() * ties.length)];
+      }
+      from += len; w++;
     }
-    if (!pick || best >= BLOC_SIZE) return null;
+    if (!pick) return null;
     const taken = used[pick] || new Set();
     let slot = 0;
     while (taken.has(slot)) slot++;

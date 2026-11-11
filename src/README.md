@@ -86,8 +86,9 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
   numărul de pe ecuson (1–25) și masa pentru fiecare dintre cele 6 runde (3 în Blitz #1, 3 în Blitz #2). Ecranul arată ce se scrie pe ecuson.
 - Blocuri de câte 25, grila 5x5 peste Z5, cele 6 clase de drepte paralele = cele 6 runde: într-un bloc complet fiecare pereche se întâlnește
   exact o dată (24 de contacte noi). În bloc incomplet nu există repetări, dar sunt mai puține contacte și grupe de 2–5 persoane.
-- Alocarea: blocul cu cei mai puțini oameni primește următoarea persoană, deci cei care sosesc împreună ajung în blocuri diferite.
-  Numărul de blocuri: D1, tabelul `setari`, cheia `blocuri` (implicit 4). Când toate blocurile sunt pline se deschide automat unul nou.
+- Alocarea pe valuri (WAVES în worker: 3, 2, 1, apoi câte unul): întâi se umplu A, B, C, apoi D, E, apoi F. În val, persoana nouă merge în blocul cu cei
+  mai puțini oameni (la egalitate, la întâmplare), deci cei care sosesc împreună ajung în blocuri diferite, iar la prezență mică primele blocuri sunt pline.
+  Un loc eliberat prin anulare într-un val anterior se ocupă primul.
 - Coloane noi în `inscrieri`: `bloc`, `slot` (index unic pe eveniment, bloc, slot). Anularea intrării eliberează locul.
 - Blocurile au nume (BLOC_NAMES: Scânteia, Busola, Puntea, Urcușul, Vârful, Orizontul, Farul, Zorii), doar ca etichetă; codurile rămân litera și numerele (persoana C7, mesele C1 până la C5). Panoul echipei arată câți oameni are fiecare bloc; exportul CSV conține blocul, numărul și cele 6 mese.
 - `FILL_ORDER` din worker este ordinea de ocupare a grilei, aleasă ca grupele să rămână echilibrate la blocuri incomplete.
