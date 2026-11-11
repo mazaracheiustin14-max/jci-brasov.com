@@ -31,6 +31,8 @@ export default {
       h.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
       h.headers.set("Referrer-Policy", "same-origin");
       if ((h.headers.get("Content-Type") || "").includes("text/html")) h.headers.set("Cache-Control", "no-cache");
+      // fișierele aplicației au ?v=<amprentă>: se schimbă adresa la fiecare modificare, deci pot sta în cache un an
+      else if (r.status === 200 && url.searchParams.has("v")) h.headers.set("Cache-Control", "public, max-age=31536000, immutable");
       return h;
     }
     // Invitații automate pe email (worker/invitatii.js): coada pentru Gmail și imaginea QR a biletului

@@ -1,0 +1,187 @@
+/* aplicatia */
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+header.top {
+  height: var(--head);
+  background: var(--bar-bg);
+  color: var(--hero-ink);
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 0 var(--s4);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.logo {
+  font: 700 20px/1 var(--font-display);
+  flex: 1;
+  letter-spacing: 0.01em;
+}
+.logo b {
+  color: var(--accent);
+  font-weight: 700;
+}
+.ibtn {
+  min-width: var(--tap);
+  height: var(--tap);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-s);
+  color: var(--hero-ink);
+  padding: 0 8px;
+}
+.ibtn:hover {
+  background: rgb(255 255 255/0.1);
+}
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 600 14px/1 var(--font-ui);
+  flex: none;
+}
+header.top .avatar {
+  background: var(--accent);
+  color: var(--on-accent);
+  width: 36px;
+  height: 36px;
+}
+select.branch {
+  height: var(--tap);
+  background: rgb(255 255 255/0.12);
+  color: var(--hero-ink);
+  border: 1px solid rgb(255 255 255/0.35);
+  border-radius: var(--r-s);
+  padding: 0 8px;
+  font: 500 14px var(--font-ui);
+}
+select.branch option {
+  color: #121a3d;
+}
+.demo-bar {
+  background: var(--warn-bg);
+  color: var(--warn);
+  padding: 8px var(--s4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+  line-height: 20px;
+}
+.demo-bar select {
+  height: 36px;
+  border-radius: var(--r-s);
+  border: 1px solid var(--warn);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 8px;
+  font: 500 14px var(--font-ui);
+}
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--s6) var(--s4) calc(var(--bar) + var(--s12) + env(safe-area-inset-bottom));
+}
+nav.tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--bar) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--bar-bg);
+  display: flex;
+  z-index: 20;
+}
+nav.tabs button {
+  flex: 1;
+  min-width: 64px;
+  border: 0;
+  background: transparent;
+  color: var(--bar-ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font: 600 13px/16px var(--font-ui);
+  position: relative;
+}
+nav.tabs button[aria-current="page"] {
+  color: var(--bar-active);
+}
+nav.tabs button[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  background: var(--bar-active);
+}
+nav.tabs svg {
+  width: 24px;
+  height: 24px;
+}
+@media (min-width: 1024px) {
+  main {
+    max-width: 1120px;
+    margin-left: var(--rail);
+    margin-right: auto;
+    width: calc(100% - var(--rail));
+    padding: var(--s8) var(--s8) var(--s12);
+  }
+  nav.tabs {
+    top: var(--head);
+    bottom: auto;
+    right: auto;
+    width: var(--rail);
+    height: auto;
+    flex-direction: column;
+    padding: var(--s4) 0;
+    justify-content: flex-start;
+  }
+  nav.tabs button {
+    flex: none;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 0 24px;
+    height: var(--tap);
+    min-height: var(--tap);
+  }
+  nav.tabs button[aria-current="page"]::before {
+    top: 8px;
+    bottom: 8px;
+    left: 0;
+    right: auto;
+    width: 3px;
+    height: auto;
+  }
+}
+.page-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin-bottom: var(--s4);
+  flex-wrap: wrap;
+}
+.page-head h1 {
+  flex: 1;
+  min-width: 140px;
+}

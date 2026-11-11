@@ -1,0 +1,6 @@
+{
+  "name": "jci-business-teste",
+  "private": true,
+  "description": "Teste pentru aplicatia de la /app. Vezi src/app/README.md",
+  "dependencies": { "jsdom": "^31.0.0" }
+}

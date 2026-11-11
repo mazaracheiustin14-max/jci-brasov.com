@@ -1,0 +1,92 @@
+/* Manualul de identitate JCI: albastru JCI #0097D7 pentru actiuni, negru JCI #130F2D pentru text si fundaluri inchise,
+   navy #1F4789 si teal #57BCBC ca secundare, galben #EFC40F doar ca accent. Plus Jakarta Sans peste tot. Randuri liniate in loc de carduri. */
+:root {
+  --brand: #130f2d;
+  --accent: #efc40f;
+  --on-accent: #130f2d;
+  --bg: #eff5fa;
+  --surface: #ffffff;
+  --ink: #130f2d;
+  --ink-2: #55536b;
+  --line: #d9e3ec;
+  --line-strong: #74809c;
+  --action: #0097d7;
+  --on-action: #ffffff;
+  --action-ink: #1f4789;
+  --focus: #1f4789;
+  --good: #1b6b45;
+  --good-bg: #e3f2ea;
+  --warn: #8a4b00;
+  --warn-bg: #fbebd3;
+  --crit: #a61b2b;
+  --crit-bg: #fbe4e6;
+  --bar-bg: #130f2d;
+  --bar-ink: #c7cee0;
+  --bar-active: #3db5ea;
+  --hero-bg: #1f4789;
+  --hero-ink: #ffffff;
+  --hero-num: #ffffff;
+  --font-display: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --font-ui: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s6: 24px;
+  --s8: 32px;
+  --s12: 48px;
+  --r-s: 8px;
+  --r-m: 12px;
+  --r-l: 20px;
+  --r-pill: 999px;
+  --tap: 44px;
+  --field: 48px;
+  --bar: 64px;
+  --rail: 240px;
+  --head: 56px;
+  --shadow: 0 1px 2px rgb(19 15 45/0.08), 0 4px 12px rgb(19 15 45/0.06);
+  --t: 150ms ease;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c0920;
+    --surface: #1a1638;
+    --ink: #eef1f8;
+    --ink-2: #aeb4cc;
+    --line: #2b2750;
+    --line-strong: #727a9e;
+    --action: #0097d7;
+    --on-action: #ffffff;
+    --action-ink: #6cc4ee;
+    --focus: #efc40f;
+    --good: #5fcb94;
+    --good-bg: #123a2c;
+    --warn: #f0b35a;
+    --warn-bg: #3e2c0e;
+    --crit: #ff8a94;
+    --crit-bg: #451620;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c0920;
+  --surface: #1a1638;
+  --ink: #eef1f8;
+  --ink-2: #aeb4cc;
+  --line: #2b2750;
+  --line-strong: #727a9e;
+  --action: #0097d7;
+  --on-action: #ffffff;
+  --action-ink: #6cc4ee;
+  --focus: #efc40f;
+  --good: #5fcb94;
+  --good-bg: #123a2c;
+  --warn: #f0b35a;
+  --warn-bg: #3e2c0e;
+  --crit: #ff8a94;
+  --crit-bg: #451620;
+  --shadow: none;
+  color-scheme: dark;
+}

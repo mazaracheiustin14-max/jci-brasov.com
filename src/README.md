@@ -98,9 +98,13 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 ## JCI Business la /app: aplicația membrilor (11 nov 2026)
 - Adresa: `https://jci-brasov.com/app`. Intrarea de pe site e butonul „Intră în JCI Business” din secțiunea „Acces echipă” a paginii Echipa (RO/EN),
   lângă cel de check-in. Legătura e într-un singur sens: site către aplicație. Aplicația nu conține niciun link către site (`src/app.py` verifică asta la build).
-- Sursa unică: `src/app/source.html` (un singur `<style>` și un singur `<script>`). `python3 src/app.py` o desparte în `public/app.html`,
-  `public/app/app.css` și `public/app/app.js` (fără script inline, din cauza CSP), pune fonturile site-ului din `/assets/fonts`, și adaugă butonul pe Echipa.
+- Sursa e pe module, în `src/app/`: `index.html` (scheletul), `css/*.css`, `js/*.js`, `img/`. Ghidul pentru actualizări: `src/app/README.md`;
+  ce urmează (roluri, drepturi, etape): `src/app/SPEC-ROLURI.md`. `python3 src/app.py` lipește modulele în `public/app.html`,
+  `public/app/app.css` și `public/app/app.js` (fără script inline, din cauza CSP), copiază logoul și pictograma, pune fonturile site-ului din `/assets/fonts`
+  și adaugă butonul pe Echipa. Fișierele au `?v=<amprentă>` și antet de cache de un an (îl pune `worker/index.js`); `app.html` se revalidează mereu.
   Pagina nu se indexează (meta robots noindex și antetul X-Robots-Tag din worker); robots.txt nu o blochează, ca interdicția să poată fi citită. Idempotent. Ordine: ULTIMUL înainte de `security.py` (după `pixel.py`). `pixel.py` exclude `app.html`: aplicația nu are pixel și nu încarcă nimic din afara site-ului.
+- Viteză: paginile publice ale site-ului nu încarcă nimic din aplicație. În aplicație, datele se reîmprospătează la 60 s doar cât pagina e vizibilă
+  și omul a fost activ în ultimele 3 minute, plus la revenirea în pagină și după fiecare scriere.
 - `worker/app.js` (API la `/api/app/*`) și `worker/index.js` (antete noindex și no-cache pentru `/app`). Tabele D1, create automat la prima cerere:
   `app_docs` (path, id, data JSON), `app_meta` (revizii pe cale), `app_sessions`, `app_codes`, `app_state` (valabilitatea fiecărui cont).
 - Autentificare:
@@ -117,7 +121,7 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
   profilul fără acord pentru director ajunge doar la titular și la conducerea filialei lui; data de valabilitate a altui membru nu se trimite membrilor;
   numele donatorilor ajung doar la președintele și trezorierul filialei; jurnalul nu se rescrie; cotizațiile, donațiile și cheltuielile nu se șterg, doar se anulează.
   Regulile de separare a atribuțiilor la cheltuieli (cine propune nu aprobă) sunt deocamdată doar în interfață.
-- Mod demonstrativ, cu date fictive și fără server: `/app?demo`.
-- Teste (`src/app/tests/`): `node --no-warnings t_backend.mjs` (82 de verificări ale API-ului pe o bază SQLite locală) și `e2e.py`
-  (Playwright, pe `npx wrangler dev --local --config wrangler.test.jsonc`, după `wrangler d1 execute jci-test --local --file init.sql`): fluxul complet
-  moderator, președinte, membru, predarea mandatului, CSP și lipsa linkurilor către site.
+- Mod demonstrativ, cu date fictive și fără server: `/app?demo`. Catalogul vizual al componentelor (referința grafică): `/app?ui`.
+- Teste (`src/app/tests/`): `t_backend.mjs` (82 de verificări ale API-ului și ale drepturilor, pe o bază SQLite locală), `t_demo.js`
+  (interfața în mod demonstrativ și catalogul, în jsdom) și `e2e.py` (Playwright pe mediul local Cloudflare: fluxul complet moderator,
+  președinte, membru, predarea mandatului, CSP și lipsa linkurilor către site). Comenzile sunt în `src/app/README.md`.

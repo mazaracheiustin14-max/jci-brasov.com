@@ -1,0 +1,60 @@
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/24px var(--font-ui);
+  -webkit-text-size-adjust: 100%;
+}
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+h1 {
+  font: 600 24px/30px var(--font-display);
+  text-wrap: balance;
+}
+h2 {
+  font: 600 20px/26px var(--font-display);
+  text-wrap: balance;
+}
+h3 {
+  font: 600 17px/24px var(--font-ui);
+}
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.skip {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  background: var(--surface);
+  padding: 8px 12px;
+  z-index: 100;
+}
+.skip:focus {
+  left: 8px;
+  top: 8px;
+}
+.small {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-2);
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}

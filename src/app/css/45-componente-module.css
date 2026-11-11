@@ -1,0 +1,292 @@
+/* componente pentru modulele noi: vezi js/12-ui-module.js și catalogul /app?ui */
+.avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.avatar {
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.photo-pick .avatar {
+  background: var(--surface);
+}
+.avatar.lg {
+  width: 56px;
+  height: 56px;
+  font-size: 18px;
+}
+.avatar.xl {
+  width: 96px;
+  height: 96px;
+  font-size: 30px;
+}
+.pill.brand {
+  background: var(--hero-bg);
+  color: #fff;
+}
+.sec-h.split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  flex-wrap: wrap;
+}
+.amt {
+  font: 600 16px/22px var(--font-ui);
+  white-space: nowrap;
+}
+.amt.in {
+  color: var(--good);
+}
+.amt.out {
+  color: var(--crit);
+}
+.kv {
+  font-size: 14px;
+  line-height: 20px;
+  margin-top: var(--s1);
+  color: var(--ink-2);
+}
+.kv span:not(.sep) {
+  white-space: nowrap;
+}
+.kv b {
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.bar {
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--line);
+  overflow: hidden;
+}
+.bar i {
+  display: block;
+  height: 100%;
+  background: var(--action);
+  border-radius: var(--r-pill);
+}
+/* vot */
+.poll {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: var(--s4);
+}
+.poll-h {
+  display: flex;
+  gap: var(--s3);
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: var(--s1);
+}
+.poll-h h3 {
+  flex: 1;
+  min-width: 180px;
+}
+.poll > .small {
+  margin-bottom: var(--s3);
+}
+.opt {
+  display: flex;
+  gap: var(--s3);
+  align-items: center;
+  min-height: var(--field);
+  padding: var(--s2) var(--s3);
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--r-s);
+  margin-bottom: var(--s2);
+  cursor: pointer;
+}
+.opt input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--action);
+}
+.opt:has(input:checked) {
+  border-color: var(--action);
+  background: var(--bg);
+}
+.res {
+  margin-bottom: var(--s3);
+}
+.res-t {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s3);
+  font: 500 15px/22px var(--font-ui);
+  margin-bottom: 4px;
+}
+.res.mine .res-t {
+  font-weight: 700;
+}
+.res.mine .bar i {
+  background: var(--accent);
+}
+/* eveniment, mulțumire */
+.ev,
+.thanks {
+  display: flex;
+  gap: var(--s3);
+  align-items: flex-start;
+  padding: var(--s4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.ev .grow,
+.thanks .grow {
+  flex: 1;
+  min-width: 0;
+}
+.ev .meta,
+.thanks .meta {
+  display: block;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-2);
+}
+.ev .val {
+  flex: none;
+}
+.ev-date {
+  flex: none;
+  width: 52px;
+  height: 56px;
+  border-radius: var(--r-s);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.ev-date b {
+  font: 700 20px/22px var(--font-ui);
+}
+.ev-date span {
+  font: 600 12px/14px var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+}
+@media (max-width: 480px) {
+  .ev {
+    flex-wrap: wrap;
+  }
+  .ev .grow {
+    flex-basis: calc(100% - 64px);
+  }
+  .ev .val {
+    width: 100%;
+    padding-left: 64px;
+  }
+}
+.th-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s1) var(--s3);
+  flex-wrap: wrap;
+}
+.quote {
+  border-left: 3px solid var(--accent);
+  padding: 2px 0 2px var(--s3);
+  margin-top: var(--s2);
+  font-size: 15px;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+/* comutator */
+.switch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 64px;
+  padding: var(--s3) var(--s4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.switch .grow {
+  flex: 1;
+  min-width: 0;
+}
+.switch b {
+  display: block;
+  font: 600 16px/22px var(--font-ui);
+}
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.switch i {
+  flex: none;
+  width: 48px;
+  height: 28px;
+  border-radius: var(--r-pill);
+  background: var(--line-strong);
+  position: relative;
+  transition: background var(--t);
+}
+.switch i::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform var(--t);
+}
+.switch input:checked + i {
+  background: var(--action);
+}
+.switch input:checked + i::after {
+  transform: translateX(20px);
+}
+.switch input:focus-visible + i {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.switch input:disabled + i {
+  opacity: 0.45;
+}
+/* poză de profil */
+.photo-pick {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  margin-bottom: var(--s4);
+}
+.photo-pick .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.photo-pick .help {
+  margin-top: var(--s2);
+}
+/* filigran */
+.wm {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;
+  opacity: 0.12;
+  background-repeat: repeat;
+}
+.wm-box {
+  position: relative;
+  overflow: hidden;
+}
+.wm-box .wm {
+  position: absolute;
+}
