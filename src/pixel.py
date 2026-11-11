@@ -9,7 +9,7 @@ import glob, re, hashlib, os
 S = '/home/claude/jci-brasov.com/public/'
 SRC = os.path.dirname(os.path.abspath(__file__)) + '/'
 BANNER = False  # 9 nov 2026: banner scos temporar la cererea lui Iustin; pixelul pornește fără acord. True = varianta cu acord GDPR.
-EXCLUDE = ('p-',)  # previzualizări pentru alți clienți (ex. Dachkraft)
+EXCLUDE = ('p-', 'app.html')  # previzualizări pentru alți clienți (ex. Dachkraft); aplicația membrilor (/app) nu primește pixel
 
 
 def ver(path):

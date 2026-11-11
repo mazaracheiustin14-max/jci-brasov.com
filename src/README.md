@@ -94,3 +94,30 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - Coloane noi în `inscrieri`: `bloc`, `slot` (index unic pe eveniment, bloc, slot). Anularea intrării eliberează locul.
 - Blocurile au nume (BLOC_NAMES: Scânteia, Busola, Puntea, Urcușul, Vârful, Orizontul, Farul, Zorii), doar ca etichetă; codurile rămân litera și numerele (persoana C7, mesele C1 până la C5). Panoul echipei arată câți oameni are fiecare bloc; exportul CSV conține blocul, numărul și cele 6 mese.
 - `FILL_ORDER` din worker este ordinea de ocupare a grilei, aleasă ca grupele să rămână echilibrate la blocuri incomplete.
+
+## JCI Business la /app: aplicația membrilor (11 nov 2026)
+- Adresa: `https://jci-brasov.com/app`. Intrarea de pe site e butonul „Intră în JCI Business” din secțiunea „Acces echipă” a paginii Echipa (RO/EN),
+  lângă cel de check-in. Legătura e într-un singur sens: site către aplicație. Aplicația nu conține niciun link către site (`src/app.py` verifică asta la build).
+- Sursa unică: `src/app/source.html` (un singur `<style>` și un singur `<script>`). `python3 src/app.py` o desparte în `public/app.html`,
+  `public/app/app.css` și `public/app/app.js` (fără script inline, din cauza CSP), pune fonturile site-ului din `/assets/fonts`, și adaugă butonul pe Echipa.
+  Pagina nu se indexează (meta robots noindex și antetul X-Robots-Tag din worker); robots.txt nu o blochează, ca interdicția să poată fi citită. Idempotent. Ordine: ULTIMUL înainte de `security.py` (după `pixel.py`). `pixel.py` exclude `app.html`: aplicația nu are pixel și nu încarcă nimic din afara site-ului.
+- `worker/app.js` (API la `/api/app/*`) și `worker/index.js` (antete noindex și no-cache pentru `/app`). Tabele D1, create automat la prima cerere:
+  `app_docs` (path, id, data JSON), `app_meta` (revizii pe cale), `app_sessions`, `app_codes`, `app_state` (valabilitatea fiecărui cont).
+- Autentificare:
+  - membrii, președinții și trezorierii intră cu un cod de 12 caractere, de unică folosință, valabil 14 zile. Codul îl generează președintele filialei
+    (sau moderatorul) din fișa membrului; în bază se ține doar amprenta lui. Sesiunea ține 60 de zile (cookie `jci_app`, HttpOnly, Secure, SameSite=Strict, doar pe `/api/app`), maximum 5 dispozitive.
+  - moderatorul intră cu o cheie; în `setari` se țin doar `app_mod_salt` și `app_mod_hash` = SHA-256(sare:cheie). Sesiune de 14 zile.
+    Schimbarea cheii: se rescriu cele două rânduri din `setari`, apoi `DELETE FROM app_sessions WHERE user_id='mod'`.
+  - se numără doar încercările greșite (tabelul `rate_log`): 10 pe oră la coduri, 5 pe oră la cheia moderatorului.
+- Roluri: moderatorul adaugă președintele în evidența filialei, îi atribuie rolul și îi generează codul. Rolurile le scrie doar moderatorul,
+  inclusiv predarea anuală a mandatului (noul președinte primește rolul, fostul rămâne membru).
+- Excluderea automată: contul e suspendat când au trecut mai mult de 3 luni de la expirarea calității de membru (`valid_until`), fără cotizație achitată.
+  Se calculează pe server la fiecare cerere, după data din Europe/Bucharest; plata cotizației sau prelungirea valabilității redă accesul. Se aplică și conducerii.
+- Ce verifică serverul: filialele sunt izolate (conducerea unei filiale citește doar datele ei); membrii simpli nu citesc cotizații, donații, cheltuieli, evidență sau jurnal;
+  profilul fără acord pentru director ajunge doar la titular și la conducerea filialei lui; data de valabilitate a altui membru nu se trimite membrilor;
+  numele donatorilor ajung doar la președintele și trezorierul filialei; jurnalul nu se rescrie; cotizațiile, donațiile și cheltuielile nu se șterg, doar se anulează.
+  Regulile de separare a atribuțiilor la cheltuieli (cine propune nu aprobă) sunt deocamdată doar în interfață.
+- Mod demonstrativ, cu date fictive și fără server: `/app?demo`.
+- Teste (`src/app/tests/`): `node --no-warnings t_backend.mjs` (82 de verificări ale API-ului pe o bază SQLite locală) și `e2e.py`
+  (Playwright, pe `npx wrangler dev --local --config wrangler.test.jsonc`, după `wrangler d1 execute jci-test --local --file init.sql`): fluxul complet
+  moderator, președinte, membru, predarea mandatului, CSP și lipsa linkurilor către site.

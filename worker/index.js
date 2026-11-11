@@ -5,6 +5,7 @@ import { EmailMessage } from "cloudflare:email";
 import { systemPrompt } from "./kb.js";
 import { handleCheckin } from "./checkin.js";
 import { handleInvitatii } from "./invitatii.js";
+import { handleApp } from "./app.js";
 
 const SITE = "https://jci-brasov.com";
 const FROM = "formular@jci-brasov.com";
@@ -21,6 +22,16 @@ export default {
     if (url.pathname.startsWith("/api/")) {
       const tooBig = Number(request.headers.get("Content-Length") || 0) > (url.pathname === "/api/chat" ? 24000 : 64000);
       if (tooBig) return new Response("Payload Too Large", { status: 413 });
+    }
+    // JCI Business (worker/app.js): API-ul aplicației, la /api/app/*; pagina /app e statică, cu antete de confidențialitate
+    if (url.pathname.startsWith("/api/app/")) return handleApp(request, env, url);
+    if (url.pathname === "/app" || url.pathname.startsWith("/app/")) {
+      const r = await env.ASSETS.fetch(request);
+      const h = new Response(r.body, r);
+      h.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+      h.headers.set("Referrer-Policy", "same-origin");
+      if ((h.headers.get("Content-Type") || "").includes("text/html")) h.headers.set("Cache-Control", "no-cache");
+      return h;
     }
     // Invitații automate pe email (worker/invitatii.js): coada pentru Gmail și imaginea QR a biletului
     if (/^\/bilet\/[a-f0-9]{32}\/qr\.png$|^\/api\/invitatii\//.test(url.pathname) && env.DB) {
