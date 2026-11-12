@@ -128,46 +128,42 @@
     }).join("") + "</div>" : "";
     var colegi = (D.colegi || []).slice();
     if (who && colegi.indexOf(who) < 0) colegi.unshift(who);
-    var needReg = !(c && c.inscris); // înscriere nouă prin telefon: cere email și acord
     root.innerHTML = '<button class="btn b-ghost" data-back="1">Înapoi la listă</button>' + prev +
       '<div class="card mt" id="fcard"><p class="lab">SECȚIUNEA 1 – DATE APEL</p><div id="ferr"></div>' +
       fld("f_apelant", "1. Cine a sunat? (obligatoriu)", '<input id="f_apelant" class="mt" list="f_colegi" maxlength="60" value="' + esc(who) + '"><datalist id="f_colegi">' + colegi.map(function (n) { return '<option value="' + esc(n) + '">'; }).join("") + "</datalist>") +
       tx("f_nume", "2. Numele persoanei sunate (obligatoriu)", c ? c.nume : "", 120) +
-      tx("f_tel", "3. Telefon", c ? c.telefon : "", 40, 'inputmode="tel"') +
-      (nou ? fld("f_sursa", "Sursa contactului (contact nou)", sel("f_sursa", D.surse.map(function (x) { return [x, x]; }), D.surse[0]).replace("<select", '<select class="mt"')) : "") +
-      fld("f_raspuns", "4. Ați reușit să vorbiți? (obligatoriu)", sel("f_raspuns", [["", "Alege"], ["da", "Da"], ["nu", "Nu a răspuns"], ["mai_tarziu", "Mă suni mai târziu"]], "").replace("<select", '<select class="mt"')) +
-      '<div id="g_rev">' + fld("f_rev", "5. Dacă te-a rugat să suni mai târziu, când?", '<input id="f_rev" class="mt" type="datetime-local">') + "</div>" +
-      fld("f_era", "6. Era deja înscris la eveniment?", sel("f_era", [["da", "Da"], ["nu", "Nu"], ["nu_stie", "Nu știe"]], era).replace("<select", '<select class="mt"')) +
+      tx("f_tel", "3. Îmi confirmați, vă rog, numărul de telefon?", c ? c.telefon : "", 40, 'inputmode="tel"') +
+      tx("f_email", "4. Pe ce adresă de e-mail vă putem trimite invitația?", c ? c.email : "", 160, 'inputmode="email" autocapitalize="none"') +
+      (nou ? fld("f_sursa", "5. Sursa contactului", sel("f_sursa", D.surse.map(function (x) { return [x, x]; }), D.surse[0]).replace("<select", '<select class="mt"'))
+        : fld("f_sursa_ro", "5. Sursa contactului", '<input id="f_sursa_ro" class="mt" value="' + esc(c.surse || "") + '" disabled>')) +
+      fld("f_raspuns", "6. Ați reușit să vorbiți? (obligatoriu)", sel("f_raspuns", [["", "Alege"], ["da", "Da"], ["nu", "Nu a răspuns"], ["mai_tarziu", "Sună mai târziu"]], "").replace("<select", '<select class="mt"')) +
+      fld("f_rev", "7. Când ar fi un moment potrivit să revin cu un telefon?", '<input id="f_rev" class="mt" type="datetime-local">') +
+      fld("f_era", "8. Ați reușit să vă înscrieți la eveniment?", sel("f_era", [["da", "Da"], ["nu", "Nu"], ["nu_stie", "Nu știe"]], era).replace("<select", '<select class="mt"')) +
       '</div><div class="card mt" id="sec2"><p class="lab">SECȚIUNEA 2 – RĂSPUNSURI</p>' +
-      tx("f_ocupatie", "7. Cu ce se ocupă în prezent?", "", 200) +
-      ta("f_provocare", "8. Care e cea mai mare provocare cu care se confruntă acum la locul de muncă sau în business?") +
-      ta("f_sfat", "9. Dacă ar putea cere sfatul cuiva care a trecut deja prin asta, ce l-ar întreba?") +
-      ta("f_interes", "10. Ce l-a făcut să intre în grupul evenimentului?") +
-      tx("f_ia", "11. Dacă ar pleca de la eveniment cu un singur lucru, care ar fi acela?", "", 300) +
-      tx("f_oameni", "12. Ce fel de oameni i-ar plăcea să cunoască acolo?", "", 300) +
-      ta("f_intrebare", "13. Ce întrebare ar pune invitaților din paneluri (puterea comunității / tehnologia care ne schimbă viața)?") +
-      ta("f_activ", "14. Ce l-ar face să rămână activ în comunitatea JCI Brașov și după eveniment?") +
+      tx("f_ocupatie", "9. Cu ce vă ocupați în prezent?", "", 200) +
+      ta("f_provocare", "10. Care este cea mai mare provocare cu care vă confruntați acum la locul de muncă sau în business?") +
+      ta("f_sfat", "11. Dacă ați putea cere sfatul cuiva care a trecut deja prin asta, ce l-ați întreba?") +
+      ta("f_interes", "12. Ce v-a făcut să vă interesați de eveniment?") +
+      tx("f_ia", "13. Dacă ar fi să plecați de la eveniment cu un singur lucru, care ar fi acela?", "", 300) +
+      tx("f_oameni", "14. Ce fel de oameni v-ar plăcea să cunoașteți acolo?", "", 300) +
+      ta("f_intrebare", "15. Avem două paneluri, unul despre puterea comunității și unul despre tehnologia care ne schimbă viața. Ce întrebare le-ați pune invitaților?") +
+      ta("f_activ", "16. Ce v-ar face să rămâneți activ în comunitatea JCI Brașov și după eveniment?") +
       '</div><div class="card mt"><p class="lab">SECȚIUNEA 3 – REZULTAT</p>' +
-      fld("f_status", "15. Status final (obligatoriu)", sel("f_status", [["", "Alege"], ["confirmat", "Confirmat"], ["revine", "Revine cu răspuns"], ["nu_participa", "Nu participă"]], "").replace("<select", '<select class="mt"')) +
-      fld("f_vip", "16. E interesat de biletul VIP?", sel("f_vip", [["", "Nespecificat"], ["da", "Da"], ["nu", "Nu"], ["poate", "Poate"]], "").replace("<select", '<select class="mt"')) +
-      '<div id="g_revine">' + fld("f_revine", "17. Dacă revine cu răspuns, când îl sunăm din nou?", '<input id="f_revine" class="mt" type="datetime-local">') + "</div>" +
-      '<div id="g_motiv">' + tx("f_motiv", "18. Dacă nu participă, care e motivul?", "", 300) + "</div>" +
-      fld("f_inv", "19. I s-a trimis linkul pe WhatsApp?", sel("f_inv", [["", "Nespecificat"], ["da", "Da"], ["nu", "Nu"]], "").replace("<select", '<select class="mt"')) +
-      ta("f_obs", "20. Observații (opțional)") +
-      (needReg ? '<div id="g_conf" hidden><p class="muted mt">Pentru înscriere sunt necesare un email valid și acordul verbal pentru prelucrarea datelor.</p>' +
-        tx("f_email", "Email pentru înscriere", c ? c.email : "", 160, 'inputmode="email" autocapitalize="none"') +
-        chk("f_acord", "Acord verbal pentru prelucrarea datelor în scopul organizării evenimentului") +
-        chk("f_viitor", "Acord pentru invitații viitoare JCI Brașov") + chk("f_bcr", "Acord pentru transmiterea datelor către BCR Asigurări") + "</div>" : "") +
+      fld("f_status", "17. Pot să vă trec pe listă ca participant confirmat? (obligatoriu)", sel("f_status", [["", "Alege"], ["confirmat", "Confirmat"], ["revine", "Revine cu răspuns"], ["nu_participa", "Nu participă"]], "").replace("<select", '<select class="mt"')) +
+      fld("f_vip", "18. V-ar interesa și biletul VIP, cu locuri în primul rând, întâlniri directe cu invitații și degustare de vin?", sel("f_vip", [["", "Nespecificat"], ["da", "Da"], ["nu", "Nu"], ["poate", "Poate"]], "").replace("<select", '<select class="mt"')) +
+      fld("f_revine", "19. Când credeți că îmi puteți da un răspuns?", '<input id="f_revine" class="mt" type="datetime-local">') +
+      tx("f_motiv", "20. Îmi puteți spune ce vă împiedică să participați?", "", 300) +
+      '<p class="lab fl">21. ACORDURI (TREI BIFE SEPARATE)</p>' +
+      chk("f_acord", "Sunteți de acord să folosim datele dumneavoastră pentru organizarea evenimentului? (obligatoriu pentru înscrierea prin telefon)") +
+      chk("f_viitor", "Vă putem trimite și invitații la evenimentele viitoare JCI Brașov?") +
+      chk("f_bcr", "Sunteți de acord să transmitem datele către BCR Asigurări?") +
+      fld("f_inv", "22. I s-a trimis linkul de înscriere / invitația?", sel("f_inv", [["", "Nespecificat"], ["da", "Da"], ["nu", "Nu"]], "").replace("<select", '<select class="mt"')) +
+      ta("f_obs", "23. Observații") +
       '<button class="btn b-green mt" id="f_save">Salvează apelul</button></div>';
     var g = function (id) { return document.getElementById(id); };
     var val = function (id) { var e = g(id); return e ? e.value : ""; };
     var on = function (id) { var e = g(id); return !!(e && e.checked); };
-    function sync() {
-      // Toate întrebările 1-20 sunt mereu vizibile; doar emailul și acordurile (pentru înscriere nouă) apar la „Confirmat”.
-      var r = g("f_raspuns").value, st = g("f_status").value;
-      if (g("g_conf")) g("g_conf").hidden = !(st === "confirmat" && r === "da");
-    }
-    root.onchange = sync;
+    root.onchange = null;
     root.__save = function () {
       var b = {
         contact_id: c ? c.id : 0, apelant: val("f_apelant"), nume_sunat: val("f_nume"), telefon: val("f_tel"), email: val("f_email"),

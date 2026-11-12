@@ -94,7 +94,7 @@ assert.equal(g("sec2").hidden, false);
 g("f_save").click(); await wait();
 assert.match(g("ferr").textContent, /statusul final/i);
 g("f_status").value = "confirmat"; g("f_status").dispatchEvent(new w.Event("change", { bubbles: true }));
-assert.equal(g("g_conf").hidden, false, "email și acord apar la Confirmat");
+assert.ok(g("f_email") && g("f_acord") && g("f_viitor") && g("f_bcr") && g("f_sursa_ro"), "email, sursa și acordurile sunt vizibile de la început");
 g("f_intrebare").value = "Cum găsim clienți?";
 g("f_save").click(); await wait();
 assert.match(g("ferr").textContent, /email/i);
