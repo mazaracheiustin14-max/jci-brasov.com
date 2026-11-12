@@ -313,10 +313,12 @@ async function saveCall(env, h, s, b) {
 }
 
 // ---------- rutare ----------
+// Se schimbă la fiecare modificare a public/assets/js/apeluri.js, ca telefoanele să nu rămână cu versiunea veche din cache.
+const JS_VERSION = "20261112b";
 export function apeluriPage(h, s) {
   return h.html(h.shell("Apeluri Beyond the Initiative", `<p class="k">Panoul echipei</p><h1>Apeluri</h1>
 <div id="ap" data-who="${h.esc(s.who)}"><div class="card"><p class="muted">Se încarcă...</p></div></div>
-<a class="btn b-ghost mt" href="/checkin">Înapoi la check-in</a>`, `<script src="/assets/js/apeluri.js"></script>`));
+<a class="btn b-ghost mt" href="/checkin">Înapoi la check-in</a>`, `<script src="/assets/js/apeluri.js?v=${JS_VERSION}"></script>`));
 }
 
 // h = { json, html, shell, esc, sameOrigin } din checkin.js; s = sesiunea echipei ({ who })
