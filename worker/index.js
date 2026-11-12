@@ -6,6 +6,7 @@ import { systemPrompt } from "./kb.js";
 import { handleCheckin } from "./checkin.js";
 import { handleInvitatii } from "./invitatii.js";
 import { handleApp } from "./app.js";
+import { EVENT, CAPACITY, DEADLINE, EMAIL_RE, countRegistrations, registerPerson } from "./inscriere-core.js";
 
 const SITE = "https://jci-brasov.com";
 const FROM = "formular@jci-brasov.com";
@@ -41,7 +42,7 @@ export default {
       if (r) return r;
     }
     // Bilete nominale cu QR și check-in la intrare (worker/checkin.js)
-    if (/^\/(bilet|c|confirma)\/|^\/checkin\/?$|^\/api\/(echipa\/|checkin$)/.test(url.pathname)) {
+    if (/^\/(bilet|c|confirma)\/|^\/checkin(\/apeluri)?\/?$|^\/api\/(echipa\/|checkin$)/.test(url.pathname)) {
       const r = await handleCheckin(request, env, url, overLimit);
       if (r) return r;
     }
@@ -69,7 +70,6 @@ export default {
 };
 
 // ===== Protecții comune =====
-const EMAIL_RE = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,24}$/;
 
 async function visitorId(request, env) {
   const ip = request.headers.get("CF-Connecting-IP") || "0";
@@ -189,22 +189,14 @@ async function handleForm(request, env) {
 
 
 // ===== Înscrieri la Beyond the Initiative (D1: jci-brasov-inscrieri) =====
-const EVENT = "beyond-2026";
-const CAPACITY = 150;
 // Bilete VIP: 40 de locuri, dintre care 15 rezervate deja (invitați VIP). Vândute = VIP_PRESOLD + plățile din tabelul vip.
 const VIP_TOTAL = 40;
 const VIP_PRESOLD = 15;
 // Membri JCI Brașov și invitații lor, confirmați în afara formularului (7 nov 2026).
 // Contorul public arată cel puțin acest număr; peste el, numărul real din baza de date.
 const COUNT_BASE = 43;
-const DEADLINE = Date.UTC(2026, 10, 24, 21, 59, 59); // 24 noiembrie 2026, 23:59 ora României
 const PROFILES = ["Antreprenor", "Manager", "Angajat", "Student", "Freelancer sau consultant", "ONG sau sector public", "Altul",
   "Entrepreneur", "Employee", "Freelancer or consultant", "NGO or public sector", "Other"];
-
-async function countRegistrations(env) {
-  const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM inscrieri WHERE eveniment = ? AND status = 'confirmat'").bind(EVENT).first();
-  return (r && r.n) || 0;
-}
 
 async function handleStats(request, env, ctx) {
   const cache = caches.default;
@@ -256,21 +248,14 @@ async function handleEventSignup(request, env, ctx) {
   let status = "confirmat";
   let newToken = null;
   try {
-    const n = await countRegistrations(env);
-    if (n >= CAPACITY) status = "asteptare";
-    const res = await env.DB.prepare(
-      "INSERT OR IGNORE INTO inscrieri (eveniment,nume,email,telefon,companie,functie,profil,intrebare,sursa,limba,acord_marketing,acord_bcr,status,tara) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-    ).bind(EVENT, f.nume, f.email, f.telefon, f.companie, f.functie, f.profil, f.intrebare, f.sursa, en ? "en" : "ro",
-      data.get("acord_marketing") ? 1 : 0, data.get("acord_bcr") ? 1 : 0, status, (request.cf && request.cf.country) || null).run();
-    if (res.meta && res.meta.changes > 0 && status === "confirmat") {
-      // Cod unic pentru biletul nominal cu QR (vezi worker/checkin.js)
-      const tk = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, "0")).join("");
-      try { await env.DB.prepare("UPDATE inscrieri SET token=? WHERE id=? AND token IS NULL").bind(tk, res.meta.last_row_id).run(); newToken = tk; } catch (e) { console.log("token:", e && e.message); }
-    }
-    if (!res.meta || res.meta.changes === 0) {
+    const r = await registerPerson(env, f, {
+      limba: en ? "en" : "ro", acord_marketing: data.get("acord_marketing") ? 1 : 0, acord_bcr: data.get("acord_bcr") ? 1 : 0,
+      tara: (request.cf && request.cf.country) || null,
+    });
+    status = r.status; newToken = r.token;
+    if (!r.inserted) {
       // Adresa e deja înscrisă: răspundem la fel ca la o înscriere nouă, ca să nu se poată verifica cine s-a înscris.
-      const ex = await env.DB.prepare("SELECT status FROM inscrieri WHERE eveniment=? AND email=?").bind(EVENT, f.email).first();
-      return ok((ex && ex.status) || "confirmat");
+      return ok(r.existingStatus || "confirmat");
     }
   } catch (e) {
     console.log("d1 insert failed:", e && e.message);

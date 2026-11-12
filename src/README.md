@@ -136,3 +136,14 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - Teste (`src/app/tests/`): `t_backend.mjs` (drepturile fiecărui rol și autentificarea, pe o bază SQLite locală), `t_demo.js`
   (interfața în mod demonstrativ, catalogul și un server simulat, în jsdom) și `e2e.py` (Playwright pe mediul local Cloudflare: fluxul complet
   administrator, președinte național, președinte, trezorier, membru; CSP și lipsa linkurilor către site). Comenzile sunt în `src/app/README.md`.
+
+## Apeluri către contacte (12 nov 2026)
+- Pagina `/checkin/apeluri` (PIN-ul echipei, buton „Apeluri și contacte” în panoul /checkin). Cod: `worker/apeluri.js`, interfața `public/assets/js/apeluri.js` (fără script inline, CSP).
+- Înscrierea la eveniment e acum în `worker/inscriere-core.js` (eveniment, capacitate 150, termen 24 noiembrie 23:59, `registerPerson`), folosită și de formularul public, și de apeluri. Orice schimbare de capacitate sau termen se face doar acolo.
+- D1, tabele noi (create automat, `CREATE TABLE IF NOT EXISTS`): `contacte` (o persoană = un rând, `inscriere_id` leagă de înscriere), `contact_surse` (toate sursele, cu dată), `call_logs` (apelurile, toate răspunsurile chestionarului), `posibile_duplicate`. `inscrieri` nu se modifică, în afară de înscrierile noi făcute prin apel (sursa „Telefon (Nume)”).
+- Sincronizare la fiecare deschidere a listei: înscrierile reale (confirmat sau listă de așteptare, fără teste) devin contacte; dacă telefonul normalizat (+40...) există deja ca contact, se leagă și primesc sursa „Site”. Același telefon normalizat = aceeași persoană (se unesc automat, dacă nu au două înscrieri). Același email sau nume care se conțin, cu telefoane diferite = „posibile duplicate”, rezolvate manual (unire sau persoane diferite).
+- Contactele din afara site-ului (WhatsApp, Meta Ads, parteneri) se încarcă direct în D1 (`INSERT INTO contacte (nume, telefon)` cu telefon +40..., apoi `INSERT INTO contact_surse`). NU se pun numere de telefon în cod: depozitul e public.
+- Starea invitației pe Gmail: „trimis” = `invitatie_trimisa` completat (fără „exclus” sau „eroare”); „confirmat” = `primire_confirmata` (a apăsat butonul din email; nu există urmărire de deschidere). Întrebarea pentru invitați vine din `inscrieri.intrebare` sau din chestionar (`call_logs.intrebare_invitati`).
+- Înscriere prin telefon: doar pentru contact neînscris, cu „Confirmat”, email valid și acord verbal; după termen cere confirmare; capacitate plină = listă de așteptare. Emailul de invitație pleacă prin scriptul Gmail existent (la 5 minute).
+- Setări opționale în `setari`: `colegi` (nume separate prin virgulă, pentru „Cine a sunat”) și `surse_contact` (lista surselor, implicit Site, WhatsApp, Meta Ads, Partener, Contact personal, Telefon, Altă sursă).
+- Teste: `node --no-warnings src/tests/apeluri.test.mjs` (backend) și `src/tests/apeluri-ui.test.mjs` (interfață, cere jsdom).

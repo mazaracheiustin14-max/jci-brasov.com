@@ -4,6 +4,8 @@
 //  - pentru oricine altcineva, se deschide biletul (/bilet/<token>), fără să confirme nimic.
 // PIN-ul (hash + sare) și secretul de semnare a sesiunii stau în D1, tabelul setari.
 
+import { handleApeluri } from "./apeluri.js";
+
 const EVENT = "beyond-2026";
 const COOKIE = "jci_echipa";
 const SESSION_HOURS = 16;
@@ -237,6 +239,7 @@ function sameOrigin(request) {
 export async function handleCheckin(request, env, url, overLimit) {
   const p = url.pathname;
   if (!env.DB) return null;
+  const H = { json, html, shell, esc, sameOrigin };
 
   let m = p.match(/^\/bilet\/([a-f0-9]{32})\/?$/);
   if (m) return ticketPage(env, m[1]);
@@ -249,6 +252,11 @@ export async function handleCheckin(request, env, url, overLimit) {
     const s = await staffSession(request, env);
     if (!s) return Response.redirect(`${url.origin}/bilet/${m[1]}`, 302);
     return scanPage(env, m[1], s, url.searchParams.get("ok") === "1");
+  }
+
+  if (p === "/checkin/apeluri" || p === "/checkin/apeluri/") {
+    const s = await staffSession(request, env);
+    return s ? handleApeluri(request, env, url, s, H) : Response.redirect(`${url.origin}/checkin`, 302);
   }
 
   if (p === "/checkin" || p === "/checkin/") {
@@ -285,6 +293,8 @@ export async function handleCheckin(request, env, url, overLimit) {
     if (p === "/api/echipa/stats") return stats(env);
     if (p === "/api/echipa/cauta") return search(env, url.searchParams.get("q") || "");
     if (p === "/api/echipa/export.csv") return exportCsv(env);
+    const ap = await handleApeluri(request, env, url, s, H);
+    if (ap) return ap;
     return json({ error: "not found" }, 404);
   }
   return null;
@@ -457,6 +467,20 @@ body.vipb{background-color:#0B0920;background-image:radial-gradient(600px 420px 
 .loc .rg small{display:block;font-size:11px;font-weight:800;letter-spacing:.12em;color:#0097D7}
 .loc .rg b{display:block;font-size:34px;font-weight:800;line-height:1.1;color:#130F2D}
 .loc .txt{margin-top:16px;font-size:14px;font-weight:700;color:#130F2D;background:#EFC40F;border-radius:10px;padding:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{border:1.5px solid rgba(255,255,255,.25);background:transparent;color:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-weight:700;font-size:14px;cursor:pointer}
+.chip.on{background:#0097D7;border-color:#0097D7}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tag{font-size:12px;font-weight:700;border-radius:999px;padding:4px 10px;background:rgba(255,255,255,.08);color:#D5D7EA}
+.tag.ok{background:#123D2B;color:#7BE0B1}.tag.warn{background:#47181C;color:#FF9C9C}.tag.info{background:#10324A;color:#8FD3F5}
+.qbox{margin-top:12px;background:#0F0C26;border-left:3px solid #EFC40F;border-radius:8px;padding:10px 12px;font-size:14px;line-height:1.45;color:#E3E4F2}
+.acts{display:flex;gap:8px;margin-top:14px}.acts>*{flex:1;padding:12px 8px;font-size:15px}
+select,textarea{width:100%;font:inherit;font-size:17px;padding:14px 16px;border-radius:12px;border:1.5px solid rgba(255,255,255,.2);background:#0F0C26;color:#fff}
+textarea{min-height:96px;resize:vertical}
+.fl{display:block;margin-top:16px}
+.chk{display:flex;gap:12px;align-items:flex-start;margin-top:14px;font-size:15px;line-height:1.4}
+.chk input{width:22px;height:22px;flex:none;margin-top:2px;padding:0}
+.ok-msg{background:#123D2B;border:1px solid #1FA463;border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:14px}
 .bar{height:10px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden;margin-top:14px}.bar i{display:block;height:100%;background:linear-gradient(90deg,#0097D7,#57BCBC)}
 `;
 function shell(title, inner, scripts = "", bodyClass = "") {
@@ -577,6 +601,7 @@ function dashboardPage(s) {
 <div class="card mt"><p class="lab">BLOCURI, CÂȚI AU PRIMIT ECUSON</p><p class="val" style="color:#fff" id="blk">Nimeni încă.</p></div>
 <div class="card mt"><p class="lab">CAUTĂ DUPĂ NUME, EMAIL SAU TELEFON</p><input id="q" class="mt" placeholder="ex. Popescu" autocomplete="off" enterkeyhint="search"><div id="rez"></div></div>
 <div class="card mt"><p class="lab">ULTIMELE INTRĂRI</p><div id="ult"><p class="muted mt">Nimeni încă.</p></div></div>
+<a class="btn b-blue mt" href="/checkin/apeluri">Apeluri și contacte</a>
 <a class="btn b-ghost mt" href="/api/echipa/export.csv">Descarcă lista de prezență (Excel)</a>
 <form method="POST" action="/api/echipa/logout"><button class="btn b-ghost mt" type="submit">Deconectare (${esc(s.who)})</button></form>`,
     `<script src="/assets/js/echipa.js"></script>`));
