@@ -4,6 +4,7 @@ const {JSDOM}=require('jsdom');const fs=require('fs');const path=require('path')
 const A=path.join(__dirname,'..');
 const cat=(d,e)=>fs.readdirSync(path.join(A,d)).filter(f=>f.endsWith(e)).sort().map(f=>fs.readFileSync(path.join(A,d,f),'utf8')).join('\n');
 const html=fs.readFileSync(path.join(A,'index.html'),'utf8').replace('<!--CSS-->','<style>'+cat('css','.css')+'</style>').replace('<!--JS-->','<script>'+cat('js','.js')+'</script>');
+const addD=n=>{const x=new Date();x.setDate(x.getDate()+n);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let fails=0;function ok(c,m){if(!c){fails++;console.log('ESEC:',m)}else console.log('ok  :',m)}
 
@@ -16,6 +17,7 @@ async function mk(pre,url){
 }
 const txt=d=>(d.window.document.getElementById('app').textContent+' '+d.window.document.getElementById('sheet').textContent).replace(/\s+/g,' ');
 function click(d,sel){const el=d.window.document.querySelector(sel);if(!el)throw new Error('lipsa '+sel);el.dispatchEvent(new d.window.MouseEvent('click',{bubbles:true}))}
+function goB(d,sub){click(d,'nav.tabs [data-id="filiala"]');click(d,'[data-act="bsub"][data-id="'+sub+'"]')}
 function setRole(d,v){const s=d.window.document.getElementById('demorole');s.value=v;s.dispatchEvent(new d.window.Event('change',{bubbles:true}))}
 
 (async()=>{
@@ -46,7 +48,7 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
 
   // ===== presedinte national: Director, Structura, Profil; nicio evidenta financiara =====
   setRole(d,'u-nat');await sleep(150);
-  ok([...d.window.document.querySelectorAll('nav.tabs button')].map(x=>x.getAttribute('data-id')).join()==='director,structura,profil','national: file Director, Structura, Profilul meu');
+  ok([...d.window.document.querySelectorAll('nav.tabs button')].map(x=>x.getAttribute('data-id')).join()==='director,evenimente,voturi,structura','national: file Director, Evenimente, Voturi, Structura');
   ok(!d.window.document.getElementById('brsel'),'national: fara selector de filiala');
   click(d,'nav.tabs [data-id="structura"]');await sleep(100);
   t=txt(d);
@@ -67,12 +69,12 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
   // ===== presedinte: vede doar Brasov, nu are selector =====
   setRole(d,'u-pres-bv');await sleep(150);
   ok(!d.window.document.getElementById('brsel'),'presedinte fara selector de filiala');
-  click(d,'nav.tabs [data-id="tablou"]');await sleep(100);
+  goB(d,'tablou');await sleep(100);
   t=txt(d);
   ok(/Tablou, Brașov/.test(t),'tablou Brasov');
   ok(!/Comparație pe filiale/.test(t),'presedinte nu vede comparatia');
   ok(!/Roluri conducere/.test(t)&&/Conducerea filialei/.test(t),'tabloul are Conducerea filialei, nu Roluri conducere');
-  ok(/Vicepreședinte comunicare/.test(t)&&/Vicepreședinte trezorier/.test(t)&&/Numește în funcție/.test(t)&&/Predă funcția de președinte/.test(t),'conducerea: functii cu titlu, butoane pentru presedinte');
+  ok(/Vicepreședinte proiecte/.test(t)&&/Vicepreședinte trezorier/.test(t)&&/Numește în funcție/.test(t)&&/Predă funcția de președinte/.test(t),'conducerea: functii cu titlu, butoane pentru presedinte');
   ok(/Sold\s*780,00/.test(t),'sold Brasov = 780,00 (avansul presedintelui NU intra in sold)');
   ok(/Creanță nerecuperată: 600,00 RON \(2 cotizații\)/.test(t),"creanta = 600 lei (f1 si f5 nerecuperate); avans total 900");
   ok(/Restanțieri\s*1/.test(t),'1 restantier');
@@ -93,7 +95,7 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
   click(d,'[data-act="handover"]');await sleep(50);
   ok(/În modul demonstrativ/.test(d.window.document.getElementById('toast').textContent),'demo: predarea nu merge fara server');
   // membri: exclus, excludere, reactivare
-  click(d,'nav.tabs [data-id="cotizatii"]');await sleep(60);
+  goB(d,'cotizatii');await sleep(60);
   click(d,'[data-act="fv"][data-id="members"]');await sleep(60);
   ok(/Paul Georgescu/.test(txt(d))&&/Exclus/.test(d.window.document.getElementById('main').textContent),'membru exclus: eticheta Exclus in lista');
   click(d,'[data-act="member"][data-id="rb4"]');await sleep(40);
@@ -105,7 +107,7 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
   click(d,'[data-act="exclude"]');await sleep(40);
   ok(/Exclude din aplicație: Sorin Matei/.test(d.window.document.getElementById('sheet').textContent)&&d.window.document.querySelector('[data-act="exclude2"]'),'excluderea cere confirmare');
   click(d,'[data-act="closesheet"]');
-  click(d,'nav.tabs [data-id="cheltuieli"]');await sleep(60);
+  goB(d,'cheltuieli');await sleep(60);
   // cheltuiala propusa de trezorier, peste 500
   ok(/Peste 500 RON/.test(txt(d)),'cheltuiala peste prag marcata');
   click(d,'[data-act="exp"][data-id="e3"]');await sleep(50);
@@ -124,7 +126,7 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
   ok(!d.window.document.querySelector('[data-act="exppay"]'),'cine a aprobat NU poate plati');
   click(d,'[data-act="closesheet"]');
   setRole(d,'u-trez-bv');await sleep(150);
-  click(d,'nav.tabs [data-id="cheltuieli"]');await sleep(60);
+  goB(d,'cheltuieli');await sleep(60);
   click(d,'[data-act="ef"][data-id="Toate"]');
   click(d,'[data-act="exp"][data-id="e3"]');click(d,'[data-act="exppay"]');await sleep(50);
   d.window.document.querySelector('#sheet form').dispatchEvent(new d.window.Event('submit',{bubbles:true,cancelable:true}));await sleep(50);
@@ -132,20 +134,20 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
   d.window.document.getElementById('xq').value='F 200';
   d.window.document.querySelector('#sheet form').dispatchEvent(new d.window.Event('submit',{bubbles:true,cancelable:true}));await sleep(150);
   setRole(d,'u-pres-bv');await sleep(150);
-  click(d,'nav.tabs [data-id="tablou"]');await sleep(80);
+  goB(d,'tablou');await sleep(80);
   // sold nou: 780 - 850 = -70 (deficit)
   ok(/Sold\s*−70,00/.test(txt(d))&&/Deficit/.test(txt(d)),'sold dupa plata = -70,00 cu mentiunea Deficit');
   ok(/Jurnal de modificări/.test(txt(d))&&/Cheltuială aprobată/.test(txt(d)),'jurnal contine aprobarea');
 
   // ===== trezorier nu poate aproba propria cheltuiala =====
   setRole(d,'u-trez-bv');await sleep(150);
-  click(d,'nav.tabs [data-id="cheltuieli"]');await sleep(80);
+  goB(d,'cheltuieli');await sleep(80);
   click(d,'[data-act="exp"][data-id="e1"]');await sleep(30);
   ok(!/Aprobă/.test(d.window.document.getElementById('sheet').textContent),'trezorierul nu poate aproba');
   click(d,'[data-act="closesheet"]');
 
   // ===== cotizatii: adauga + anulare + duplicat =====
-  click(d,'nav.tabs [data-id="cotizatii"]');await sleep(80);
+  goB(d,'cotizatii');await sleep(80);
   click(d,'[data-act="fv"][data-id="members"]');await sleep(40);
   ok(!d.window.document.querySelector('[data-act="newmember"]'),'trezorierul nu adauga membri');
   click(d,'[data-act="member"][data-id="rb2"]');await sleep(40);
@@ -174,12 +176,12 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
   click(d,'[data-act="closesheet"]');
 
   // donatie anonima: nu se afiseaza numele
-  click(d,'nav.tabs [data-id="donatii"]');await sleep(60);
+  goB(d,'donatii');await sleep(60);
   ok(/Donator anonim/.test(txt(d)),'donator anonim afisat ca atare');
 
   // ===== membru: fara acces la finante =====
   setRole(d,'u-m1');await sleep(150);
-  ok(d.window.document.querySelectorAll('nav.tabs button').length===2,'membru are 2 sectiuni');
+  ok(d.window.document.querySelectorAll('nav.tabs button').length===4,'membru are 4 sectiuni');
   ok(!/Tablou|Cotizații|Cheltuieli/.test(d.window.document.querySelector('nav.tabs').textContent),'membrul nu vede sectiuni financiare');
   click(d,'nav.tabs [data-id="profil"]');await sleep(80);
   ok(/Membru activ/.test(txt(d)),'membru isi vede insigna');
@@ -187,24 +189,128 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
 
   // ===== presedinte Cluj: sold =====
   setRole(d,'u-pres-cj');await sleep(150);
-  click(d,'nav.tabs [data-id="tablou"]');await sleep(100);
+  goB(d,'tablou');await sleep(100);
   t=txt(d);ok(/Tablou, Cluj/.test(t)&&/Sold\s*50,00/.test(t),'presedinte Cluj: sold Cluj = 50,00');
 
   // ===== conducere (board): Director, Donatii, Cheltuieli, Profil; doar citire =====
   setRole(d,'u-board-bv');await sleep(150);
-  ok([...d.window.document.querySelectorAll('nav.tabs button')].map(x=>x.getAttribute('data-id')).join()==='director,donatii,cheltuieli,profil','board: file Director, Donatii, Cheltuieli, Profilul meu');
-  click(d,'nav.tabs [data-id="donatii"]');await sleep(80);
+  ok([...d.window.document.querySelectorAll('nav.tabs button')].map(x=>x.getAttribute('data-id')).join()==='director,evenimente,voturi,filiala','board: file Director, Evenimente, Voturi, Filiala');
+  goB(d,'donatii');await sleep(80);
   ok(/Donator anonim/.test(txt(d))&&!d.window.document.querySelector('[data-act="newdon"]'),'board citeste donatiile, fara buton de adaugare');
-  click(d,'nav.tabs [data-id="cheltuieli"]');await sleep(80);
+  goB(d,'cheltuieli');await sleep(80);
   ok(/Închiriere sală/.test(txt(d))&&!d.window.document.querySelector('[data-act="newexp"]'),'board citeste cheltuielile, fara buton de adaugare');
-  click(d,'nav.tabs [data-id="profil"]');await sleep(80);
-  ok(/Funcția mea/.test(txt(d))&&/Vicepreședinte comunicare/.test(txt(d))&&d.window.document.querySelector('#main [data-act="handover"]'),'board: Functia mea cu titlu si Preda functia');
+  click(d,'[data-act="goprofil"]');await sleep(80);
+  ok(/Funcția mea/.test(txt(d))&&/Vicepreședinte proiecte/.test(txt(d))&&d.window.document.querySelector('#main [data-act="handover"]'),'board: Functia mea cu titlu si Preda functia');
   setRole(d,'u-trez-bv');await sleep(150);
   click(d,'[data-act="goprofil"]');await sleep(80);
   ok(/Funcția mea/.test(txt(d))&&/Vicepreședinte trezorier/.test(txt(d)),'trezorier: Functia mea');
   setRole(d,'u-m1');await sleep(150);
   click(d,'nav.tabs [data-id="profil"]');await sleep(80);
   ok(!/Funcția mea/.test(txt(d)),'membrul nu are Functia mea');
+
+  // ===== evenimente si voturi: membru =====
+  const submitF=(dd,sel0)=>dd.window.document.querySelector(sel0||'#sheet form').dispatchEvent(new dd.window.Event('submit',{bubbles:true,cancelable:true}));
+  const tabN=(dd,id)=>click(dd,'nav.tabs [data-id="'+id+'"]');
+  setRole(d,'u-m1');await sleep(150);
+  tabN(d,'evenimente');await sleep(100);
+  t=txt(d);
+  ok(/Ai participat la 1 eveniment\./.test(t),'membru: contorul "Ai participat la 1 eveniment"');
+  ok(/Urmează/.test(t)&&/Au trecut/.test(t)&&/Seară de networking/.test(t)&&/Atelier de vorbit în public/.test(t),'membru: Urmeaza si Au trecut');
+  ok(/Am participat/.test(t)&&/Ce am făcut/.test(t)&&/Am moderat panelul de întrebări/.test(t),'membru: Am participat, Ce am facut si contributia mea');
+  ok(!/Adaugă eveniment/.test(t)&&!d.window.document.querySelector('[data-act="evv"]'),'membru: fara Adauga eveniment si fara Participare');
+  ok(d.window.document.querySelector('[data-act="evgo"]')&&/Vin și eu/.test(t),'membru: butonul Vin si eu la evenimentul viitor');
+  click(d,'[data-act="evgo"]');await sleep(100);
+  ok(/Particip\b/.test(d.window.document.querySelector('[data-act="evgo"]').textContent)&&/2 participanți/.test(txt(d)),'membru: Vin si eu devine Particip, contorul pe eveniment creste');
+  click(d,'[data-act="evdid"]');await sleep(40);
+  ok(/Ce ai făcut/.test(d.window.document.getElementById('sheet').textContent),'foaia Ce am facut');
+  d.window.document.getElementById('dd_t').value='Am facut fotografiile';d.window.document.getElementById('dd_a').value='abc';submitF(d);await sleep(40);
+  ok(/Introdu suma în lei/.test(d.window.document.getElementById('sheet').textContent),'Ce am facut: suma gresita');
+  d.window.document.getElementById('dd_a').value='250,50';submitF(d);await sleep(120);
+  ok(/Am facut fotografiile/.test(txt(d))&&/250,50 RON/.test(txt(d)),'Ce am facut: textul si suma se vad la eveniment');
+  tabN(d,'voturi');await sleep(100);
+  t=txt(d);
+  ok(/Adunarea generală, Brașov/.test(t)&&!/Voturi naționale/.test(t)&&!/Vot nou/.test(t),'membru: voturile adunarii generale, fara cele nationale si fara Vot nou');
+  ok(d.window.document.querySelectorAll('form.poll-f').length===1&&/Votează/.test(t),'membru: un vot deschis cu formular');
+  ok(/67%/.test(t)&&/3 voturi din 4/.test(t)&&/votul tău/.test(t),'membru: vot inchis cu rezultate si votul propriu');
+  submitF(d,'form.poll-f');await sleep(60);
+  ok(/Alege o opțiune/.test(d.window.document.getElementById('toast').textContent),'vot: fara optiune, mesaj');
+  d.window.document.querySelector('form.poll-f input[value="nu"]').checked=true;submitF(d,'form.poll-f');await sleep(120);
+  ok(!d.window.document.querySelector('form.poll-f')&&/Ai votat/.test(txt(d))&&!/Cine a votat/.test(txt(d)),'vot: dupa vot, fara formular, rezultatul ascuns pana la inchidere');
+
+  // eveniment trecut fara rand: membrul spune singur ca a participat
+  setRole(d,'u-m1');await sleep(150);
+  await d.window.S.store.set('branches/Brașov/attend','ev-past_u-m1',{eventId:'ev-past',memberId:'u-m1',going:false,did:''});await sleep(100);
+  tabN(d,'evenimente');await sleep(100);
+  ok(/Ai participat la 0 evenimente/.test(txt(d))&&[...d.window.document.querySelectorAll('[data-act="evgo"]')].some(b=>b.textContent==='Am participat'),'membru: la un eveniment trecut fara participare apare Am participat');
+  click(d,'[data-act="evgo"][data-id="ev-past"]');await sleep(120);
+  ok(/Ai participat la 1 eveniment\./.test(txt(d))&&d.window.document.querySelector('[data-act="evdid"]'),'membru: dupa Am participat apar contorul si Ce am facut');
+  // ===== evenimente si voturi: presedinte =====
+  setRole(d,'u-pres-bv');await sleep(150);
+  tabN(d,'evenimente');await sleep(100);
+  ok(/Adaugă eveniment/.test(txt(d))&&d.window.document.querySelectorAll('[data-act="evv"]').length===2,'presedinte: Adauga eveniment si chips Evenimente/Participare');
+  click(d,'[data-act="evv"][data-id="part"]');await sleep(80);
+  t=txt(d);
+  ok(/Andrei Popescu\s*1 eveniment/.test(t)&&/Ioana Dumitrescu\s*1 eveniment/.test(t)&&/Radu Ionescu\s*0 evenimente/.test(t),'Participare: contorul pe persoana');
+  ok(t.indexOf('Radu Ionescu')>t.indexOf('Ioana Dumitrescu'),'Participare: descrescator');
+  click(d,'[data-act="partm"][data-id="u-m2"]');await sleep(40);
+  ok(/Atelier de vorbit în public/.test(d.window.document.getElementById('sheet').textContent)&&/Am adus sponsorul pentru sală/.test(d.window.document.getElementById('sheet').textContent)&&/1\.500,00 RON/.test(d.window.document.getElementById('sheet').textContent),'Participare: foaia persoanei cu ce a facut');
+  click(d,'[data-act="closesheet"]');
+  click(d,'[data-act="evpresence"]');await sleep(40);
+  ok(/Consemnează prezența/.test(d.window.document.getElementById('sheet').textContent)&&d.window.document.getElementById('pr_m').options.length>=7,'Consemneaza prezenta: membri din evidenta');
+  d.window.document.getElementById('pr_m').value='u-m3';d.window.document.getElementById('dd_t').value='Am fost la receptie';submitF(d);await sleep(120);
+  ok(/Radu Ionescu\s*1 eveniment/.test(txt(d)),'Consemneaza prezenta: contorul creste');
+  click(d,'[data-act="evv"][data-id="list"]');await sleep(60);
+  click(d,'[data-act="evopen"][data-id="ev-past"]');await sleep(40);
+  t=d.window.document.getElementById('sheet').textContent;
+  ok(/Participanți/.test(t)&&/Am deschis evenimentul/.test(t)&&/Editează/.test(t)&&/Anulează evenimentul/.test(t),'foaia evenimentului: participanti cu ce au facut, editare, anulare');
+  click(d,'[data-act="closesheet"]');
+  click(d,'[data-act="newev"]');await sleep(40);
+  d.window.document.getElementById('ev_t').value='X';submitF(d);await sleep(40);
+  ok(/între 2 și 120/.test(d.window.document.getElementById('sheet').textContent),'eveniment nou: denumire prea scurta');
+  d.window.document.getElementById('ev_t').value='Excursie de echipă';d.window.document.getElementById('ev_d').value=addD(20);submitF(d);await sleep(120);
+  ok(/Excursie de echipă/.test(txt(d)),'eveniment nou: apare in lista');
+  tabN(d,'voturi');await sleep(100);
+  t=txt(d);
+  ok(/Voturi naționale/.test(t)&&/Adunarea generală, Brașov/.test(t)&&/Vot nou/.test(t)&&d.window.document.querySelectorAll('[data-act="pollnew"]').length===1,'presedinte: voturi nationale si de adunare, Vot nou doar pentru adunare');
+  ok(d.window.document.querySelectorAll('form.poll-f').length===2,'presedinte: poate vota la votul national deschis si la cel al filialei');
+  click(d,'[data-act="pollwho"][data-id="pl-open"]');await sleep(40);
+  ok(/Ioana Dumitrescu/.test(d.window.document.getElementById('sheet').textContent)&&!/Da\b/.test(d.window.document.getElementById('sheet').textContent.replace(/Cine a votat|Închide|Lista arată/g,'')),'Cine a votat: doar numele');
+  click(d,'[data-act="closesheet"]');
+  click(d,'[data-act="pollnew"]');await sleep(40);
+  d.window.document.getElementById('pl_t').value='Alegem sala?';d.window.document.getElementById('pl_o').value='Doar una';submitF(d);await sleep(40);
+  ok(/între 2 și 8 opțiuni/.test(d.window.document.getElementById('sheet').textContent),'vot nou: minim 2 optiuni');
+  d.window.document.getElementById('pl_o').value='Sala A\nSala B\n';submitF(d);await sleep(120);
+  ok(/Alegem sala\?/.test(txt(d)),'vot nou: apare in lista');
+  click(d,'[data-act="pollclose"][data-id="pl-open"]');await sleep(100);
+  ok(/2 voturi din 4/.test(txt(d)),'Inchide votul acum: apar rezultatele');
+  d.window.document.querySelector('form.poll-f input[value="bv"]').checked=true;submitF(d,'form.poll-f');await sleep(100);
+  ok(/Ai votat/.test(txt(d)),'presedintele voteaza la votul national');
+
+  // ===== evenimente si voturi: presedinte national =====
+  setRole(d,'u-nat');await sleep(150);
+  tabN(d,'evenimente');await sleep(100);
+  ok(/Seară de networking/.test(txt(d))&&!d.window.document.querySelector('[data-act="evv"]')&&!/Adaugă eveniment/.test(txt(d)),'national: evenimentele filialei lui, fara conducere');
+  tabN(d,'voturi');await sleep(100);
+  t=txt(d);
+  ok(/Voturi naționale/.test(t)&&!/Adunarea generală/.test(t)&&d.window.document.querySelectorAll('[data-act="pollnew"]').length===1,'national: doar voturile nationale, cu Vot nou');
+  ok(!d.window.document.querySelector('form.poll-f')&&/50%/.test(t),'national nu voteaza; votul inchis arata rezultatul');
+  click(d,'[data-act="pollcancel"][data-id="pn-open"]');await sleep(40);
+  click(d,'[data-act="pollcancel2"]');await sleep(100);
+  ok(/Vot anulat/.test(txt(d))&&!d.window.document.querySelector('form.poll-f'),'national: votul anulat ramane in lista, marcat Vot anulat, fara rezultate');
+
+  // ===== evenimente: conducere de tip board si trezorier =====
+  setRole(d,'u-board-bv');await sleep(150);
+  tabN(d,'evenimente');await sleep(100);
+  ok(/Adaugă eveniment/.test(txt(d))&&d.window.document.querySelectorAll('[data-act="evv"]').length===2,'board: Adauga eveniment si Participare');
+  click(d,'[data-act="evopen"][data-id="ev-next"]');await sleep(40);click(d,'[data-act="evcancel"]');await sleep(40);click(d,'[data-act="evcancel2"]');await sleep(120);
+  ok(/Seară de networking \(anulat\)/.test(txt(d)),'board: anuleaza evenimentul, ramane marcat');
+  tabN(d,'voturi');await sleep(80);
+  ok(!/Vot nou/.test(txt(d))&&d.window.document.querySelectorAll('form.poll-f').length===1,'board: voteaza ca membru al filialei, nu creeaza voturi');
+  setRole(d,'u-trez-bv');await sleep(150);
+  tabN(d,'evenimente');await sleep(100);
+  ok(!/Adaugă eveniment/.test(txt(d))&&d.window.document.querySelectorAll('[data-act="evv"]').length===2,'trezorier: fara Adauga eveniment, cu Participare');
+  click(d,'[data-act="evv"][data-id="part"]');await sleep(60);
+  ok(!d.window.document.querySelector('[data-act="evpresence"]')&&/Participanți/.test(txt(d)),'trezorier: vede participarea, nu consemneaza prezenta');
 
   // ===== ecranul de suspendare =====
   {
@@ -258,6 +364,70 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
     ok(/Resetează accesul: Radu Național/.test(m.window.document.getElementById('sheet').textContent),'administrator: confirmarea resetarii');
     click(m,'[data-act="resetaccess2"]');await sleep(200);
     ok(JSON.stringify(calls[0])===JSON.stringify({op:'resetAccess',memberId:'nat'})&&/ZZZZ-2345-EFGH/.test(m.window.document.getElementById('sheet').textContent),'administrator: resetAccess pentru presedintele national, cu cod');
+  }
+  // evenimente si voturi, in modul server (cereri catre /api/app/write si /api/app/vote)
+  {
+    const past=addD(-10),fut=addD(10);
+    const polls=[{id:'pl1',title:'Buget?',options:[{id:'o1',label:'Da'},{id:'o2',label:'Nu'}],closes:fut,closed:false,cancelled:false,state:'open',mine:'',canVote:true,total:0,voters:10},
+      {id:'pl2',title:'Data adunării',options:[{id:'o1',label:'12 dec',votes:6},{id:'o2',label:'19 dec',votes:2}],closes:past,closed:false,cancelled:false,state:'closed',mine:'o1',canVote:false,total:8,voters:10}];
+    const dd=Object.assign({},base,{roles:[],profiles:[{id:'m1',name:'Maria Membru',branch:'Brașov',consent:{}}],badges:[{id:'m1',verified:true,active:true,validUntil:'2027-12-31',branch:'Brașov'}],
+      'branches/Brașov/events':[{id:'ev1',title:'Atelier',date:past,place:'Sala',note:'',cancelled:false,count:3},{id:'ev2',title:'Seara',date:fut,place:'',note:'',cancelled:false,count:1}],
+      'branches/Brașov/attend':[{id:'ev1_m1',eventId:'ev1',memberId:'m1',going:true,did:'Am ajutat'}],'branches/Brașov/polls':polls});
+    const {dom:m,others}=await mkServer({id:'m1',isOwner:false,name:'Maria',branch:'Brașov',role:'member',title:''},dd,b=>({body:{ok:true}}),(u,b)=>({body:{ok:true}}));
+    await sleep(500);
+    click(m,'nav.tabs [data-id="evenimente"]');await sleep(100);
+    t=txt(m);
+    ok(/3 participanți/.test(t)&&/Ai participat la 1 eveniment/.test(t),'server, membru: contorul pe eveniment vine de la server; contorul meu din randurile mele');
+    click(m,'[data-act="evgo"]');await sleep(150);
+    ok(others[0]&&others[0].url==='/api/app/write'&&JSON.stringify(others[0].body)===JSON.stringify({path:'branches/Brașov/attend',id:'ev2_m1',data:{eventId:'ev2',memberId:'m1',going:true,did:''}}),'participare: corpul cererii de scriere '+JSON.stringify(others[0]&&others[0].body));
+    click(m,'[data-act="evdid"]');await sleep(40);
+    m.window.document.getElementById('dd_t').value='Am facut poze';m.window.document.getElementById('dd_a').value='100';
+    m.window.document.querySelector('#sheet form').dispatchEvent(new m.window.Event('submit',{bubbles:true,cancelable:true}));await sleep(150);
+    ok(JSON.stringify(others[1].body.data)===JSON.stringify({eventId:'ev1',memberId:'m1',going:true,did:'Am facut poze',amount:10000})&&others[1].body.id==='ev1_m1','Ce am facut: did si amount in bani');
+    click(m,'nav.tabs [data-id="voturi"]');await sleep(100);
+    ok(/Buget\?/.test(txt(m))&&/Rezultatul apare după închiderea votului|Votează/.test(txt(m))&&/75%/.test(txt(m)),'server, membru: vot deschis cu formular, vot inchis cu rezultat');
+    m.window.document.querySelector('form.poll-f input[value="o2"]').checked=true;
+    m.window.document.querySelector('form.poll-f').dispatchEvent(new m.window.Event('submit',{bubbles:true,cancelable:true}));await sleep(150);
+    ok(others[2]&&others[2].url==='/api/app/vote'&&JSON.stringify(others[2].body)===JSON.stringify({path:'branches/Brașov/polls',pollId:'pl1',optionId:'o2'}),'vot: corpul cererii '+JSON.stringify(others[2]&&others[2].body));
+  }
+  {
+    const fut=addD(10),past=addD(-10);
+    const dd=Object.assign({},base,{roles:[{id:'p1',role:'president',branch:'Brașov',title:'Președinte',name:'Paul Președinte'}],profiles:[],badges:[],'data/users/p1':[],audit:[],
+      'branches/Brașov/members':[{id:'p1',name:'Paul Președinte',userId:'p1',branch:'Brașov'},{id:'m2',name:'Mihai Membru',userId:'m2',branch:'Brașov'}],
+      'branches/Brașov/fees':[],'branches/Brașov/donations':[],'branches/Brașov/expenses':[],'branches/Brașov/settings':[],
+      'branches/Brașov/events':[{id:'ev1',title:'Atelier',date:past,place:'Sala',note:'',cancelled:false,count:1}],
+      'branches/Brașov/attend':[{id:'ev1_m2',eventId:'ev1',memberId:'m2',going:true,did:'Am prezentat',name:'Mihai Membru'}],
+      'branches/Brașov/polls':[{id:'pl1',title:'Buget?',options:[{id:'o1',label:'Da'},{id:'o2',label:'Nu'}],closes:fut,closed:false,cancelled:false,state:'open',mine:'',canVote:true,total:1,voters:5,createdBy:'p1',votedNames:['Mihai Membru']}],
+      polls:[]});
+    const {dom:p,others}=await mkServer({id:'p1',isOwner:false,name:'Paul',branch:'Brașov',role:'president',title:'Președinte'},dd,b=>({body:{ok:true}}),(u,b)=>({body:{ok:true}}));
+    await sleep(500);
+    click(p,'nav.tabs [data-id="evenimente"]');await sleep(100);
+    click(p,'[data-act="newev"]');await sleep(40);
+    p.window.document.getElementById('ev_t').value='Excursie';p.window.document.getElementById('ev_d').value=fut;p.window.document.getElementById('ev_p').value='Bran';
+    p.window.document.querySelector('#sheet form').dispatchEvent(new p.window.Event('submit',{bubbles:true,cancelable:true}));await sleep(150);
+    const w0=others.find(o=>o.url==='/api/app/write');
+    ok(w0&&w0.body.path==='branches/Brașov/events'&&JSON.stringify(w0.body.data)===JSON.stringify({title:'Excursie',date:fut,place:'Bran',note:'',cancelled:false}),'eveniment nou: corpul cererii, fara createdBy (il pune serverul)');
+    click(p,'[data-act="evv"][data-id="part"]');await sleep(80);
+    ok(/Mihai Membru\s*1 eveniment/.test(txt(p)),'server, participare: numele vin din randuri');
+    click(p,'[data-act="evpresence"]');await sleep(40);
+    ok(Array.from(p.window.document.getElementById('pr_m').options).map(o=>o.textContent).join('|')==='Mihai Membru|Paul Președinte','presedinte: membrii pentru prezenta vin din evidenta');
+    p.window.document.getElementById('pr_m').value='p1';p.window.document.getElementById('dd_t').value='Am organizat';
+    p.window.document.querySelector('#sheet form').dispatchEvent(new p.window.Event('submit',{bubbles:true,cancelable:true}));await sleep(150);
+    const w1=others.filter(o=>o.url==='/api/app/write').pop();
+    ok(w1.body.id==='ev1_p1'&&JSON.stringify(w1.body.data)===JSON.stringify({eventId:'ev1',memberId:'p1',going:true,did:'Am organizat'}),'consemnarea prezentei: corpul cererii');
+    click(p,'nav.tabs [data-id="voturi"]');await sleep(100);
+    ok(/Voturi naționale/.test(txt(p))&&/Adunarea generală, Brașov/.test(txt(p)),'server, presedinte: voturi nationale si de adunare');
+    click(p,'[data-act="pollwho"]');await sleep(40);
+    ok(/Mihai Membru/.test(p.window.document.getElementById('sheet').textContent),'server: Cine a votat arata votedNames');
+    click(p,'[data-act="closesheet"]');
+    click(p,'[data-act="pollnew"]');await sleep(40);
+    p.window.document.getElementById('pl_t').value='Unde mergem?';p.window.document.getElementById('pl_o').value='Bran\nPoiana';p.window.document.getElementById('pl_d').value=fut;
+    p.window.document.querySelector('#sheet form').dispatchEvent(new p.window.Event('submit',{bubbles:true,cancelable:true}));await sleep(150);
+    const w2=others.filter(o=>o.url==='/api/app/write').pop();
+    ok(w2.body.path==='branches/Brașov/polls'&&JSON.stringify(w2.body.data)===JSON.stringify({title:'Unde mergem?',options:[{id:'o1',label:'Bran'},{id:'o2',label:'Poiana'}],closes:fut,closed:false,cancelled:false}),'vot nou: corpul cererii');
+    click(p,'[data-act="pollclose"][data-id="pl1"]');await sleep(150);
+    const w3=others.filter(o=>o.url==='/api/app/write').pop();
+    ok(w3.body.id==='pl1'&&w3.body.data.closed===true&&w3.body.data.title==='Buget?'&&!('votes' in w3.body.data)&&!('createdBy' in w3.body.data),'Inchide votul: doar campurile permise');
   }
   // ecranul de intrare si ecranul „Setează e-mailul și parola”
   async function mkRaw(meStatus,meBody){
@@ -343,7 +513,7 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
       'branches/Brașov/members':members,'branches/Brașov/fees':[],'branches/Brașov/donations':[],'branches/Brașov/expenses':[],'branches/Brașov/settings':[]});
     const {dom:p,calls,others}=await mkServer({id:'p1',isOwner:false,name:'Paul',branch:'Brașov',role:'president',title:'Președinte',email:'paul@exemplu.ro'},pd,b=>b.op==='resetAccess'?{body:{ok:true,memberId:b.memberId,code:'RRRR2345TTTT',expires:'2026-12-01'}}:{body:{ok:true}},(u,b)=>({body:{ok:true}}));
     await sleep(500);
-    click(p,'nav.tabs [data-id="tablou"]');await sleep(100);
+    goB(p,'tablou');await sleep(100);
     ok(/Tina Trezorier/.test(txt(p))&&/Conducerea filialei/.test(txt(p)),'server, presedinte: Conducerea filialei cu nume din evidenta');
     click(p,'[data-act="newrole"]');await sleep(40);
     p.window.document.getElementById('nr_m').value='m2';p.window.document.getElementById('nr_r').value='board';p.window.document.getElementById('nr_t').value='Secretar';
@@ -351,7 +521,7 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
     ok(JSON.stringify(calls[0])===JSON.stringify({op:'setRole',memberId:'m2',role:'board',title:'Secretar'}),'setRole: corpul cererii '+JSON.stringify(calls[0]));
     click(p,'[data-act="role"][data-id="t1"]');await sleep(40);click(p,'[data-act="roleoff"]');await sleep(200);
     ok(JSON.stringify(calls[1])===JSON.stringify({op:'setRole',memberId:'t1',role:'member'}),'retragere functie: corpul cererii');
-    click(p,'nav.tabs [data-id="cotizatii"]');await sleep(60);click(p,'[data-act="fv"][data-id="members"]');await sleep(60);
+    goB(p,'cotizatii');await sleep(60);click(p,'[data-act="fv"][data-id="members"]');await sleep(60);
     ok(/Exclus/.test(p.window.document.getElementById('main').textContent),'server: membrul exclus are eticheta');
     click(p,'[data-act="member"][data-id="m2"]');await sleep(40);
     ok(!!p.window.document.querySelector('[data-act="exclude"]')&&p.window.document.querySelector('[data-act="resetaccess"]')&&!p.window.document.querySelector('[data-act="gencode"]'),'fisa membrului cu cont activat: Exclude si Reseteaza accesul, fara Genereaza cod');

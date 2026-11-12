@@ -1,32 +1,12 @@
 /* Randarea paginii: antet, navigare, alegerea ecranului */
 function tabsFor() {
   var rl = myRole().role;
+  var ev = ["evenimente", "Evenimente", "cal"],
+    vo = ["voturi", "Voturi", "vote"];
   if (rl === "mod") return [["structura", "Structură", "build"]];
-  if (rl === "national")
-    return [
-      ["director", "Director", "dir"],
-      ["structura", "Structură", "build"],
-      ["profil", "Profilul meu", "me"],
-    ];
-  if (rl === "board")
-    return [
-      ["director", "Director", "dir"],
-      ["donatii", "Donații", "gift"],
-      ["cheltuieli", "Cheltuieli", "spend"],
-      ["profil", "Profilul meu", "me"],
-    ];
-  if (!isLead())
-    return [
-      ["director", "Director", "dir"],
-      ["profil", "Profilul meu", "me"],
-    ];
-  return [
-    ["director", "Director", "dir"],
-    ["tablou", "Tablou", "dash"],
-    ["cotizatii", "Cotizații", "fee"],
-    ["donatii", "Donații", "gift"],
-    ["cheltuieli", "Cheltuieli", "spend"],
-  ];
+  if (rl === "national") return [["director", "Director", "dir"], ev, vo, ["structura", "Structură", "build"]];
+  if (rl === "board" || isLead()) return [["director", "Director", "dir"], ev, vo, ["filiala", "Filială", "build"]];
+  return [["director", "Director", "dir"], ev, vo, ["profil", "Profilul meu", "me"]];
 }
 function render() {
   var app = document.getElementById("app");
@@ -146,10 +126,9 @@ function render() {
   if (S.tab === "director") body = vDirector();
   else if (S.tab === "profil") body = vProfile();
   else if (S.tab === "structura") body = vStructure();
-  else if (S.tab === "tablou") body = vDash();
-  else if (S.tab === "cotizatii") body = vFees();
-  else if (S.tab === "donatii") body = vDon();
-  else if (S.tab === "cheltuieli") body = vExp();
+  else if (S.tab === "evenimente") body = vEvents();
+  else if (S.tab === "voturi") body = vVotes();
+  else if (S.tab === "filiala") body = vBranch();
   else body = vDirector();
   var note =
     (S.note ? '<div class="notice">' + esc(S.note) + "</div>" : "") +

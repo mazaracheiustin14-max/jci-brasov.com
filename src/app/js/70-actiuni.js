@@ -515,6 +515,56 @@ async function onAct(act, id) {
         await S.store.del("data/users/" + S.me.id, "claim");
       } catch (e) {}
       break;
+    case "bsub":
+      S.bsub = id;
+      render();
+      break;
+    case "evv":
+      S.evView = id;
+      render();
+      break;
+    case "evgo":
+      evGo(id);
+      break;
+    case "evdid":
+      sheetDid(id);
+      break;
+    case "evopen":
+      sheetEventDetail(id);
+      break;
+    case "newev":
+      sheetEventForm(null);
+      break;
+    case "evedit":
+      sheetEventForm(id);
+      break;
+    case "evcancel":
+      sheetEventCancel(id);
+      break;
+    case "evcancel2":
+      doEventCancel(id);
+      break;
+    case "evpresence":
+      sheetPresence(id);
+      break;
+    case "partm":
+      sheetPerson(id);
+      break;
+    case "pollnew":
+      sheetPollNew(id);
+      break;
+    case "pollclose":
+      doPollClose(id);
+      break;
+    case "pollcancel":
+      sheetPollCancel(id);
+      break;
+    case "pollcancel2":
+      doPollCancel(id);
+      break;
+    case "pollwho":
+      sheetPollWho(id);
+      break;
     case "handover":
       sheetHandover();
       break;

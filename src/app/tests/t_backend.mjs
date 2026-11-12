@@ -491,6 +491,151 @@ ok(LOG.length>200&&LOG.every(x=>!x.includes("Pw!")),"E1b 7 nicio parola in raspu
  ok(new Set(auth.map(x=>x.salt)).size===auth.length,"E1b 7 sare diferita pe cont");
  const hr=auth.find(x=>x.member_id==="late");ok(hr&&pbkdf2Sync(PWD("late"),Buffer.from(hr.salt,"hex"),20000,32,"sha256").toString("hex")===hr.hash,"E1b 7 amprenta este PBKDF2-SHA256 cu 20000 de iteratii");
  ok(!JSON.stringify(env.DB._db.prepare("SELECT * FROM app_sessions").all()).includes("Pw!"),"E1b 7 nici in sesiuni");}
+// ======= E3: evenimente si participare
+const EVP="branches/Brașov/events",ATP="branches/Brașov/attend",BPP="branches/Brașov/polls";
+const past=addM(T,-1),fut=addM(T,2);
+const MIA=await addM2(ANA2,"mia","Mia Membru","Brașov",true),NIC=await addM2(ANA2,"nic","Nic Membru","Brașov",true),OLI=await addM2(ANA2,"oli","Oli Membru","Brașov",true);
+const CLU1=await addM2(PCLUJ,"clu1","Clu Membru","Cluj",true);
+r=await A(ANA2,{op:"setRole",memberId:"bea",role:"board",title:"Vicepreședinte proiecte"});ok(r.status===200,"E3 pregatire: bea board");
+const evBody=(o)=>Object.assign({title:"Intalnire lunara",date:past,place:"Brasov",note:"Sala mare"},o||{});
+r=await W(ANA2,EVP,"ev1",evBody({createdBy:"hack",createdAt:"2000-01-01"}));ok(r.status===200,"E3 1 presedintele creeaza eveniment");
+r=await W(BEA,EVP,"ev2",evBody({title:"Atelier de vara",date:fut}));ok(r.status===200,"E3 1 board creeaza eveniment");
+r=await W(BEA,EVP,"ev1",evBody({note:"Sala mica"}));ok(r.status===200,"E3 1 board modifica evenimentul");
+rows=await PULL(MIA,[EVP]);{const e1=rows.data[EVP].find(x=>x.id==="ev1");ok(rows.data[EVP].length===2&&e1.createdBy===ana&&e1.createdAt!=="2000-01-01"&&e1.note==="Sala mica","E3 1 createdBy si createdAt pune serverul si le pastreaza la modificare");}
+r=await W(TIM,EVP,"ev9",evBody());ok(r.status===403,"E3 1 trezorierul nu scrie evenimente");
+r=await W(MIA,EVP,"ev9",evBody());ok(r.status===403,"E3 1 membrul simplu nu scrie evenimente");
+r=await W(PCLUJ,EVP,"ev9",evBody());ok(r.status===403,"E3 1 presedintele altei filiale nu scrie evenimente");
+r=await W(CORA,EVP,"ev9",evBody());ok(r.status===403,"E3 1 nationalul (alta filiala) nu scrie evenimente");
+r=await W(MOD,EVP,"ev9",evBody());ok(r.status===403,"E3 1 mod nu scrie evenimente");
+r=await W(ANA2,EVP,"ev1",null,true);ok(r.status===403,"E3 1 evenimentele nu se sterg");
+for(const [nm,o] of [["titlu scurt",{title:"A"}],["titlu lung",{title:"x".repeat(121)}],["data gresita",{date:"2026-13-45"}],["data in alt format",{date:"12.11.2026"}],["loc prea lung",{place:"x".repeat(121)}],["descriere prea lunga",{note:"x".repeat(501)}],["cancelled nebooleana",{cancelled:"da"}]]){
+  r=await W(ANA2,EVP,"ev9",evBody(o));ok(r.status===400,"E3 1 eveniment invalid respins: "+nm);
+}
+r=await W(ANA2,EVP,"ev3",evBody({title:"Eveniment anulat",cancelled:true}));ok(r.status===200,"E3 1 eveniment anulat prin cancelled");
+rows=await PULL(MOD,[EVP]);ok(rows.errors[EVP]===403,"E3 1 mod nu citeste evenimentele");
+rows=await PULL(CLU1,[EVP]);ok(rows.errors[EVP]===403,"E3 1 membrul altei filiale nu citeste evenimentele");
+rows=await PULL(CORA,[EVP,"branches/Cluj/events"]);ok(rows.errors[EVP]===403&&Array.isArray(rows.data["branches/Cluj/events"]),"E3 1 nationalul citeste doar evenimentele filialei lui");
+for(const [nm,ck] of [["membru",MIA],["trezorier",TIM],["board",BEA],["presedinte",ANA2]]){rows=await PULL(ck,[EVP]);ok(Array.isArray(rows.data[EVP])&&rows.data[EVP].length===3,"E3 1 "+nm+" citeste evenimentele filialei");}
+// participare
+const att=(e,m,o)=>Object.assign({eventId:e,memberId:m,going:true},o||{});
+const rv0=(await PULL(MIA,[EVP])).rev;
+r=await W(MIA,ATP,"ev1_mia",att("ev1","mia",{did:"Am ajutat la sonorizare",amount:5000,by:"hack",at:"2000-01-01"}));ok(r.status===200,"E3 2 membrul scrie pentru el");
+rows=await PULL(ANA2,[ATP]);{const x=rows.data[ATP].find(y=>y.id==="ev1_mia");ok(x.by==="mia"&&x.at!=="2000-01-01"&&x.amount===5000&&x.did==="Am ajutat la sonorizare","E3 2 at si by le pune serverul");}
+r=await W(MIA,ATP,"ev1_nic",att("ev1","nic"));ok(r.status===403,"E3 2 membrul nu scrie pentru altul");
+r=await W(MIA,ATP,"ev1_oli",att("ev1","mia"));ok(r.status===400,"E3 2 id-ul trebuie sa fie eveniment_membru");
+r=await W(MIA,ATP,"ev1_mia",att("ev1","mia",{going:"da"}));ok(r.status===400,"E3 2 going nebooleana: 400");
+r=await W(MIA,ATP,"ev1_mia",att("ev1","mia",{did:"x".repeat(301)}));ok(r.status===400,"E3 2 did prea lung: 400");
+for(const a of [-1,1.5,"5",1e20]){r=await W(MIA,ATP,"ev1_mia",att("ev1","mia",{amount:a}));ok(r.status===400,"E3 2 suma invalida respinsa: "+String(a));}
+r=await W(MIA,ATP,"nimic_mia",att("nimic","mia"));ok(r.status===400,"E3 2 eveniment inexistent: 400");
+r=await W(MIA,ATP,"ev3_mia",att("ev3","mia"));ok(r.status===400,"E3 2 eveniment anulat: 400");
+r=await W(BEA,ATP,"ev1_nic",att("ev1","nic",{did:"Prezent"}));ok(r.status===200,"E3 2 board consemneaza prezenta unui membru din evidenta");
+r=await W(BEA,ATP,"ev1_nimeni",att("ev1","nimeni"));ok(r.status===400,"E3 2 membru care nu e in evidenta: 400");
+r=await W(ANA2,ATP,"ev1_oli",att("ev1","oli",{did:"Moderator"}));ok(r.status===200,"E3 2 presedintele consemneaza prezenta");
+r=await W(TIM,ATP,"ev1_nic",att("ev1","nic"));ok(r.status===403,"E3 2 trezorierul nu consemneaza pentru altul");
+r=await W(TIM,ATP,"ev1_tim",att("ev1","tim"));ok(r.status===200,"E3 2 trezorierul scrie pentru el insusi");
+r=await W(MIA,ATP,"ev2_mia",att("ev2","mia"));ok(r.status===200,"E3 2 participare la un eveniment viitor");
+r=await W(MIA,ATP,"ev1_mia",null,true);ok(r.status===403,"E3 2 participarea nu se sterge");
+r=await W(PCLUJ,ATP,"ev1_mia",att("ev1","mia"));ok(r.status===403,"E3 2 alta filiala nu scrie participare");
+r=await W(MOD,ATP,"ev1_mia",att("ev1","mia"));ok(r.status===403,"E3 2 mod nu scrie participare");
+r=await W(CORA,ATP,"ev1_cora",att("ev1","cora"));ok(r.status===403,"E3 2 nationalul din alta filiala nu scrie in Brasov");
+{await A(ANA2,{op:"exclude",memberId:"eve"});r=await W(ANA2,ATP,"ev1_eve",att("ev1","eve"));ok(r.status===400,"E3 2 nu se consemneaza prezenta unui membru exclus");await A(ANA2,{op:"reactivate",memberId:"eve"});}
+rows=await PULL(MIA,[ATP]);ok(rows.data[ATP].length===2&&rows.data[ATP].every(x=>x.memberId==="mia"&&!("name" in x)),"E3 2 membrul simplu primeste doar randurile lui");
+rows=await PULL(NIC,[ATP]);ok(rows.data[ATP].length===1&&rows.data[ATP][0].memberId==="nic","E3 2 alt membru: doar randul lui");
+for(const [nm,ck] of [["board",BEA],["trezorier",TIM],["presedinte",ANA2]]){rows=await PULL(ck,[ATP]);
+  ok(rows.data[ATP].length===5&&rows.data[ATP].every(x=>typeof x.name==="string"&&x.name.length>0)&&rows.data[ATP].find(x=>x.id==="ev1_mia").name==="Mia Membru","E3 2 "+nm+" primeste toate randurile, cu name");}
+rows=await PULL(MOD,[ATP]);ok(rows.errors[ATP]===403,"E3 2 mod nu citeste participarea");
+rows=await PULL(CLU1,[ATP]);ok(rows.errors[ATP]===403,"E3 2 alta filiala nu citeste participarea");
+{const ev=(await api("/api/app/pull",{cookie:MIA,body:{paths:[EVP],revs:rv0}})).j.data[EVP];ok(Array.isArray(ev),"E3 2 un rand de participare ridica revizia evenimentelor");
+ const c=Object.fromEntries(ev.map(x=>[x.id,x.count]));ok(c.ev1===4&&c.ev2===1&&c.ev3===0,"E3 2 count corect pe eveniment");}
+r=await W(OLI,ATP,"ev1_oli",att("ev1","oli",{going:false}));ok(r.status===200,"E3 2 retragerea se face cu going false");
+rows=await PULL(MIA,[EVP]);ok(rows.data[EVP].find(x=>x.id==="ev1").count===3,"E3 2 count scade dupa retragere");
+// ======= E4: voturi
+const V=(ck,path,pollId,optionId)=>api("/api/app/vote",{cookie:ck,body:{path,pollId,optionId}});
+const NP="polls";
+const oN=[{id:"a",label:"Optiunea Alfa"},{id:"b",label:"Optiunea Beta"}];
+const oB=[{id:"x",label:"Hotel Alfa"},{id:"y",label:"Hotel Beta"},{id:"z",label:"Hotel Gama"}];
+const noVotes=(row)=>row.options.every(o=>!("votes" in o));
+r=await W(CORA,NP,"np1",{title:"Buget national 2027",options:oN,closes:fut});ok(r.status===200,"E4 3 nationalul creeaza un vot national");
+for(const [nm,ck] of [["presedinte",ANA2],["trezorier",TIM],["mod",MOD],["membru",MIA]]){r=await W(ck,NP,"npx",{title:"Vot fals",options:oN,closes:fut});ok(r.status===403,"E4 3 "+nm+" nu creeaza vot national");}
+r=await W(CORA,NP,"np1",null,true);ok(r.status===403,"E4 3 voturile nu se sterg");
+for(const [nm,o] of [["titlu scurt",{title:"Da?"}],["o optiune",{options:[oN[0]]}],["9 optiuni",{options:Array.from({length:9},(_,i)=>({id:"o"+i,label:"O"+i}))}],["optiuni duplicate",{options:[oN[0],oN[0]]}],["eticheta goala",{options:[oN[0],{id:"b",label:" "}]}],["eticheta lunga",{options:[oN[0],{id:"b",label:"x".repeat(81)}]}],["data gresita",{closes:"azi"}]]){
+  r=await W(CORA,NP,"npx",Object.assign({title:"Intrebare valida",options:oN,closes:fut},o));ok(r.status===400,"E4 3 vot invalid respins: "+nm);}
+for(const [nm,ck] of [["presedinte",ANA2],["alt presedinte",PCLUJ],["national",CORA]]){rows=await PULL(ck,[NP]);ok(Array.isArray(rows.data[NP])&&rows.data[NP].length===1,"E4 3 "+nm+" citeste voturile nationale");}
+for(const [nm,ck] of [["mod",MOD],["trezorier",TIM],["board",BEA],["membru",MIA]]){rows=await PULL(ck,[NP]);ok(rows.errors[NP]===403,"E4 3 "+nm+" nu citeste voturile nationale");}
+r=await V(ANA2,NP,"np1","a");ok(r.status===200&&JSON.stringify(r.j)==='{"ok":true}',"E4 3 presedintele voteaza (raspuns doar ok)");
+r=await V(PCLUJ,NP,"np1","b");ok(r.status===200,"E4 3 alt presedinte voteaza");
+for(const [nm,ck] of [["national",CORA],["mod",MOD],["trezorier",TIM],["membru",MIA],["board",BEA]]){r=await V(ck,NP,"np1","a");ok(r.status===403,"E4 3 "+nm+" nu voteaza la votul national");}
+r=await V(ANA2,NP,"np1","b");ok(r.status===400,"E4 5 al doilea vot: 400");
+r=await V(SM1,NP,"np1","zzz");ok(r.status===400,"E4 5 optiune inexistenta: 400");
+r=await V(SM1,NP,"nimeni","a");ok(r.status===404,"E4 5 vot inexistent: 404");
+r=await V(SM1,"branches/Nimic/polls","np1","a");ok(r.status===400,"E4 5 cale invalida: 400");
+r=await V(SM1,"branches/Brașov/members","np1","a");ok(r.status===400,"E4 5 cale care nu e de voturi: 400");
+r=await api("/api/app/vote",{body:{path:NP,pollId:"np1",optionId:"a"}});ok(r.status===401,"E4 vot fara sesiune: 401");
+{const cn=(await api("/api/app/code",{cookie:ANA2,body:{branch:"Brașov",memberId:"nocr"}}));
+ await addM2(ANA2,"nocr","Fara Parola","Brașov",false);const c2=(await api("/api/app/code",{cookie:ANA2,body:{branch:"Brașov",memberId:"nocr"}})).j.code;
+ const NOCR=(await api("/api/app/login",{body:{code:c2}})).cookie;
+ r=await V(NOCR,NP,"np1","a");ok(r.status===403&&r.j.needCred===true,"E4 fara e-mail si parola nu se voteaza: 403 cu needCred");
+ r=await V(NOCR,BPP,"np1","a");ok(r.status===403&&r.j.needCred===true,"E4 needCred acopera si votul de filiala");}
+{const rA=await PULL(ANA2,[NP]),rS=await PULL(SM1,[NP]),rC=await PULL(CORA,[NP]);
+ const a=rA.data[NP][0],sm=rS.data[NP][0],c=rC.data[NP][0];
+ ok(a.state==="open"&&a.mine==="a"&&a.canVote===false&&a.total===2&&a.voters===3&&noVotes(a)&&!("votedNames" in a),"E4 3 vot deschis: state, mine, canVote, total, voters, fara totaluri pe optiuni si fara votedNames");
+ ok(sm.mine===""&&sm.canVote===true&&sm.total===2&&noVotes(sm),"E4 3 presedintele care n-a votat: mine gol, canVote true");
+ ok(c.canVote===false&&JSON.stringify(c.votedNames)===JSON.stringify(["Ana Pres","Petru Cluj"]),"E4 6 votedNames apare doar la creator, in ordine alfabetica");
+ ok(![rA,rS,rC].some(x=>JSON.stringify(x).includes('"votes"')),"E4 6 nicio raspuns nu are totaluri pe optiuni cat votul e deschis");
+ ok(!JSON.stringify(rA).includes("votedNames")&&!JSON.stringify(rS).includes("votedNames"),"E4 6 votedNames nu ajunge la altcineva");}
+r=await V(SM1,NP,"np1","b");ok(r.status===200,"E4 3 al treilea presedinte voteaza");
+r=await W(CORA,NP,"np1",{title:"Alt titlu pentru buget",options:oN,closes:fut});ok(r.status===400,"E4 7 dupa primul vot titlul nu se schimba");
+r=await W(CORA,NP,"np1",{title:"Buget national 2027",options:[oN[0],{id:"b",label:"Optiunea Gama"}],closes:fut});ok(r.status===400,"E4 7 dupa primul vot optiunile nu se schimba");
+r=await W(CORA,NP,"np1",{title:"Buget national 2027",options:[oN[1],oN[0]],closes:fut});ok(r.status===400,"E4 7 nici ordinea optiunilor");
+r=await W(CORA,NP,"np1",{title:"Buget national 2027",options:oN,closes:addM(T,3)});ok(r.status===200,"E4 7 closes se poate schimba dupa primul vot");
+r=await W(CORA,NP,"np1",{title:"Buget national 2027",options:oN,closes:addM(T,3),closed:true});ok(r.status===200,"E4 3 creatorul inchide votul acum");
+{const rA=await PULL(ANA2,[NP]),rC=await PULL(CORA,[NP]);const a=rA.data[NP][0],c=rC.data[NP][0];
+ ok(a.state==="closed"&&a.canVote===false&&a.total===3&&a.mine==="a"&&a.options.find(o=>o.id==="a").votes===1&&a.options.find(o=>o.id==="b").votes===2,"E4 6 dupa inchidere apar totalurile pe optiuni");
+ ok(c.votedNames.length===3&&JSON.stringify(Object.keys(c).sort())===JSON.stringify(["canVote","cancelled","closed","closes","createdAt","createdBy","id","mine","options","state","title","total","voted"+"Names","voters"].sort()),"E4 6 raspunsul creatorului: doar campurile din proiect");}
+r=await W(CORA,NP,"np1",{title:"Buget national 2027",options:oN,closes:addM(T,3),closed:false});ok(r.status===400,"E4 5 un vot inchis nu se redeschide");
+r=await W(CORA,NP,"np2",{title:"Vot expirat",options:oN,closes:past});ok(r.status===200,"E4 5 vot cu data de inchidere trecuta (creare)");
+r=await V(SM1,NP,"np2","a");ok(r.status===400,"E4 5 vot dupa closes: 400");
+rows=await PULL(SM1,[NP]);{const x=rows.data[NP].find(y=>y.id==="np2");ok(x.state==="closed"&&x.canVote===false&&x.options.every(o=>o.votes===0),"E4 5 votul expirat apare inchis, cu totaluri");}
+r=await W(CORA,NP,"np3",{title:"Vot anulat din start",options:oN,closes:fut,cancelled:true});ok(r.status===200,"E4 5 vot anulat");
+r=await V(SM1,NP,"np3","a");ok(r.status===400,"E4 5 vot anulat: 400");
+r=await W(CORA,NP,"np4",{title:"Vot anulat dupa vot",options:oN,closes:fut});r=await V(ANA2,NP,"np4","a");ok(r.status===200,"E4 pregatire: vot in np4");
+r=await W(CORA,NP,"np4",{title:"Vot anulat dupa vot",options:oN,closes:fut,cancelled:true});ok(r.status===200,"E4 5 creatorul anuleaza un vot cu voturi");
+r=await V(PCLUJ,NP,"np4","a");ok(r.status===400,"E4 5 dupa anulare nu se mai voteaza");
+rows=await PULL(CORA,[NP]);{const x=rows.data[NP].find(y=>y.id==="np4");ok(x.state==="closed"&&noVotes(x),"E4 6 un vot anulat nu arata totalurile pe optiuni");}
+// vot de filiala
+r=await W(ANA2,BPP,"bp1",{title:"Locatie adunare generala",options:oB,closes:fut});ok(r.status===200,"E4 4 presedintele filialei creeaza vot");
+for(const [nm,ck] of [["alt presedinte",PCLUJ],["board",BEA],["trezorier",TIM],["membru",MIA],["national din alta filiala",CORA],["mod",MOD]]){r=await W(ck,BPP,"bpx",{title:"Vot fals aici",options:oB,closes:fut});ok(r.status===403,"E4 4 "+nm+" nu creeaza vot de filiala");}
+r=await W(PCLUJ,"branches/Cluj/polls","cp1",{title:"Vot de filiala Cluj",options:oB,closes:fut});ok(r.status===200,"E4 4 presedintele Cluj creeaza vot in Cluj");
+r=await W(CORA,"branches/Cluj/polls","cpx",{title:"Vot fals national",options:oB,closes:fut});ok(r.status===403,"E4 4 nationalul nu creeaza vot de filiala nici in filiala lui");
+r=await W(ANA2,BPP,"bp1",null,true);ok(r.status===403,"E4 4 votul de filiala nu se sterge");
+for(const [nm,ck] of [["membru",MIA],["board",BEA],["trezorier",TIM],["presedinte",ANA2]]){rows=await PULL(ck,[BPP]);ok(Array.isArray(rows.data[BPP])&&rows.data[BPP].length===1,"E4 4 "+nm+" citeste votul filialei");}
+for(const [nm,ck] of [["mod",MOD],["presedinte din alta filiala",PCLUJ],["membru din alta filiala",CLU1],["national din alta filiala",CORA]]){rows=await PULL(ck,[BPP]);ok(rows.errors[BPP]===403,"E4 4 "+nm+" nu citeste votul de Brasov");}
+rows=await PULL(CORA,["branches/Cluj/polls"]);ok(rows.errors["branches/Cluj/polls"]===403,"E4 4 nationalul din Cluj nu citeste votul filialei lui");
+r=await V(CORA,"branches/Cluj/polls","cp1","x");ok(r.status===403,"E4 4 nationalul din filiala nu voteaza");
+r=await V(ANA2,"branches/Cluj/polls","cp1","x");ok(r.status===403,"E4 4 alta filiala nu voteaza");
+r=await V(CLU1,"branches/Cluj/polls","cp1","y");ok(r.status===200,"E4 4 membrul filialei voteaza (Cluj)");
+r=await V(PCLUJ,"branches/Cluj/polls","cp1","x");ok(r.status===200,"E4 4 presedintele filialei voteaza si el");
+rows=await PULL(CLU1,["branches/Cluj/polls"]);ok(rows.data["branches/Cluj/polls"][0].voters===2&&rows.data["branches/Cluj/polls"][0].total===2,"E4 4 voters exclude presedintele national (Cluj: pcluj si clu1)");
+r=await V(MOD,BPP,"bp1","x");ok(r.status===403,"E4 4 mod nu voteaza");
+for(const [ck,o] of [[MIA,"x"],[NIC,"x"],[BEA,"y"],[TIM,"z"],[ANA2,"x"]]){r=await V(ck,BPP,"bp1",o);ok(r.status===200,"E4 4 voteaza la adunarea generala: "+o);}
+r=await V(MIA,BPP,"bp1","y");ok(r.status===400,"E4 5 al doilea vot de filiala: 400");
+{const exp=env.DB._db.prepare("SELECT valid_until FROM app_state WHERE branch='Brașov' AND active=1 AND excluded=0").all().filter(x=>!x.valid_until||addM(x.valid_until,3)>=T).length;
+ const rM=await PULL(MIA,[BPP]),rN=await PULL(NIC,[BPP]),rA=await PULL(ANA2,[BPP]);const m=rM.data[BPP][0],a=rA.data[BPP][0];
+ ok(m.total===5&&m.voters===exp&&exp>5&&m.mine==="x"&&m.canVote===false&&noVotes(m),"E4 4 total, voters si mine pentru un membru, fara totaluri pe optiuni");
+ ok(a.votedNames.length===5&&JSON.stringify(a.votedNames)===JSON.stringify([...a.votedNames].sort((p,q)=>p.localeCompare(q,"ro"))),"E4 6 creatorul vede cine a votat, fara optiune");
+ ok(!JSON.stringify(rM).includes("votedNames")&&!JSON.stringify(rN).includes("votedNames"),"E4 6 membrii nu primesc votedNames");}
+r=await W(ANA2,BPP,"bp1",{title:"Alta locatie pentru adunare",options:oB,closes:fut});ok(r.status===400,"E4 7 vot de filiala: titlul nu se schimba dupa primul vot");
+r=await W(ANA2,BPP,"bp1",{title:"Locatie adunare generala",options:oB.slice(0,2),closes:fut});ok(r.status===400,"E4 7 vot de filiala: optiunile nu se schimba dupa primul vot");
+r=await W(ANA2,BPP,"bp1",{title:"Locatie adunare generala",options:oB,closes:fut,closed:true});ok(r.status===200,"E4 4 presedintele inchide votul filialei");
+r=await V(OLI,BPP,"bp1","y");ok(r.status===400,"E4 5 vot pe vot inchis: 400");
+rows=await PULL(OLI,[BPP]);{const x=rows.data[BPP][0];ok(x.state==="closed"&&x.canVote===false&&x.mine===""&&x.options.find(o=>o.id==="x").votes===3&&x.options.find(o=>o.id==="y").votes===1&&x.options.find(o=>o.id==="z").votes===1,"E4 6 dupa inchidere un membru vede totalurile (3, 1, 1)");}
+// votul secret: nicaieri nu se leaga un om de optiune
+ok(!env.DB._db.prepare("SELECT path, data FROM app_docs").all().some(x=>!/(^polls$|\/polls$)/.test(x.path)&&/Optiunea (Alfa|Beta)|Hotel (Alfa|Beta|Gama)/.test(x.data)),"E4 6 nicio optiune aleasa in jurnal sau in alte documente");
+ok(!env.DB._db.prepare("SELECT data FROM app_docs WHERE path='audit'").all().some(x=>/vot/i.test(x.data)),"E4 6 votul nu se scrie in jurnal");
+ok(env.DB._db.prepare("SELECT COUNT(*) c FROM app_votes").get().c===11,"E4 6 voturile sunt in app_votes (3 + 1 + 2 + 5)");
+{const polls=LOG.filter(x=>x.includes('"state":"open"')||x.includes('"state":"closed"')).map(x=>JSON.parse(x));
+ const rowsAll=polls.flatMap(x=>Object.values(x.data||{})).flat().filter(x=>x&&x.state);
+ ok(rowsAll.length>20&&rowsAll.every(x=>!("voter" in x)&&!("voterId" in x)&&!("votes_by" in x)&&(!x.votedNames||x.createdBy)),"E4 6 niciun raspuns de pull nu are camp care sa lege un om de o optiune");}
 // limitarea incercarilor gresite: doar esecurile se numara
 env.DB._db.exec("DELETE FROM rate_log");
 const cg=(await api("/api/app/code",{cookie:ANA2,body:{branch:"Brașov",memberId:"dan"}})).j.code;

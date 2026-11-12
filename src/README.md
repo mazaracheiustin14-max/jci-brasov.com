@@ -122,6 +122,9 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
   alte funcții de conducere (cu titlu liber), membru. Filialele sunt o listă în baza de date (`branchlist`). Rolurile și filialele se schimbă doar prin
   operațiile de la `/api/app/admin`: `setNational`, `addBranch`, `setPresident`, `setRole`, `handover`, `exclude`, `reactivate`, `resetAccess`, `candidates`.
   Administratorul tehnic și președintele național nu citesc datele interne ale filialelor. Președintele poate suspenda și reactiva un membru.
+- Evenimente și voturi (12 nov 2026, `src/app/etape/E3-E4-evenimente-voturi.md`): `branches/<b>/events` (le creează președintele și funcțiile de conducere),
+  `branches/<b>/attend` (participarea și „ce am făcut”; conducerea filialei vede toate rândurile, membrul doar pe ale lui), `polls` și `branches/<b>/polls`
+  cu `POST /api/app/vote`. Votul e secret: tabelul `app_votes` nu se citește niciodată pe om, totalurile pe opțiuni apar doar după închidere.
 - Excluderea automată: contul e suspendat când au trecut mai mult de 3 luni de la expirarea calității de membru (`valid_until`), fără cotizație achitată.
   Se calculează pe server la fiecare cerere, după data din Europe/Bucharest; plata cotizației sau prelungirea valabilității redă accesul. Se aplică și conducerii.
 - Ce verifică serverul: filialele sunt izolate (conducerea unei filiale citește doar datele ei; un identificator de membru aparține unei singure filiale);

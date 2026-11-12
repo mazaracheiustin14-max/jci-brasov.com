@@ -6,6 +6,8 @@
 //  - Reguli: membrii văd directorul; conducerea unei filiale vede doar filiala ei; administratorul tehnic (mod) și președintele național
 //    (national) nu văd datele interne ale filialelor, doar structura (filiale, președinți). Rolurile se schimbă doar prin /api/app/admin.
 //  - Un membru a cărui valabilitate a expirat de peste 3 luni este exclus automat (nu mai primește date).
+//  - Evenimente și participare (branches/<b>/events, attend) și voturi (polls, branches/<b>/polls, POST /api/app/vote).
+//    Votul e secret: tabelul app_votes nu se citește niciodată pe om, iar totalurile pe opțiuni se dau doar după închidere.
 // Aplicația nu face legătura înapoi spre site; singura legătură este butonul de pe pagina Echipa.
 
 const COOKIE = "jci_app";
@@ -16,7 +18,7 @@ const CODE_DAYS = 14;
 const SEED_BRANCHES = ["Brașov", "Cluj", "București"];
 const ROLES = ["national", "president", "treasurer", "board"];
 const DEFAULT_TITLE = { national: "Președinte național", president: "Președinte", treasurer: "Vicepreședinte trezorier", board: "Conducere" };
-const COLLS = ["members", "fees", "donations", "expenses", "settings", "codes"];
+const COLLS = ["members", "fees", "donations", "expenses", "settings", "codes", "events", "attend", "polls"];
 const CODE_ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const MAX_DOC = 6000;
@@ -115,6 +117,7 @@ function ensureSchema(env) {
       "CREATE INDEX IF NOT EXISTS app_sessions_user ON app_sessions (user_id)",
       "CREATE TABLE IF NOT EXISTS app_codes (hash TEXT PRIMARY KEY, member_id TEXT NOT NULL, branch TEXT NOT NULL, created_by TEXT, created TEXT, expires TEXT NOT NULL, used TEXT)",
       "CREATE TABLE IF NOT EXISTS app_state (member_id TEXT PRIMARY KEY, branch TEXT NOT NULL, valid_until TEXT, active INTEGER NOT NULL DEFAULT 0)",
+      "CREATE TABLE IF NOT EXISTS app_votes (path TEXT NOT NULL, poll_id TEXT NOT NULL, voter_id TEXT NOT NULL, option_id TEXT NOT NULL, at TEXT, PRIMARY KEY (path, poll_id, voter_id))",
       "CREATE TABLE IF NOT EXISTS app_auth (member_id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, salt TEXT NOT NULL, hash TEXT NOT NULL, iter INTEGER NOT NULL, updated TEXT NOT NULL)",
     ];
     schemaReady = (async () => {
@@ -154,7 +157,7 @@ async function getBranches(env) {
 // ---------- căi și reguli ----------
 function parsePath(p, branches) {
   if (typeof p !== "string" || p.length > 120) return null;
-  if (p === "profiles" || p === "badges" || p === "roles" || p === "audit" || p === "claims" || p === "branchlist") return { kind: p };
+  if (p === "profiles" || p === "badges" || p === "roles" || p === "audit" || p === "claims" || p === "branchlist" || p === "polls") return { kind: p };
   let m = /^data\/users\/([A-Za-z0-9_-]{1,64})$/.exec(p);
   if (m) return { kind: "private", uid: m[1] };
   m = /^branches\/([^/]+)\/([a-z]+)$/.exec(p);
@@ -166,6 +169,9 @@ const membersPath = (b) => "branches/" + b + "/members";
 // funcții de conducere legate de o filială (mod și national nu au niciodată filială de conducere)
 const presOf = (u, b) => u.role === "president" && !!u.branch && u.branch === b;
 const leadOf = (u, b) => (u.role === "president" || u.role === "treasurer") && !!u.branch && u.branch === b;
+// membru al filialei: orice cont activ cu filiala proprie egală cu b, indiferent de rol (mod nu are filială)
+const memberOf = (u, b) => !u.mod && !!u.branch && u.branch === b;
+const leadBoardOf = (u, b) => (u.role === "president" || u.role === "board") && !!u.branch && u.branch === b;
 const boardOf = (u, b) => (u.role === "president" || u.role === "treasurer" || u.role === "board") && !!u.branch && u.branch === b;
 
 function canRead(u, pp) {
@@ -174,8 +180,11 @@ function canRead(u, pp) {
     case "profiles": case "badges": case "roles": case "branchlist": return true;
     case "audit": return u.mod || u.role === "national" || u.role === "president" || u.role === "treasurer";
     case "private": return pp.uid === u.id;
+    case "polls": return !u.mod && (u.role === "national" || u.role === "president");
     case "branch":
       if (pp.coll === "codes") return false;
+      if (pp.coll === "events" || pp.coll === "attend") return memberOf(u, pp.b);
+      if (pp.coll === "polls") return memberOf(u, pp.b) && u.role !== "national";
       if (pp.coll === "donations" || pp.coll === "expenses") return boardOf(u, pp.b);
       return leadOf(u, pp.b); // members, fees, settings
     default: return false;
@@ -187,8 +196,12 @@ function canWrite(u, pp, id, del) {
     case "profiles": return (id === u.id && !u.mod) || (u.mod && del);
     case "audit": return (u.role === "president" || u.role === "treasurer") && !del;
     case "private": return pp.uid === u.id && !u.mod;
+    case "polls": return !del && !u.mod && u.role === "national";
     case "branch":
       if (del) return false;
+      if (pp.coll === "events") return leadBoardOf(u, pp.b);
+      if (pp.coll === "attend") return memberOf(u, pp.b); // dreptul pe rând (propriul rând sau al altuia) se verifică în write
+      if (pp.coll === "polls") return presOf(u, pp.b);
       if (pp.coll === "members" || pp.coll === "settings") return presOf(u, pp.b);
       if (pp.coll === "fees" || pp.coll === "donations" || pp.coll === "expenses") return leadOf(u, pp.b);
       return false; // codes
@@ -316,6 +329,7 @@ export async function handleApp(request, env, url) {
   if (p === "/api/app/pull" && request.method === "POST") return pull(env, u, body);
   if (p === "/api/app/write" && request.method === "POST") return write(env, u, body);
   if (p === "/api/app/code" && request.method === "POST") return makeCode(env, u, body);
+  if (p === "/api/app/vote" && request.method === "POST") return vote(env, u, body);
   if (p === "/api/app/admin" && request.method === "POST") return admin(env, u, body);
   return fail(404, "Negăsit.");
 }
@@ -454,9 +468,16 @@ async function pull(env, u, body) {
   for (const [p, pp] of known) {
     const rev = cur[p] || 0;
     out.rev[p] = rev;
-    if (revs[p] === rev) continue; // neschimbat
+    const isPoll = pp.kind === "polls" || (pp.kind === "branch" && pp.coll === "polls");
+    if (revs[p] === rev && !isPoll) continue; // neschimbat (voturile se recalculează mereu: starea lor depinde de data de azi)
     let rows = [];
-    if (pp.kind === "badges") {
+    if (isPoll) {
+      rows = await pollRows(env, u, p, pp, t);
+    } else if (pp.kind === "branch" && pp.coll === "events") {
+      rows = await eventRows(env, p, pp);
+    } else if (pp.kind === "branch" && pp.coll === "attend") {
+      rows = await attendRows(env, u, p, pp);
+    } else if (pp.kind === "badges") {
       const r = await env.DB.prepare("SELECT member_id, branch, valid_until, excluded FROM app_state WHERE active=1").all();
       // ceilalți membri văd doar dacă insigna e activă; data de valabilitate o văd titularul și președintele sau trezorierul filialei lui
       rows = (r.results || []).map((x) => {
@@ -550,6 +571,15 @@ async function write(env, u, body) {
     const own = "branches/" + u.branch + "/";
     if (!str(d.path, 120).startsWith(own)) d.path = own;
     d = { at: new Date().toISOString(), by: u.id, byName: str(d.byName, 100), path: str(d.path, 120), branch: u.branch, docId: str(d.docId, 64), action: str(d.action, 40), summary: str(d.summary, 300), changes: Array.isArray(d.changes) ? d.changes.slice(0, 12).map((c) => ({ f: str(c && c.f, 40), o: str(c && c.o, 60), n: str(c && c.n, 60) })) : [] };
+  } else if (pp.kind === "polls" || (pp.kind === "branch" && pp.coll === "polls")) {
+    const r0 = await checkPoll(env, path, id, d, u); if (r0.err) return r0.err;
+    d = r0.doc;
+  } else if (pp.kind === "branch" && pp.coll === "events") {
+    const r0 = await checkEvent(env, path, id, d, u); if (r0.err) return r0.err;
+    d = r0.doc;
+  } else if (pp.kind === "branch" && pp.coll === "attend") {
+    const r0 = await checkAttend(env, pp.b, path, id, d, u); if (r0.err) return r0.err;
+    d = r0.doc;
   } else if (pp.kind === "branch") {
     if (pp.coll === "members") {
       const ex = await getDoc(env, path, id);
@@ -570,8 +600,173 @@ async function write(env, u, body) {
     }
   }
   await putDoc(env, path, id, d, u.id);
+  // un rând de participare schimbă și numărul de pe eveniment; o schimbare în evidență schimbă numele din participare
+  if (pp.kind === "branch" && pp.coll === "attend") await bump(env, "branches/" + pp.b + "/events");
+  if (pp.kind === "branch" && pp.coll === "members") await bump(env, "branches/" + pp.b + "/attend");
   if (pp.kind === "branch" && pp.coll === "members") await recomputeState(env, pp.b, id);
   if (pp.kind === "branch" && pp.coll === "fees" && d.memberId && ID_RE.test(String(d.memberId))) await recomputeState(env, pp.b, String(d.memberId));
+  return json({ ok: true });
+}
+
+// ---------- evenimente, participare, voturi ----------
+const isDate = (v) => {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const d = new Date(v + "T00:00:00Z");
+  return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+};
+// text opțional (lipsă înseamnă gol); întoarce null dacă nu e text sau e prea lung
+const optText = (v, max) => (v == null ? "" : typeof v === "string" && v.trim().length <= max ? v.trim() : null);
+
+async function checkEvent(env, path, id, d, u) {
+  const ex = await getDoc(env, path, id);
+  const title = typeof d.title === "string" ? d.title.trim() : "";
+  if (title.length < 2 || title.length > 120) return { err: fail(400, "Denumirea evenimentului are între 2 și 120 de caractere.") };
+  if (!isDate(d.date)) return { err: fail(400, "Data evenimentului nu este validă (AAAA-LL-ZZ).") };
+  const place = optText(d.place, 120); if (place === null) return { err: fail(400, "Locul are cel mult 120 de caractere.") };
+  const note = optText(d.note, 500); if (note === null) return { err: fail(400, "Descrierea are cel mult 500 de caractere.") };
+  if (d.cancelled != null && typeof d.cancelled !== "boolean") return { err: fail(400, "Cerere invalidă.") };
+  return { doc: { title, date: d.date, place, note, cancelled: d.cancelled === true, createdBy: ex && ex.createdBy ? ex.createdBy : u.id, createdAt: ex && ex.createdAt ? ex.createdAt : new Date().toISOString() } };
+}
+
+async function checkAttend(env, b, path, id, d, u) {
+  const evId = d.eventId, mid = d.memberId;
+  if (typeof evId !== "string" || !ID_RE.test(evId) || typeof mid !== "string" || !ID_RE.test(mid)) return { err: fail(400, "Cerere invalidă.") };
+  // dreptul pe rând: omul pentru el însuși; președintele și funcția de conducere (board) pentru oricine din evidență
+  if (mid !== u.id && !leadBoardOf(u, b)) return { err: fail(403, "Poți consemna participarea doar pentru tine.") };
+  if (id !== evId + "_" + mid) return { err: fail(400, "Identificatorul nu corespunde evenimentului și membrului.") };
+  const ev = await getDoc(env, "branches/" + b + "/events", evId);
+  if (!ev) return { err: fail(400, "Evenimentul nu există în această filială.") };
+  if (ev.cancelled) return { err: fail(400, "Evenimentul a fost anulat.") };
+  if (mid !== u.id) {
+    const m = await getDoc(env, membersPath(b), mid);
+    if (!m) return { err: fail(400, "Membrul nu există în evidența filialei.") };
+    if (m.excluded) return { err: fail(400, "Membrul este exclus din aplicație.") };
+  }
+  if (typeof d.going !== "boolean") return { err: fail(400, "Cerere invalidă.") };
+  const did = optText(d.did, 300); if (did === null) return { err: fail(400, "Textul „Ce am făcut” are cel mult 300 de caractere.") };
+  const out = { eventId: evId, memberId: mid, going: d.going, did };
+  if (d.amount != null && d.amount !== "") {
+    if (!Number.isSafeInteger(d.amount) || d.amount < 0) return { err: fail(400, "Suma trebuie să fie un număr întreg, zero sau mai mare.") };
+    out.amount = d.amount;
+  }
+  // un id de forma a_b_c poate fi citit în două feluri: nu se suprascrie rândul altui eveniment sau membru
+  const ex = await getDoc(env, path, id);
+  if (ex && (ex.eventId !== evId || ex.memberId !== mid)) return { err: fail(400, "Identificator în conflict.") };
+  out.at = new Date().toISOString(); out.by = u.id;
+  return { doc: out };
+}
+
+const pollClosedByTime = (d, t) => d.closed === true || String(d.closes || "") < t;
+async function checkPoll(env, path, id, d, u) {
+  const ex = await getDoc(env, path, id);
+  const title = typeof d.title === "string" ? d.title.trim() : "";
+  if (title.length < 4 || title.length > 200) return { err: fail(400, "Întrebarea are între 4 și 200 de caractere.") };
+  if (!Array.isArray(d.options) || d.options.length < 2 || d.options.length > 8) return { err: fail(400, "Votul are între 2 și 8 opțiuni.") };
+  const options = []; const seen = new Set();
+  for (const o of d.options) {
+    const oid = o && typeof o.id === "string" ? o.id : "", label = o && typeof o.label === "string" ? o.label.trim() : "";
+    if (!/^[A-Za-z0-9_-]{1,32}$/.test(oid) || seen.has(oid) || label.length < 1 || label.length > 80) return { err: fail(400, "Opțiunile au identificator unic și text de 1 până la 80 de caractere.") };
+    seen.add(oid); options.push({ id: oid, label });
+  }
+  if (!isDate(d.closes)) return { err: fail(400, "Data închiderii nu este validă (AAAA-LL-ZZ).") };
+  if ((d.closed != null && typeof d.closed !== "boolean") || (d.cancelled != null && typeof d.cancelled !== "boolean")) return { err: fail(400, "Cerere invalidă.") };
+  const doc = { title, options, closes: d.closes, closed: d.closed === true, cancelled: d.cancelled === true, createdBy: ex && ex.createdBy ? ex.createdBy : u.id, createdAt: ex && ex.createdAt ? ex.createdAt : new Date().toISOString() };
+  if (ex) {
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM app_votes WHERE path=? AND poll_id=?").bind(path, id).first();
+    const exOpts = Array.isArray(ex.options) ? ex.options.map((o) => ({ id: o.id, label: o.label })) : [];
+    if (n && n.n > 0 && (ex.title !== title || JSON.stringify(exOpts) !== JSON.stringify(options)))
+      return { err: fail(400, "După primul vot, întrebarea și opțiunile nu se mai pot schimba.") };
+    // un vot ale cărui totaluri au putut fi văzute nu se redeschide
+    const t = today();
+    if (pollClosedByTime(ex, t) && !pollClosedByTime(doc, t)) return { err: fail(400, "Un vot închis nu se mai redeschide.") };
+  }
+  return { doc };
+}
+
+async function eventRows(env, p, pp) {
+  const r = await env.DB.prepare("SELECT id, data FROM app_docs WHERE path=?").bind(p).all();
+  const c = await env.DB.prepare("SELECT json_extract(data,'$.eventId') AS e, COUNT(*) AS n FROM app_docs WHERE path=? AND json_extract(data,'$.going')=1 GROUP BY e").bind("branches/" + pp.b + "/attend").all();
+  const cnt = {}; for (const x of (c.results || [])) cnt[x.e] = x.n;
+  const rows = [];
+  for (const x of (r.results || [])) { try { const o = JSON.parse(x.data); o.id = x.id; o.count = cnt[x.id] || 0; rows.push(o); } catch (e) { /* ignorat */ } }
+  return rows;
+}
+
+async function attendRows(env, u, p, pp) {
+  const all = boardOf(u, pp.b); // conducerea filialei vede tot, cu numele; membrul simplu doar rândurile lui
+  const r = await env.DB.prepare("SELECT a.id AS id, a.data AS data, m.data AS mdata FROM app_docs a LEFT JOIN app_docs m ON m.path=? AND m.id=json_extract(a.data,'$.memberId') WHERE a.path=?").bind(membersPath(pp.b), p).all();
+  const rows = [];
+  for (const x of (r.results || [])) {
+    try {
+      const o = JSON.parse(x.data); o.id = x.id;
+      if (!all && o.memberId !== u.id) continue;
+      if (all) { o.name = ""; if (x.mdata) { try { o.name = String(JSON.parse(x.mdata).name || "").slice(0, 100); } catch (e) { /* fără nume */ } } }
+      rows.push(o);
+    } catch (e) { /* ignorat */ }
+  }
+  return rows;
+}
+
+const voterOk = (x) => { const s = stateOf(x); return s === "active" || s === "grace"; };
+// câți au drept de vot acum (conturi active; la votul național doar președinții, la cel de filială membrii fără președintele național)
+async function countVoters(env, pp) {
+  if (pp.kind === "polls") {
+    const r = await env.DB.prepare("SELECT s.valid_until AS valid_until, s.active AS active, s.excluded AS excluded FROM app_docs r JOIN app_state s ON s.member_id=r.id WHERE r.path='roles' AND json_extract(r.data,'$.role')='president' AND json_extract(r.data,'$.branch')=s.branch").all();
+    return (r.results || []).filter(voterOk).length;
+  }
+  const r = await env.DB.prepare("SELECT member_id, valid_until, active, excluded FROM app_state WHERE branch=?").bind(pp.b).all();
+  const nat = new Set(await rolesWhere(env, "national"));
+  return (r.results || []).filter((x) => voterOk(x) && !nat.has(x.member_id)).length;
+}
+const mayVote = (u, pp) => !u.mod && (pp.kind === "polls" ? u.role === "president" : memberOf(u, pp.b) && u.role !== "national");
+
+async function pollRows(env, u, p, pp, t) {
+  const r = await env.DB.prepare("SELECT id, data FROM app_docs WHERE path=?").bind(p).all();
+  // totaluri pe opțiune și votul propriu; votul altcuiva nu se citește niciodată pe om
+  const tot = await env.DB.prepare("SELECT poll_id, option_id, COUNT(*) AS n FROM app_votes WHERE path=? GROUP BY poll_id, option_id").bind(p).all();
+  const mine = await env.DB.prepare("SELECT poll_id, option_id FROM app_votes WHERE path=? AND voter_id=?").bind(p, u.id).all();
+  const per = {}; for (const x of (tot.results || [])) { (per[x.poll_id] = per[x.poll_id] || {})[x.option_id] = x.n; }
+  const my = {}; for (const x of (mine.results || [])) my[x.poll_id] = x.option_id;
+  const voters = await countVoters(env, pp);
+  const eligible = mayVote(u, pp);
+  const rows = [];
+  for (const x of (r.results || [])) {
+    let o; try { o = JSON.parse(x.data); } catch (e) { continue; }
+    const byOpt = per[x.id] || {};
+    const closed = pollClosedByTime(o, t);
+    const isClosed = closed || o.cancelled === true;
+    const total = Object.values(byOpt).reduce((a, b) => a + b, 0);
+    const out = { id: x.id, title: o.title, closes: o.closes, closed: o.closed === true, cancelled: o.cancelled === true, createdBy: o.createdBy, createdAt: o.createdAt,
+      state: isClosed ? "closed" : "open", mine: my[x.id] || "", canVote: eligible && !isClosed && !my[x.id], total, voters };
+    // totalurile pe opțiuni doar după închidere; un vot anulat nu le arată (altfel anularea ar scoate la iveală totaluri parțiale)
+    out.options = (Array.isArray(o.options) ? o.options : []).map((op) => (closed && o.cancelled !== true ? { id: op.id, label: op.label, votes: byOpt[op.id] || 0 } : { id: op.id, label: op.label }));
+    if (o.createdBy === u.id) {
+      const v = await env.DB.prepare("SELECT d.data AS data FROM app_votes v LEFT JOIN app_state s ON s.member_id=v.voter_id LEFT JOIN app_docs d ON d.path = 'branches/' || s.branch || '/members' AND d.id = v.voter_id WHERE v.path=? AND v.poll_id=?").bind(p, x.id).all();
+      const names = [];
+      for (const y of (v.results || [])) { try { names.push(String(JSON.parse(y.data).name || "").slice(0, 100)); } catch (e) { names.push(""); } }
+      out.votedNames = names.filter(Boolean).sort((a, b) => a.localeCompare(b, "ro")); // în ordine alfabetică, nu în ordinea votării
+    }
+    rows.push(out);
+  }
+  return rows;
+}
+
+async function vote(env, u, body) {
+  const pp = parsePath(body.path, await getBranches(env));
+  const pollId = body.pollId, optionId = body.optionId;
+  if (!pp || !(pp.kind === "polls" || (pp.kind === "branch" && pp.coll === "polls")) || typeof pollId !== "string" || !ID_RE.test(pollId) || typeof optionId !== "string" || !optionId)
+    return fail(400, "Cerere invalidă.");
+  if (!mayVote(u, pp)) return fail(403, "Nu ai drept de vot la acest vot.");
+  const d = await getDoc(env, body.path, pollId);
+  if (!d) return fail(404, "Votul nu există.");
+  if (d.cancelled === true) return fail(400, "Votul a fost anulat.");
+  if (pollClosedByTime(d, today())) return fail(400, "Votul este închis.");
+  if (!Array.isArray(d.options) || !d.options.some((o) => o && o.id === optionId)) return fail(400, "Opțiunea nu există.");
+  const had = await env.DB.prepare("SELECT voter_id FROM app_votes WHERE path=? AND poll_id=? AND voter_id=?").bind(body.path, pollId, u.id).first();
+  if (had) return fail(400, "Ai votat deja.");
+  try { await env.DB.prepare("INSERT INTO app_votes (path, poll_id, voter_id, option_id, at) VALUES (?,?,?,?,?)").bind(body.path, pollId, u.id, optionId, today()).run(); }
+  catch (e) { return fail(400, "Ai votat deja."); }
+  await bump(env, body.path);
   return json({ ok: true });
 }
 

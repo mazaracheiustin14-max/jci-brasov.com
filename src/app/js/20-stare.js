@@ -14,6 +14,8 @@ var S = {
   sel: null,
   feeFilter: "Toate",
   feeView: "fees",
+  bsub: "tablou",
+  evView: "list",
   expFilter: "Toate",
   theme: null,
   note: "",
@@ -201,6 +203,7 @@ function sub(path) {
       delete S.err[path];
     }
     if (path === "branchlist" && rows) syncBranches(rows);
+    if ((path === "badges" || path === "profiles") && rows) ensureAppSubs();
     if (path === "roles" && rows) {
       var sig = myRole().role + "|" + myRole().branch;
       if (S._sig && S._sig !== sig) {
@@ -210,7 +213,7 @@ function sub(path) {
         return;
       }
       S._sig = sig;
-      ensureLeadSubs();
+      ensureAppSubs();
     }
     schedule();
   });
@@ -229,6 +232,30 @@ function syncBranches(rows) {
   names.forEach(function (n) {
     BRANCHES.push(n);
   });
+}
+/* Filiala mea: din rol, din cont (server), din insigna sau din profil (demonstrativ). */
+function myBranchName() {
+  var r = myRole();
+  if (r.branch) return r.branch;
+  if (!S.me) return "";
+  if (S.me.branch) return S.me.branch;
+  var b = badgeOf(S.me.id);
+  if (b && b.branch) return b.branch;
+  var p = myProfile();
+  return (p && p.branch) || "";
+}
+/* Abonările după rol: evidența conducerii, apoi evenimentele și voturile filialei mele. */
+function ensureAppSubs() {
+  ensureLeadSubs();
+  if (!S.me) return;
+  var rl = myRole().role;
+  if (rl === "mod") return;
+  if (rl === "national" || rl === "president") sub("polls");
+  var b = myBranchName();
+  if (!b) return;
+  sub("branches/" + b + "/events");
+  sub("branches/" + b + "/attend");
+  if (rl !== "national") sub("branches/" + b + "/polls");
 }
 function ensureLeadSubs() {
   var rl = myRole().role;
@@ -263,7 +290,7 @@ function subscribeAll() {
   sub("badges");
   sub("roles");
   if (S.me) sub("data/users/" + S.me.id);
-  ensureLeadSubs();
+  ensureAppSubs();
 }
 function fixGateTop() {
   var g = document.querySelector(".demo-bar+.gate .gate-top"),

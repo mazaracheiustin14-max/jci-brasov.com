@@ -41,12 +41,14 @@ src/app/js/00-util.js            constante, formatare, date
            50-director-profil.js ecrane: director, profil
            55-finante.js         ecrane: tablou, cotizații, donații, cheltuieli
            58-structura.js       structură (filiale, președinți), conducerea filialei, predarea funcției, excluderea
+           62-evenimente.js      evenimente, participare, contorul pe persoană
+           64-voturi.js          voturi naționale și de adunare generală
            60-foi-finante.js     foi: membri, cotizații, donații, cheltuieli
            70-actiuni.js         onAct(act, id): toate butoanele
            80-catalog.js         catalogul vizual /app?ui
            90-pornire.js         start()
 src/app/img/                     logo.png, icon.png
-src/app/etape/                   proiectul tehnic al fiecărei etape (E1.md, E1b-autentificare.md ...)
+src/app/etape/                   proiectul tehnic al fiecărei etape (E1.md, E1b-autentificare.md, E3-E4-evenimente-voturi.md ...)
 src/app/tests/                   teste (vezi mai jos)
 worker/app.js                    API-ul /api/app/* și regulile de acces
 ```

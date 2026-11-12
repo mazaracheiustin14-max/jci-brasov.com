@@ -435,7 +435,8 @@ function uiChips(items, current, act) {
   );
 }
 /* Vot. p: { id, title, scope, closes: "AAAA-LL-ZZ", state: "open" | "closed", options: [{ id, label, votes }],
-   voted: id-ul opțiunii alese sau "", canVote, showResults, voters: câți au drept de vot (opțional) }.
+   cancelled (opțional), voted: id-ul opțiunii alese sau "", canVote, showResults, voters: câți au drept de vot (opțional) }.
+   extra: HTML în plus la sfârșitul cardului, de exemplu butoanele creatorului (opțional).
    Formularul are data-poll="id"; trimiterea se tratează în modulul de voturi. */
 function uiPoll(p) {
   var open = p.state === "open";
@@ -446,13 +447,17 @@ function uiPoll(p) {
     '<div class="poll-h"><h3>' +
     esc(p.title) +
     "</h3>" +
-    uiTag(open ? "Deschis până la " + dro(p.closes) : "Închis", open ? "good" : "neutral", open ? "clock" : "check") +
+    (p.cancelled
+      ? uiTag("Anulat", "neutral", "x")
+      : uiTag(open ? "Deschis până la " + dro(p.closes) : "Închis", open ? "good" : "neutral", open ? "clock" : "check")) +
     '</div><p class="small">' +
     esc(p.scope) +
     (p.showResults ? '<span class="sep"></span>' + total + (total === 1 ? " vot" : " voturi") + (p.voters ? " din " + p.voters : "") : "") +
     "</p>";
   var body;
-  if (open && p.canVote && !p.voted) {
+  if (p.cancelled) {
+    body = '<p class="small">Vot anulat. Nu se mai primesc voturi și nu există rezultat.</p>';
+  } else if (open && p.canVote && !p.voted) {
     body =
       '<form class="poll-f" data-poll="' +
       esc(p.id) +
@@ -485,10 +490,11 @@ function uiPoll(p) {
   } else {
     body = '<p class="small">' + (p.voted ? "Ai votat. " : "") + "Rezultatul apare după închiderea votului.</p>";
   }
-  return '<div class="poll">' + head + body + "</div>";
+  return '<div class="poll">' + head + body + (p.extra || "") + "</div>";
 }
 /* Eveniment. e: { id, title, date: "AAAA-LL-ZZ", place, count, going, past, income, spent (în bani; lipsesc dacă
-   regulile filialei ascund sumele), mine: contribuția mea, text scurt }. Butonul trimite data-act="evgo". */
+   regulile filialei ascund sumele), cancelled (anulat: fără buton), mine: contribuția mea, text scurt, act: acțiunea la apăsarea cardului (opțional,
+   primește data-id = id), extra: HTML în plus în dreapta, de exemplu un buton (opțional) }. Butonul trimite data-act="evgo". */
 function uiEvent(e) {
   var d = String(e.date || "").split("-");
   var money =
@@ -501,8 +507,10 @@ function uiEvent(e) {
       : "";
   var right = e.past
     ? e.going
-      ? uiTag("Am participat", "good", "check")
-      : ""
+      ? uiTag("Am participat", "good", "check") + (e.extra || "")
+      : e.cancelled
+        ? ""
+        : '<button class="btn sm" data-act="evgo" data-id="' + esc(e.id) + '">Am participat</button>'
     : '<button class="btn sm' +
       (e.going ? " sec" : "") +
       '" data-act="evgo" data-id="' +
@@ -511,7 +519,9 @@ function uiEvent(e) {
       (e.going ? "Particip" : "Vin și eu") +
       "</button>";
   return (
-    '<div class="ev"><div class="ev-date"><b>' +
+    '<div class="ev"' +
+    (e.act ? ' data-act="' + esc(e.act) + '" data-id="' + esc(e.id) + '"' : "") +
+    '><div class="ev-date"><b>' +
     esc(d[2] || "") +
     "</b><span>" +
     (MONTHS[+d[1] - 1] || "") +
@@ -519,7 +529,7 @@ function uiEvent(e) {
     esc(e.title) +
     '</h3><span class="meta">' +
     esc(e.place || "") +
-    (e.count != null ? '<span class="sep"></span>' + e.count + " participanți" : "") +
+    (e.count != null ? '<span class="sep"></span>' + (e.count === 1 ? "1 participant" : e.count + " participanți") : "") +
     "</span>" +
     money +
     (e.mine ? '<span class="meta">Contribuția mea: ' + esc(e.mine) + "</span>" : "") +
@@ -1040,11 +1050,97 @@ function demoSeed(put) {
     }),
   );
   put("branches/Brașov/settings", "main", { opening: 0 });
+  /* evenimente, participări și voturi de probă; datele sunt relative la azi */
+  var ev1 = "ev-past",
+    ev2 = "ev-next";
+  put("branches/Brașov/events", ev1, {
+    title: "Atelier de vorbit în public",
+    date: addDays(t, -20),
+    place: "Sediul filialei",
+    note: "Exerciții de prezentare în fața grupului.",
+    cancelled: false,
+    createdBy: "u-pres-bv",
+    createdAt: addDays(t, -40) + "T10:00:00.000Z",
+  });
+  put("branches/Brașov/events", ev2, {
+    title: "Seară de networking",
+    date: addDays(t, 10),
+    place: "CATTIA Brașov",
+    note: "",
+    cancelled: false,
+    createdBy: "u-board-bv",
+    createdAt: addDays(t, -2) + "T10:00:00.000Z",
+  });
+  [
+    [ev1, "u-m1", true, "Am moderat panelul de întrebări", 0],
+    [ev1, "u-m2", true, "Am adus sponsorul pentru sală", 150000],
+    [ev1, "u-pres-bv", true, "Am deschis evenimentul", 0],
+    [ev1, "u-m3", false, "", 0],
+    [ev2, "u-m2", true, "", 0],
+  ].forEach(function (a) {
+    var o = { eventId: a[0], memberId: a[1], going: a[2], did: a[3], at: t + "T09:00:00.000Z", by: a[1] };
+    if (a[4]) o.amount = a[4];
+    put("branches/Brașov/attend", a[0] + "_" + a[1], o);
+  });
+  put("branches/Brașov/polls", "pl-open", {
+    title: "Aprobăm bugetul pentru evenimentul din primăvară?",
+    options: [
+      { id: "da", label: "Da" },
+      { id: "nu", label: "Nu" },
+      { id: "ab", label: "Mă abțin" },
+    ],
+    closes: addDays(t, 6),
+    closed: false,
+    cancelled: false,
+    createdBy: "u-pres-bv",
+    createdAt: addDays(t, -1) + "T10:00:00.000Z",
+    votes: { "u-m2": "da" },
+  });
+  put("branches/Brașov/polls", "pl-closed", {
+    title: "Data adunării generale de iarnă",
+    options: [
+      { id: "a", label: "12 decembrie" },
+      { id: "b", label: "19 decembrie" },
+    ],
+    closes: addDays(t, -5),
+    closed: false,
+    cancelled: false,
+    createdBy: "u-pres-bv",
+    createdAt: addDays(t, -15) + "T10:00:00.000Z",
+    votes: { "u-m1": "a", "u-m2": "a", "u-m3": "b" },
+  });
+  put("polls", "pn-open", {
+    title: "Orașul conferinței naționale de anul viitor",
+    options: [
+      { id: "bv", label: "Brașov" },
+      { id: "cj", label: "Cluj" },
+      { id: "b", label: "București" },
+    ],
+    closes: addDays(t, 14),
+    closed: false,
+    cancelled: false,
+    createdBy: "u-nat",
+    createdAt: addDays(t, -1) + "T10:00:00.000Z",
+    votes: {},
+  });
+  put("polls", "pn-closed", {
+    title: "Cotizația națională pentru anul viitor",
+    options: [
+      { id: "keep", label: "Rămâne neschimbată" },
+      { id: "up", label: "Crește" },
+    ],
+    closes: addDays(t, -9),
+    closed: false,
+    cancelled: false,
+    createdBy: "u-nat",
+    createdAt: addDays(t, -30) + "T10:00:00.000Z",
+    votes: { "u-pres-bv": "keep", "u-pres-cj": "up" },
+  });
   put("roles", "u-nat", { role: "national", branch: "Brașov", title: "Președinte național", since: "2026-11-01" });
   put("roles", "u-pres-bv", { role: "president", branch: "Brașov", title: "Președinte", since: "2026-11-01" });
   put("roles", "u-pres-cj", { role: "president", branch: "Cluj", title: "Președinte", since: "2026-11-01" });
   put("roles", "u-trez-bv", { role: "treasurer", branch: "Brașov", title: "Vicepreședinte trezorier", since: "2026-11-01" });
-  put("roles", "u-board-bv", { role: "board", branch: "Brașov", title: "Vicepreședinte comunicare", since: "2026-11-01" });
+  put("roles", "u-board-bv", { role: "board", branch: "Brașov", title: "Vicepreședinte proiecte", since: "2026-11-01" });
   [
     ["u-nat", "Președinte național (probă)", "Brașov"],
     ["u-pres-cj", "Președinte Cluj (probă)", "Cluj"],
@@ -1093,6 +1189,8 @@ var S = {
   sel: null,
   feeFilter: "Toate",
   feeView: "fees",
+  bsub: "tablou",
+  evView: "list",
   expFilter: "Toate",
   theme: null,
   note: "",
@@ -1280,6 +1378,7 @@ function sub(path) {
       delete S.err[path];
     }
     if (path === "branchlist" && rows) syncBranches(rows);
+    if ((path === "badges" || path === "profiles") && rows) ensureAppSubs();
     if (path === "roles" && rows) {
       var sig = myRole().role + "|" + myRole().branch;
       if (S._sig && S._sig !== sig) {
@@ -1289,7 +1388,7 @@ function sub(path) {
         return;
       }
       S._sig = sig;
-      ensureLeadSubs();
+      ensureAppSubs();
     }
     schedule();
   });
@@ -1308,6 +1407,30 @@ function syncBranches(rows) {
   names.forEach(function (n) {
     BRANCHES.push(n);
   });
+}
+/* Filiala mea: din rol, din cont (server), din insigna sau din profil (demonstrativ). */
+function myBranchName() {
+  var r = myRole();
+  if (r.branch) return r.branch;
+  if (!S.me) return "";
+  if (S.me.branch) return S.me.branch;
+  var b = badgeOf(S.me.id);
+  if (b && b.branch) return b.branch;
+  var p = myProfile();
+  return (p && p.branch) || "";
+}
+/* Abonările după rol: evidența conducerii, apoi evenimentele și voturile filialei mele. */
+function ensureAppSubs() {
+  ensureLeadSubs();
+  if (!S.me) return;
+  var rl = myRole().role;
+  if (rl === "mod") return;
+  if (rl === "national" || rl === "president") sub("polls");
+  var b = myBranchName();
+  if (!b) return;
+  sub("branches/" + b + "/events");
+  sub("branches/" + b + "/attend");
+  if (rl !== "national") sub("branches/" + b + "/polls");
 }
 function ensureLeadSubs() {
   var rl = myRole().role;
@@ -1342,7 +1465,7 @@ function subscribeAll() {
   sub("badges");
   sub("roles");
   if (S.me) sub("data/users/" + S.me.id);
-  ensureLeadSubs();
+  ensureAppSubs();
 }
 function fixGateTop() {
   var g = document.querySelector(".demo-bar+.gate .gate-top"),
@@ -1643,32 +1766,12 @@ async function autoProcess() {
 /* Randarea paginii: antet, navigare, alegerea ecranului */
 function tabsFor() {
   var rl = myRole().role;
+  var ev = ["evenimente", "Evenimente", "cal"],
+    vo = ["voturi", "Voturi", "vote"];
   if (rl === "mod") return [["structura", "Structură", "build"]];
-  if (rl === "national")
-    return [
-      ["director", "Director", "dir"],
-      ["structura", "Structură", "build"],
-      ["profil", "Profilul meu", "me"],
-    ];
-  if (rl === "board")
-    return [
-      ["director", "Director", "dir"],
-      ["donatii", "Donații", "gift"],
-      ["cheltuieli", "Cheltuieli", "spend"],
-      ["profil", "Profilul meu", "me"],
-    ];
-  if (!isLead())
-    return [
-      ["director", "Director", "dir"],
-      ["profil", "Profilul meu", "me"],
-    ];
-  return [
-    ["director", "Director", "dir"],
-    ["tablou", "Tablou", "dash"],
-    ["cotizatii", "Cotizații", "fee"],
-    ["donatii", "Donații", "gift"],
-    ["cheltuieli", "Cheltuieli", "spend"],
-  ];
+  if (rl === "national") return [["director", "Director", "dir"], ev, vo, ["structura", "Structură", "build"]];
+  if (rl === "board" || isLead()) return [["director", "Director", "dir"], ev, vo, ["filiala", "Filială", "build"]];
+  return [["director", "Director", "dir"], ev, vo, ["profil", "Profilul meu", "me"]];
 }
 function render() {
   var app = document.getElementById("app");
@@ -1788,10 +1891,9 @@ function render() {
   if (S.tab === "director") body = vDirector();
   else if (S.tab === "profil") body = vProfile();
   else if (S.tab === "structura") body = vStructure();
-  else if (S.tab === "tablou") body = vDash();
-  else if (S.tab === "cotizatii") body = vFees();
-  else if (S.tab === "donatii") body = vDon();
-  else if (S.tab === "cheltuieli") body = vExp();
+  else if (S.tab === "evenimente") body = vEvents();
+  else if (S.tab === "voturi") body = vVotes();
+  else if (S.tab === "filiala") body = vBranch();
   else body = vDirector();
   var note =
     (S.note ? '<div class="notice">' + esc(S.note) + "</div>" : "") +
@@ -2337,6 +2439,31 @@ function openProfile(id) {
 
 /* ---- tablou ---- */
 /* Ecrane: tablou, cotizații, donații, cheltuieli */
+/* Fila „Filială”: adună ecranele financiare ale filialei sub un rând de filtre. Conducerea de tip board vede doar donațiile și cheltuielile. */
+function branchSubs() {
+  return isBoard()
+    ? [
+        ["donatii", "Donații"],
+        ["cheltuieli", "Cheltuieli"],
+      ]
+    : [
+        ["tablou", "Tablou"],
+        ["cotizatii", "Cotizații"],
+        ["donatii", "Donații"],
+        ["cheltuieli", "Cheltuieli"],
+      ];
+}
+function vBranch() {
+  var subs = branchSubs();
+  if (
+    !subs.some(function (x) {
+      return x[0] === S.bsub;
+    })
+  )
+    S.bsub = subs[0][0];
+  var body = S.bsub === "tablou" ? vDash() : S.bsub === "cotizatii" ? vFees() : S.bsub === "donatii" ? vDon() : vExp();
+  return uiChips(subs, S.bsub, "bsub") + body;
+}
 function vDash() {
   var b = curBranch();
   var r = report(b);
@@ -3614,6 +3741,736 @@ async function feeUpdate(id, patch, summary) {
   if (ok) await recomputeBadge(b, f.memberId);
   return ok;
 }
+/* Evenimente: lista filialei mele, participarea fiecăruia, ce a făcut la eveniment, contorul pe persoană.
+   Datele: branches/<filiala>/events și branches/<filiala>/attend (id = <eveniment>_<membru>). Drepturile le verifică serverul. */
+function evPath() {
+  return "branches/" + myBranchName() + "/events";
+}
+function atPath() {
+  return "branches/" + myBranchName() + "/attend";
+}
+/* Creează și editează evenimente: președintele și conducerea de tip „altă funcție” (board). */
+function isEvManager() {
+  var r = myRole().role;
+  return r === "president" || r === "board";
+}
+/* Conducerea filialei: vede participarea tuturor. */
+function isBranchLeadership() {
+  var r = myRole().role;
+  return r === "president" || r === "treasurer" || r === "board";
+}
+function evPast(e) {
+  return String(e.date || "") < today();
+}
+function evById(id) {
+  return (
+    col(evPath()).filter(function (e) {
+      return e.id === id;
+    })[0] || null
+  );
+}
+function myAttend(eid) {
+  return (
+    col(atPath()).filter(function (x) {
+      return x.eventId === eid && x.memberId === S.me.id;
+    })[0] || null
+  );
+}
+function attRowsOf(eid) {
+  return col(atPath()).filter(function (x) {
+    return x.eventId === eid && x.going;
+  });
+}
+/* Contorul pe eveniment: serverul îl trimite ca count; în demonstrativ se numără local. */
+function evCount(e) {
+  return e.count != null ? e.count : attRowsOf(e.id).length;
+}
+/* Rândurile cu participare la evenimente trecute și neanulate, ale unui membru. */
+function pastGoing(mid) {
+  return col(atPath()).filter(function (x) {
+    if (x.memberId !== mid || !x.going) return false;
+    var e = evById(x.eventId);
+    return !!e && !e.cancelled && evPast(e);
+  });
+}
+function attName(r) {
+  return r.name || nameOf(r.memberId);
+}
+function memberKey(m) {
+  return S.server ? m.id : m.userId || m.id;
+}
+function didText(r) {
+  return (r.did || "") + (r.amount ? (r.did ? " | " : "") + fmt(r.amount) + " RON" : "");
+}
+function saveErr(e) {
+  toast(e && e.message && !/^http /.test(e.message) ? e.message : "Nu am putut salva. Încearcă din nou.");
+}
+async function saveAttend(eid, mid, o) {
+  try {
+    await S.store.set(atPath(), eid + "_" + mid, o);
+    return true;
+  } catch (e) {
+    saveErr(e);
+    return false;
+  }
+}
+async function saveEvent(id, o) {
+  try {
+    await S.store.set(evPath(), id, o);
+    return true;
+  } catch (e) {
+    saveErr(e);
+    return false;
+  }
+}
+
+function vEvents() {
+  var b = myBranchName();
+  var lead = isBranchLeadership();
+  var h =
+    '<div class="page-head"><h1>Evenimente</h1>' +
+    (isEvManager() ? '<button class="btn sm" data-act="newev">Adaugă eveniment</button>' : "") +
+    "</div>";
+  if (!b) return h + emptyBox("Nicio filială", "Contul tău nu e legat încă de o filială.", "", "");
+  if (S.err[evPath()])
+    return h + emptyBox("Nu am putut încărca evenimentele", "Verifică conexiunea la internet și încearcă din nou.", "Reîncarcă", "retry");
+  if (lead)
+    h += uiChips(
+      [
+        ["list", "Evenimente"],
+        ["part", "Participare"],
+      ],
+      S.evView,
+      "evv",
+    );
+  if (lead && S.evView === "part") return h + vParticipation();
+  var n = pastGoing(S.me.id).length;
+  h += '<div class="notice info">Ai participat la ' + n + (n === 1 ? " eveniment." : " evenimente.") + "</div>";
+  var mgr = isEvManager();
+  var evs = col(evPath()).filter(function (e) {
+    return mgr || !e.cancelled;
+  });
+  function card(e) {
+    var my = myAttend(e.id);
+    var past = evPast(e) || !!e.cancelled;
+    var going = !!(my && my.going) && !e.cancelled;
+    return uiEvent({
+      id: e.id,
+      title: e.title + (e.cancelled ? " (anulat)" : ""),
+      date: e.date,
+      place: e.place,
+      count: evCount(e),
+      going: going,
+      past: past,
+      cancelled: !!e.cancelled,
+      mine: going && past && my ? didText(my) : "",
+      extra: going && past ? '<button class="btn sm sec" data-act="evdid" data-id="' + esc(e.id) + '">Ce am făcut</button>' : "",
+      act: "evopen",
+    });
+  }
+  var next = evs
+    .filter(function (e) {
+      return !e.cancelled && !evPast(e);
+    })
+    .sort(function (a, c) {
+      return a.date < c.date ? -1 : 1;
+    });
+  var gone = evs
+    .filter(function (e) {
+      return e.cancelled || evPast(e);
+    })
+    .sort(function (a, c) {
+      return a.date < c.date ? 1 : -1;
+    });
+  h += uiSection("Urmează");
+  h += next.length
+    ? '<div class="list">' + next.map(card).join("") + "</div>"
+    : emptyBox("Niciun eveniment programat", "Evenimentele noi ale filialei apar aici.", mgr ? "Adaugă eveniment" : "", "newev");
+  if (gone.length) h += uiSection("Au trecut") + '<div class="list">' + gone.map(card).join("") + "</div>";
+  return h;
+}
+
+/* Participare (conducerea filialei): contorul pe persoană */
+function vParticipation() {
+  var rows = col(atPath());
+  var ids = [];
+  rows.forEach(function (r) {
+    if (ids.indexOf(r.memberId) < 0) ids.push(r.memberId);
+  });
+  var people = ids
+    .map(function (id) {
+      var r0 = rows.filter(function (r) {
+        return r.memberId === id;
+      })[0];
+      return { id: id, name: attName(r0), n: pastGoing(id).length };
+    })
+    .sort(function (a, c) {
+      return c.n - a.n || (norm(a.name) < norm(c.name) ? -1 : 1);
+    });
+  var pastEvs = col(evPath()).filter(function (e) {
+    return !e.cancelled && evPast(e);
+  });
+  var total = people.reduce(function (s, p) {
+    return s + p.n;
+  }, 0);
+  var h = uiStats([
+    { l: "Evenimente trecute", n: String(pastEvs.length) },
+    { l: "Participări", n: String(total), s: "pe toate evenimentele" },
+  ]);
+  if (isEvManager()) h += '<div class="acts"><button class="btn sm" data-act="evpresence">Consemnează prezența</button></div>';
+  h += uiSection("Participanți");
+  h += people.length
+    ? '<div class="list">' +
+      people
+        .map(function (p) {
+          return row({
+            act: "partm",
+            id: p.id,
+            avatar: p.name,
+            title: p.name,
+            meta: esc(p.n + (p.n === 1 ? " eveniment" : " evenimente")),
+            right: '<span class="num"><b>' + p.n + "</b></span>",
+          });
+        })
+        .join("") +
+      "</div>"
+    : emptyBox("Nicio participare înregistrată", "Participările membrilor apar aici.", "", "");
+  return h;
+}
+function sheetPerson(mid) {
+  var rows = pastGoing(mid).sort(function (a, c) {
+    var ea = evById(a.eventId),
+      ec = evById(c.eventId);
+    return ea.date < ec.date ? 1 : -1;
+  });
+  var any = col(atPath()).filter(function (r) {
+    return r.memberId === mid;
+  })[0];
+  openSheet(
+    "<h2>" +
+      esc(any ? attName(any) : nameOf(mid)) +
+      '</h2><p class="small">' +
+      rows.length +
+      (rows.length === 1 ? " eveniment" : " evenimente") +
+      "</p>" +
+      (rows.length
+        ? '<div class="list">' +
+          rows
+            .map(function (r) {
+              var e = evById(r.eventId);
+              return row({ title: e.title, meta: esc(dro(e.date) + " | " + (didText(r) || "fără mențiune")) });
+            })
+            .join("") +
+          "</div>"
+        : '<p class="small">Nicio participare la evenimente trecute.</p>') +
+      '<div class="sheet-acts"><button class="btn sec" data-act="closesheet">Închide</button></div>',
+  );
+}
+
+/* Participarea mea */
+async function evGo(id) {
+  var e = evById(id);
+  if (!e || e.cancelled) return;
+  var my = myAttend(id);
+  var o = { eventId: id, memberId: S.me.id, going: !(my && my.going), did: my ? my.did || "" : "" };
+  if (my && my.amount) o.amount = my.amount;
+  await saveAttend(id, S.me.id, o);
+}
+function didFields(r) {
+  return (
+    '<div class="field"><label for="dd_t">Ce ai făcut</label><textarea id="dd_t" name="did" maxlength="300">' +
+    esc(r ? r.did : "") +
+    "</textarea></div>" +
+    inp(
+      "amount",
+      "Sumă adusă sau cheltuită (RON, opțional)",
+      r && r.amount ? String(r.amount / 100).replace(".", ",") : "",
+      "text",
+      "dd_a",
+      'inputmode="decimal"',
+    )
+  );
+}
+function readDid(fd, eid, mid) {
+  var did = String(fd.get("did") || "").trim();
+  var raw = String(fd.get("amount") || "").trim();
+  if (did.length > 300) return fieldErr("Textul are cel mult 300 de caractere.");
+  var o = { eventId: eid, memberId: mid, going: true, did: did };
+  if (raw) {
+    var b = toBani(raw);
+    if (isNaN(b)) return fieldErr("Introdu suma în lei, de exemplu 150,00.");
+    o.amount = b;
+  }
+  return o;
+}
+function sheetDid(eid) {
+  var e = evById(eid);
+  if (!e) return;
+  var my = myAttend(eid);
+  openSheet(
+    '<h2>Ce am făcut</h2><p class="small">' + esc(e.title) + "</p><form>" + didFields(my) + errActs("Salvează"),
+    async function (fd) {
+      var o = readDid(fd, eid, S.me.id);
+      if (!o) return;
+      if (await saveAttend(eid, S.me.id, o)) {
+        closeSheet();
+        toast("Modificările au fost salvate.");
+      }
+    },
+  );
+}
+
+/* Foaia unui eveniment */
+function sheetEventDetail(id) {
+  var e = evById(id);
+  if (!e) return;
+  var lead = isBranchLeadership();
+  var rows = lead ? attRowsOf(id) : [];
+  var past = evPast(e);
+  var h =
+    "<h2>" +
+    esc(e.title) +
+    '</h2><p class="small">' +
+    dro(e.date) +
+    (e.place ? " | " + esc(e.place) : "") +
+    (e.cancelled ? " | anulat" : "") +
+    "</p>" +
+    (e.note ? '<p style="margin:12px 0">' + esc(e.note) + "</p>" : "") +
+    '<p class="small">' +
+    evCount(e) +
+    " participanți</p>";
+  if (lead) {
+    h += uiSection("Participanți");
+    h += rows.length
+      ? '<div class="list">' +
+        rows
+          .map(function (r) {
+            return row({ avatar: attName(r), title: attName(r), meta: esc(didText(r) || "fără mențiune") });
+          })
+          .join("") +
+        "</div>"
+      : '<p class="small">Niciun participant înregistrat.</p>';
+  }
+  var acts = "";
+  if (isEvManager() && !e.cancelled) {
+    acts += '<button class="btn sec" data-act="evedit" data-id="' + esc(id) + '">Editează</button>';
+    if (past) acts += '<button class="btn sec" data-act="evpresence" data-id="' + esc(id) + '">Consemnează prezența</button>';
+    acts += '<button class="btn crit" data-act="evcancel" data-id="' + esc(id) + '">Anulează evenimentul</button>';
+  }
+  h +=
+    (acts ? '<div class="acts" style="margin-top:12px">' + acts + "</div>" : "") +
+    '<div class="sheet-acts"><button class="btn sec" data-act="closesheet">Închide</button></div>';
+  openSheet(h);
+}
+function sheetEventForm(id) {
+  var e = id ? evById(id) : null;
+  openSheet(
+    "<h2>" +
+      (e ? "Editează evenimentul" : "Adaugă eveniment") +
+      "</h2><form>" +
+      inp("title", "Denumirea", e ? e.title : "", "text", "ev_t", 'maxlength="120" autocomplete="off"') +
+      inp("date", "Data", e ? e.date : today(), "date", "ev_d") +
+      inp("place", "Locul", e ? e.place : "", "text", "ev_p", 'maxlength="120" autocomplete="off"') +
+      '<div class="field"><label for="ev_n">Descriere</label><textarea id="ev_n" name="note" maxlength="500">' +
+      esc(e ? e.note : "") +
+      "</textarea></div>" +
+      errActs("Salvează"),
+    async function (fd) {
+      var title = String(fd.get("title") || "").trim();
+      var date = String(fd.get("date") || "");
+      var place = String(fd.get("place") || "").trim();
+      var note = String(fd.get("note") || "").trim();
+      if (title.length < 2 || title.length > 120) return fieldErr("Denumirea are între 2 și 120 de caractere.");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return fieldErr("Alege data evenimentului.");
+      if (place.length > 120) return fieldErr("Locul are cel mult 120 de caractere.");
+      if (note.length > 500) return fieldErr("Descrierea are cel mult 500 de caractere.");
+      var o = { title: title, date: date, place: place, note: note, cancelled: e ? !!e.cancelled : false };
+      /* id scurt: id-ul participării (<eveniment>_<membru>) are cel mult 64 de caractere, iar id-ul unui membru are 36 */
+      var nid = id || uid().replace(/-/g, "").slice(0, 20);
+      if (!S.server) {
+        o.createdBy = e ? e.createdBy : S.me.id;
+        o.createdAt = e ? e.createdAt : new Date().toISOString();
+      }
+      if (await saveEvent(nid, o)) {
+        closeSheet();
+        toast("Modificările au fost salvate.");
+      }
+    },
+  );
+}
+function sheetEventCancel(id) {
+  var e = evById(id);
+  if (!e) return;
+  openSheet(
+    "<h2>Anulează evenimentul</h2><p>" +
+      esc(e.title) +
+      ' nu se șterge: rămâne în listă, marcat ca anulat, iar participările rămân consemnate.</p><div class="sheet-acts"><button class="btn crit" data-act="evcancel2" data-id="' +
+      esc(id) +
+      '">Anulează evenimentul</button><button class="btn sec" data-act="closesheet">Renunț</button></div>',
+  );
+}
+async function doEventCancel(id) {
+  var e = evById(id);
+  if (!e) return;
+  var o = { title: e.title, date: e.date, place: e.place || "", note: e.note || "", cancelled: true };
+  if (!S.server) Object.assign(o, { createdBy: e.createdBy, createdAt: e.createdAt });
+  if (await saveEvent(id, o)) {
+    closeSheet();
+    toast("Evenimentul a fost anulat.");
+  }
+}
+
+/* Consemnarea prezenței unui membru la un eveniment trecut (președinte și conducere de tip board) */
+function sheetPresence(eid) {
+  var b = myBranchName();
+  var evs = col(evPath())
+    .filter(function (e) {
+      return !e.cancelled && evPast(e);
+    })
+    .sort(function (a, c) {
+      return a.date < c.date ? 1 : -1;
+    });
+  var people;
+  if (myRole().role === "president") {
+    people = col("branches/" + b + "/members")
+      .filter(function (m) {
+        return !m.excluded;
+      })
+      .sort(byName)
+      .map(function (m) {
+        return [memberKey(m), m.name];
+      });
+  } else {
+    people = [];
+    col(atPath()).forEach(function (r) {
+      if (
+        !people.some(function (p) {
+          return p[0] === r.memberId;
+        })
+      )
+        people.push([r.memberId, attName(r)]);
+    });
+  }
+  if (!evs.length) {
+    toast("Nu există evenimente trecute la care să consemnezi prezența.");
+    return;
+  }
+  if (!people.length) {
+    toast("Nu există membri în listă.");
+    return;
+  }
+  openSheet(
+    '<h2>Consemnează prezența</h2><p class="small">Pentru un membru care a fost la un eveniment trecut.</p><form>' +
+      sel("memberId", people, "", "Membrul", "pr_m") +
+      sel(
+        "eventId",
+        evs.map(function (e) {
+          return [e.id, e.title + " (" + dro(e.date) + ")"];
+        }),
+        eid || evs[0].id,
+        "Evenimentul",
+        "pr_e",
+      ) +
+      didFields(null) +
+      errActs("Salvează"),
+    async function (fd) {
+      var mid = String(fd.get("memberId") || "");
+      var ev = String(fd.get("eventId") || "");
+      if (!mid || !ev) return fieldErr("Alege membrul și evenimentul.");
+      var o = readDid(fd, ev, mid);
+      if (!o) return;
+      if (await saveAttend(ev, mid, o)) {
+        closeSheet();
+        toast("Prezența a fost consemnată.");
+      }
+    },
+  );
+}
+/* Voturi: naționale (votează președinții de filiale) și de adunare generală (votează membrii filialei).
+   Votul e secret: serverul nu trimite cine ce a votat, iar totalurile apar doar după închidere. */
+function pollPaths() {
+  var r = myRole().role,
+    b = myBranchName(),
+    out = [];
+  if (r === "national" || r === "president") out.push("polls");
+  if (b && r !== "national" && r !== "mod") out.push("branches/" + b + "/polls");
+  return out;
+}
+function pollScope(path) {
+  return path === "polls" ? "Președinții de filiale" : "Adunarea generală, " + myBranchName();
+}
+/* Naționale: doar președintele național; de adunare generală: doar președintele filialei. */
+function canCreatePoll(path) {
+  var r = myRole().role;
+  return path === "polls" ? r === "national" : r === "president";
+}
+function findPoll(id) {
+  var paths = pollPaths();
+  for (var i = 0; i < paths.length; i++) {
+    var p = col(paths[i]).filter(function (x) {
+      return x.id === id;
+    })[0];
+    if (p) return { p: p, path: paths[i] };
+  }
+  return null;
+}
+/* Modul demonstrativ: starea votului se calculează local, din câmpul votes al documentului. */
+function demoPoll(p, path) {
+  var votes = p.votes || {};
+  var r = myRole().role;
+  var closed = !!p.closed || !!p.cancelled || String(p.closes) < today();
+  var voters =
+    path === "polls"
+      ? col("roles").filter(function (x) {
+          return x.role === "president";
+        }).length
+      : (S.D.profiles || []).filter(function (x) {
+          var bd = badgeOf(x.id);
+          var rl = roleOfMember({ id: x.id });
+          return x.branch === myBranchName() && !!bd && bd.verified && bd.excluded !== true && !(rl && rl.role === "national");
+        }).length;
+  var v = {
+    state: closed ? "closed" : "open",
+    mine: votes[S.me.id] || "",
+    canVote: path === "polls" ? r === "president" : r !== "national" && r !== "mod",
+    total: Object.keys(votes).length,
+    voters: voters,
+    options: p.options.map(function (o) {
+      var n = 0;
+      Object.keys(votes).forEach(function (k) {
+        if (votes[k] === o.id) n++;
+      });
+      return closed ? { id: o.id, label: o.label, votes: n } : { id: o.id, label: o.label };
+    }),
+  };
+  if (p.createdBy === S.me.id) v.votedNames = Object.keys(votes).map(nameOf);
+  return v;
+}
+function pollCard(p, path) {
+  var v = p.state !== undefined ? p : demoPoll(p, path);
+  var creator = p.createdBy === S.me.id || v.votedNames !== undefined;
+  var open = v.state === "open" && !p.cancelled;
+  var extra = "";
+  if (creator) {
+    extra =
+      '<div class="acts" style="margin-top:12px">' +
+      (open
+        ? '<button class="btn sm sec" data-act="pollclose" data-id="' +
+          esc(p.id) +
+          '">Închide votul acum</button><button class="btn sm crit" data-act="pollcancel" data-id="' +
+          esc(p.id) +
+          '">Anulează votul</button>'
+        : "") +
+      '<button class="btn sm sec" data-act="pollwho" data-id="' +
+      esc(p.id) +
+      '">Cine a votat</button></div>';
+  }
+  return uiPoll({
+    id: p.id,
+    title: p.title,
+    cancelled: !!p.cancelled,
+    scope: pollScope(path),
+    closes: p.closes,
+    state: p.cancelled ? "closed" : v.state,
+    voted: v.mine || "",
+    canVote: !!v.canVote && !p.cancelled,
+    showResults: v.state === "closed" && !p.cancelled,
+    voters: v.voters,
+    options: v.options,
+    extra: extra,
+  });
+}
+function vVotes() {
+  var paths = pollPaths();
+  var h = '<div class="page-head"><h1>Voturi</h1></div>';
+  if (!paths.length) return h + emptyBox("Niciun vot disponibil", "Contul tău nu e legat încă de o filială.", "", "");
+  paths.forEach(function (path) {
+    var title = path === "polls" ? "Voturi naționale" : pollScope(path);
+    h += uiSection(
+      title,
+      canCreatePoll(path) ? '<button class="btn sm" data-act="pollnew" data-id="' + esc(path) + '">Vot nou</button>' : "",
+    );
+    if (S.err[path]) {
+      h += '<p class="small">Nu am putut încărca voturile. Reîncarcă pagina.</p>';
+      return;
+    }
+    var list = col(path)
+      .filter(function (p) {
+        return !p.cancelled || p.createdBy === S.me.id;
+      })
+      .sort(function (a, c) {
+        var ao = !a.closed && String(a.closes) >= today(),
+          co = !c.closed && String(c.closes) >= today();
+        if (ao !== co) return ao ? -1 : 1;
+        return ao ? (a.closes < c.closes ? -1 : 1) : a.closes < c.closes ? 1 : -1;
+      });
+    h += list.length
+      ? '<div class="list">' +
+        list
+          .map(function (p) {
+            return pollCard(p, path);
+          })
+          .join("") +
+        "</div>"
+      : '<p class="small" style="margin-bottom:16px">Niciun vot deocamdată.</p>';
+  });
+  return h;
+}
+
+/* Votarea: formularul uiPoll are data-poll = id-ul votului */
+async function castVote(pollId, optionId) {
+  var f = findPoll(pollId);
+  if (!f) return;
+  if (!optionId) {
+    toast("Alege o opțiune.");
+    return;
+  }
+  if (S.server) {
+    var r;
+    try {
+      r = await svPost("/api/app/vote", { path: f.path, pollId: pollId, optionId: String(optionId) });
+    } catch (e) {
+      toast("Nu am putut contacta serverul. Încearcă din nou.");
+      return;
+    }
+    if (r.status !== 200) {
+      toast((r.body && r.body.error) || "Votul nu a fost înregistrat.");
+      return;
+    }
+    await safe(function () {
+      return S.store.refresh();
+    });
+  } else {
+    var votes = Object.assign({}, f.p.votes || {});
+    votes[S.me.id] = String(optionId);
+    var o = stripId(f.p);
+    o.votes = votes;
+    await S.store.set(f.path, pollId, o);
+  }
+  toast("Votul tău a fost înregistrat.");
+}
+document.addEventListener("submit", function (ev) {
+  var f = ev.target && ev.target.closest ? ev.target.closest("form.poll-f") : null;
+  if (!f || S.mode === "ui") return;
+  ev.preventDefault();
+  castVote(f.getAttribute("data-poll"), new FormData(f).get("opt"));
+});
+
+/* Documentul de scris: doar câmpurile permise (după primul vot, titlul și opțiunile nu se mai schimbă). */
+function pollDoc(p, patch) {
+  var o = {
+    title: p.title,
+    options: p.options.map(function (x) {
+      return { id: x.id, label: x.label };
+    }),
+    closes: p.closes,
+    closed: !!p.closed,
+    cancelled: !!p.cancelled,
+  };
+  if (!S.server) Object.assign(o, { createdBy: p.createdBy, createdAt: p.createdAt, votes: p.votes || {} });
+  return Object.assign(o, patch || {});
+}
+async function savePoll(path, id, o) {
+  try {
+    await S.store.set(path, id, o);
+    return true;
+  } catch (e) {
+    toast(e && e.message && !/^http /.test(e.message) ? e.message : "Nu am putut salva. Încearcă din nou.");
+    return false;
+  }
+}
+function sheetPollNew(path) {
+  openSheet(
+    '<h2>Vot nou</h2><p class="small">' +
+      esc(pollScope(path)) +
+      " votează. Votul e secret: totalurile apar după închidere. După primul vot, întrebarea și opțiunile nu se mai pot schimba.</p><form>" +
+      inp("title", "Întrebarea", "", "text", "pl_t", 'maxlength="200" autocomplete="off"') +
+      '<div class="field"><label for="pl_o">Opțiunile, câte una pe rând (între 2 și 8)</label><textarea id="pl_o" name="options"></textarea></div>' +
+      inp("closes", "Data închiderii", addDays(today(), 7), "date", "pl_d") +
+      errActs("Creează votul"),
+    async function (fd) {
+      var title = String(fd.get("title") || "").trim();
+      var lines = String(fd.get("options") || "")
+        .split(/\r?\n/)
+        .map(function (x) {
+          return x.trim();
+        })
+        .filter(Boolean);
+      var closes = String(fd.get("closes") || "");
+      if (title.length < 4 || title.length > 200) return fieldErr("Întrebarea are între 4 și 200 de caractere.");
+      if (lines.length < 2 || lines.length > 8) return fieldErr("Scrie între 2 și 8 opțiuni, câte una pe rând.");
+      if (
+        lines.some(function (x) {
+          return x.length > 80;
+        })
+      )
+        return fieldErr("O opțiune are cel mult 80 de caractere.");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(closes) || closes < today()) return fieldErr("Alege o dată de închidere de azi înainte.");
+      var o = {
+        title: title,
+        options: lines.map(function (l, i) {
+          return { id: "o" + (i + 1), label: l };
+        }),
+        closes: closes,
+        closed: false,
+        cancelled: false,
+      };
+      if (!S.server) Object.assign(o, { createdBy: S.me.id, createdAt: new Date().toISOString(), votes: {} });
+      if (await savePoll(path, uid(), o)) {
+        closeSheet();
+        toast("Votul a fost creat.");
+      }
+    },
+  );
+}
+async function doPollClose(id) {
+  var f = findPoll(id);
+  if (!f) return;
+  if (await savePoll(f.path, id, pollDoc(f.p, { closed: true }))) toast("Votul a fost închis.");
+}
+function sheetPollCancel(id) {
+  var f = findPoll(id);
+  if (!f) return;
+  openSheet(
+    "<h2>Anulează votul</h2><p>" +
+      esc(f.p.title) +
+      ' rămâne în listă, marcat ca anulat, și nu mai primește voturi.</p><div class="sheet-acts"><button class="btn crit" data-act="pollcancel2" data-id="' +
+      esc(id) +
+      '">Anulează votul</button><button class="btn sec" data-act="closesheet">Renunț</button></div>',
+  );
+}
+async function doPollCancel(id) {
+  var f = findPoll(id);
+  if (!f) return;
+  if (await savePoll(f.path, id, pollDoc(f.p, { cancelled: true }))) {
+    closeSheet();
+    toast("Votul a fost anulat.");
+  }
+}
+/* Cine a votat: doar numele, fără opțiunea aleasă */
+function sheetPollWho(id) {
+  var f = findPoll(id);
+  if (!f) return;
+  var v = f.p.state !== undefined ? f.p : demoPoll(f.p, f.path);
+  var names = (v.votedNames || []).map(function (x) {
+    return typeof x === "string" ? x : x && x.name;
+  });
+  openSheet(
+    '<h2>Cine a votat</h2><p class="small">' +
+      esc(f.p.title) +
+      "</p>" +
+      (names.length
+        ? '<div class="list">' +
+          names
+            .map(function (n) {
+              return row({ avatar: n, title: n, meta: "A votat" });
+            })
+            .join("") +
+          "</div>"
+        : '<p class="small">Nimeni nu a votat încă.</p>') +
+      '<p class="help">Lista arată doar cine a votat, nu și ce a ales.</p><div class="sheet-acts"><button class="btn sec" data-act="closesheet">Închide</button></div>',
+  );
+}
 /* Acțiuni: toate butoanele cu data-act trec prin onAct */
 function csv(rows) {
   return rows
@@ -4131,6 +4988,56 @@ async function onAct(act, id) {
         await S.store.del("data/users/" + S.me.id, "claim");
       } catch (e) {}
       break;
+    case "bsub":
+      S.bsub = id;
+      render();
+      break;
+    case "evv":
+      S.evView = id;
+      render();
+      break;
+    case "evgo":
+      evGo(id);
+      break;
+    case "evdid":
+      sheetDid(id);
+      break;
+    case "evopen":
+      sheetEventDetail(id);
+      break;
+    case "newev":
+      sheetEventForm(null);
+      break;
+    case "evedit":
+      sheetEventForm(id);
+      break;
+    case "evcancel":
+      sheetEventCancel(id);
+      break;
+    case "evcancel2":
+      doEventCancel(id);
+      break;
+    case "evpresence":
+      sheetPresence(id);
+      break;
+    case "partm":
+      sheetPerson(id);
+      break;
+    case "pollnew":
+      sheetPollNew(id);
+      break;
+    case "pollclose":
+      doPollClose(id);
+      break;
+    case "pollcancel":
+      sheetPollCancel(id);
+      break;
+    case "pollcancel2":
+      doPollCancel(id);
+      break;
+    case "pollwho":
+      sheetPollWho(id);
+      break;
     case "handover":
       sheetHandover();
       break;
@@ -4408,7 +5315,7 @@ function renderCatalog() {
     "Evenimente",
     "Membrul își confirmă participarea și își notează contribuția.",
     '<div class="list">' +
-      uiEvent({ id: "e1", title: "Beyond the Initiative", date: d(15), place: "CATTIA Brașov", count: 96, going: false }) +
+      uiEvent({ id: "e1", title: "Beyond the Initiative", date: d(15), place: "CATTIA Brașov", count: 96, going: false, act: "evopen" }) +
       uiEvent({ id: "e2", title: "Seară de networking", date: d(4), place: "Sediul filialei", count: 21, going: true }) +
       uiEvent({
         id: "e3",

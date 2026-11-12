@@ -1,7 +1,7 @@
 # JCI Business: roluri, drepturi și module noi
 
 Specificație dictată de Iustin Măzărache pe 11 noiembrie 2026; deciziile din secțiunea 6 au fost confirmate în aceeași zi.
-Stare: etapa 1 este publicată din 12 noiembrie 2026, împreună cu intrarea cu e-mail și parolă; etapele 2 până la 6 urmează.
+Stare: etapa 1 este publicată din 12 noiembrie 2026, împreună cu intrarea cu e-mail și parolă; evenimentele (participare, contor pe persoană) și voturile sunt publicate din aceeași zi; urmează etapele 2, 5 și 6 și sumele pe eveniment.
 
 ## 1. Piramida
 
@@ -96,8 +96,8 @@ Fiecare etapă se publică separat, după aprobarea lui Iustin, cu teste pe serv
 |---|---|---|
 | E1 | Filiale administrabile, președinte național, predarea funcției, funcții de conducere, excluderea unui membru; intrare cu e-mail și parolă | publicată pe 12 noiembrie 2026 |
 | E2 | Registru simplu de bani, confirmarea cotizației, buget pentru membri, regulile filialei | urmează |
-| E3 | Evenimente: participare, contribuții, statistici | după E2 |
-| E4 | Voturi naționale și de adunare generală | după E1 |
+| E3 | Evenimente: participare, contribuții, contor pe persoană | publicată pe 12 noiembrie 2026; sumele pe eveniment vin cu E2 |
+| E4 | Voturi naționale și de adunare generală | publicată pe 12 noiembrie 2026 |
 | E5 | Mulțumiri de networking, profil cu poză și site | urmează |
 | E6 | Filigran și cutia de cereri | urmează |
 

@@ -1,4 +1,29 @@
 /* Ecrane: tablou, cotizații, donații, cheltuieli */
+/* Fila „Filială”: adună ecranele financiare ale filialei sub un rând de filtre. Conducerea de tip board vede doar donațiile și cheltuielile. */
+function branchSubs() {
+  return isBoard()
+    ? [
+        ["donatii", "Donații"],
+        ["cheltuieli", "Cheltuieli"],
+      ]
+    : [
+        ["tablou", "Tablou"],
+        ["cotizatii", "Cotizații"],
+        ["donatii", "Donații"],
+        ["cheltuieli", "Cheltuieli"],
+      ];
+}
+function vBranch() {
+  var subs = branchSubs();
+  if (
+    !subs.some(function (x) {
+      return x[0] === S.bsub;
+    })
+  )
+    S.bsub = subs[0][0];
+  var body = S.bsub === "tablou" ? vDash() : S.bsub === "cotizatii" ? vFees() : S.bsub === "donatii" ? vDon() : vExp();
+  return uiChips(subs, S.bsub, "bsub") + body;
+}
 function vDash() {
   var b = curBranch();
   var r = report(b);

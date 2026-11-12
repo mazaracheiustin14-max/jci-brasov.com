@@ -445,11 +445,97 @@ function demoSeed(put) {
     }),
   );
   put("branches/Brașov/settings", "main", { opening: 0 });
+  /* evenimente, participări și voturi de probă; datele sunt relative la azi */
+  var ev1 = "ev-past",
+    ev2 = "ev-next";
+  put("branches/Brașov/events", ev1, {
+    title: "Atelier de vorbit în public",
+    date: addDays(t, -20),
+    place: "Sediul filialei",
+    note: "Exerciții de prezentare în fața grupului.",
+    cancelled: false,
+    createdBy: "u-pres-bv",
+    createdAt: addDays(t, -40) + "T10:00:00.000Z",
+  });
+  put("branches/Brașov/events", ev2, {
+    title: "Seară de networking",
+    date: addDays(t, 10),
+    place: "CATTIA Brașov",
+    note: "",
+    cancelled: false,
+    createdBy: "u-board-bv",
+    createdAt: addDays(t, -2) + "T10:00:00.000Z",
+  });
+  [
+    [ev1, "u-m1", true, "Am moderat panelul de întrebări", 0],
+    [ev1, "u-m2", true, "Am adus sponsorul pentru sală", 150000],
+    [ev1, "u-pres-bv", true, "Am deschis evenimentul", 0],
+    [ev1, "u-m3", false, "", 0],
+    [ev2, "u-m2", true, "", 0],
+  ].forEach(function (a) {
+    var o = { eventId: a[0], memberId: a[1], going: a[2], did: a[3], at: t + "T09:00:00.000Z", by: a[1] };
+    if (a[4]) o.amount = a[4];
+    put("branches/Brașov/attend", a[0] + "_" + a[1], o);
+  });
+  put("branches/Brașov/polls", "pl-open", {
+    title: "Aprobăm bugetul pentru evenimentul din primăvară?",
+    options: [
+      { id: "da", label: "Da" },
+      { id: "nu", label: "Nu" },
+      { id: "ab", label: "Mă abțin" },
+    ],
+    closes: addDays(t, 6),
+    closed: false,
+    cancelled: false,
+    createdBy: "u-pres-bv",
+    createdAt: addDays(t, -1) + "T10:00:00.000Z",
+    votes: { "u-m2": "da" },
+  });
+  put("branches/Brașov/polls", "pl-closed", {
+    title: "Data adunării generale de iarnă",
+    options: [
+      { id: "a", label: "12 decembrie" },
+      { id: "b", label: "19 decembrie" },
+    ],
+    closes: addDays(t, -5),
+    closed: false,
+    cancelled: false,
+    createdBy: "u-pres-bv",
+    createdAt: addDays(t, -15) + "T10:00:00.000Z",
+    votes: { "u-m1": "a", "u-m2": "a", "u-m3": "b" },
+  });
+  put("polls", "pn-open", {
+    title: "Orașul conferinței naționale de anul viitor",
+    options: [
+      { id: "bv", label: "Brașov" },
+      { id: "cj", label: "Cluj" },
+      { id: "b", label: "București" },
+    ],
+    closes: addDays(t, 14),
+    closed: false,
+    cancelled: false,
+    createdBy: "u-nat",
+    createdAt: addDays(t, -1) + "T10:00:00.000Z",
+    votes: {},
+  });
+  put("polls", "pn-closed", {
+    title: "Cotizația națională pentru anul viitor",
+    options: [
+      { id: "keep", label: "Rămâne neschimbată" },
+      { id: "up", label: "Crește" },
+    ],
+    closes: addDays(t, -9),
+    closed: false,
+    cancelled: false,
+    createdBy: "u-nat",
+    createdAt: addDays(t, -30) + "T10:00:00.000Z",
+    votes: { "u-pres-bv": "keep", "u-pres-cj": "up" },
+  });
   put("roles", "u-nat", { role: "national", branch: "Brașov", title: "Președinte național", since: "2026-11-01" });
   put("roles", "u-pres-bv", { role: "president", branch: "Brașov", title: "Președinte", since: "2026-11-01" });
   put("roles", "u-pres-cj", { role: "president", branch: "Cluj", title: "Președinte", since: "2026-11-01" });
   put("roles", "u-trez-bv", { role: "treasurer", branch: "Brașov", title: "Vicepreședinte trezorier", since: "2026-11-01" });
-  put("roles", "u-board-bv", { role: "board", branch: "Brașov", title: "Vicepreședinte comunicare", since: "2026-11-01" });
+  put("roles", "u-board-bv", { role: "board", branch: "Brașov", title: "Vicepreședinte proiecte", since: "2026-11-01" });
   [
     ["u-nat", "Președinte național (probă)", "Brașov"],
     ["u-pres-cj", "Președinte Cluj (probă)", "Cluj"],

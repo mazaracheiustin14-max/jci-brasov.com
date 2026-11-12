@@ -106,7 +106,8 @@ function uiChips(items, current, act) {
   );
 }
 /* Vot. p: { id, title, scope, closes: "AAAA-LL-ZZ", state: "open" | "closed", options: [{ id, label, votes }],
-   voted: id-ul opțiunii alese sau "", canVote, showResults, voters: câți au drept de vot (opțional) }.
+   cancelled (opțional), voted: id-ul opțiunii alese sau "", canVote, showResults, voters: câți au drept de vot (opțional) }.
+   extra: HTML în plus la sfârșitul cardului, de exemplu butoanele creatorului (opțional).
    Formularul are data-poll="id"; trimiterea se tratează în modulul de voturi. */
 function uiPoll(p) {
   var open = p.state === "open";
@@ -117,13 +118,17 @@ function uiPoll(p) {
     '<div class="poll-h"><h3>' +
     esc(p.title) +
     "</h3>" +
-    uiTag(open ? "Deschis până la " + dro(p.closes) : "Închis", open ? "good" : "neutral", open ? "clock" : "check") +
+    (p.cancelled
+      ? uiTag("Anulat", "neutral", "x")
+      : uiTag(open ? "Deschis până la " + dro(p.closes) : "Închis", open ? "good" : "neutral", open ? "clock" : "check")) +
     '</div><p class="small">' +
     esc(p.scope) +
     (p.showResults ? '<span class="sep"></span>' + total + (total === 1 ? " vot" : " voturi") + (p.voters ? " din " + p.voters : "") : "") +
     "</p>";
   var body;
-  if (open && p.canVote && !p.voted) {
+  if (p.cancelled) {
+    body = '<p class="small">Vot anulat. Nu se mai primesc voturi și nu există rezultat.</p>';
+  } else if (open && p.canVote && !p.voted) {
     body =
       '<form class="poll-f" data-poll="' +
       esc(p.id) +
@@ -156,10 +161,11 @@ function uiPoll(p) {
   } else {
     body = '<p class="small">' + (p.voted ? "Ai votat. " : "") + "Rezultatul apare după închiderea votului.</p>";
   }
-  return '<div class="poll">' + head + body + "</div>";
+  return '<div class="poll">' + head + body + (p.extra || "") + "</div>";
 }
 /* Eveniment. e: { id, title, date: "AAAA-LL-ZZ", place, count, going, past, income, spent (în bani; lipsesc dacă
-   regulile filialei ascund sumele), mine: contribuția mea, text scurt }. Butonul trimite data-act="evgo". */
+   regulile filialei ascund sumele), cancelled (anulat: fără buton), mine: contribuția mea, text scurt, act: acțiunea la apăsarea cardului (opțional,
+   primește data-id = id), extra: HTML în plus în dreapta, de exemplu un buton (opțional) }. Butonul trimite data-act="evgo". */
 function uiEvent(e) {
   var d = String(e.date || "").split("-");
   var money =
@@ -172,8 +178,10 @@ function uiEvent(e) {
       : "";
   var right = e.past
     ? e.going
-      ? uiTag("Am participat", "good", "check")
-      : ""
+      ? uiTag("Am participat", "good", "check") + (e.extra || "")
+      : e.cancelled
+        ? ""
+        : '<button class="btn sm" data-act="evgo" data-id="' + esc(e.id) + '">Am participat</button>'
     : '<button class="btn sm' +
       (e.going ? " sec" : "") +
       '" data-act="evgo" data-id="' +
@@ -182,7 +190,9 @@ function uiEvent(e) {
       (e.going ? "Particip" : "Vin și eu") +
       "</button>";
   return (
-    '<div class="ev"><div class="ev-date"><b>' +
+    '<div class="ev"' +
+    (e.act ? ' data-act="' + esc(e.act) + '" data-id="' + esc(e.id) + '"' : "") +
+    '><div class="ev-date"><b>' +
     esc(d[2] || "") +
     "</b><span>" +
     (MONTHS[+d[1] - 1] || "") +
@@ -190,7 +200,7 @@ function uiEvent(e) {
     esc(e.title) +
     '</h3><span class="meta">' +
     esc(e.place || "") +
-    (e.count != null ? '<span class="sep"></span>' + e.count + " participanți" : "") +
+    (e.count != null ? '<span class="sep"></span>' + (e.count === 1 ? "1 participant" : e.count + " participanți") : "") +
     "</span>" +
     money +
     (e.mine ? '<span class="meta">Contribuția mea: ' + esc(e.mine) + "</span>" : "") +

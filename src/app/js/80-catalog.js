@@ -67,7 +67,7 @@ function renderCatalog() {
     "Evenimente",
     "Membrul își confirmă participarea și își notează contribuția.",
     '<div class="list">' +
-      uiEvent({ id: "e1", title: "Beyond the Initiative", date: d(15), place: "CATTIA Brașov", count: 96, going: false }) +
+      uiEvent({ id: "e1", title: "Beyond the Initiative", date: d(15), place: "CATTIA Brașov", count: 96, going: false, act: "evopen" }) +
       uiEvent({ id: "e2", title: "Seară de networking", date: d(4), place: "Sediul filialei", count: 21, going: true }) +
       uiEvent({
         id: "e3",
