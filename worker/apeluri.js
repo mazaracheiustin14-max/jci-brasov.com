@@ -292,8 +292,8 @@ async function saveCall(env, h, s, b) {
     "INSERT INTO call_logs (contact_id, inscriere_id, apelant, nume_sunat, telefon, email, sursa, raspuns, revenire_la, era_inscris, ocupatie, provocare, sfat, interes, ia_acasa, oameni, intrebare_invitati, ramane_activ, status_final, vip, revine_la, motiv, acord_date, acord_viitor, acord_bcr, invitatie_trimisa, observatii, rezultat_inscriere) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
   ).bind(contact.id, inscriereId, apelant, numeSunat, contact.telefon || telefon, email, sursaFolosita, raspuns, clean(b.revenire_la, 20),
     ["da", "nu", "nu_stie"].includes(era) ? era : "",
-    da ? g("ocupatie", 200) : "", da ? noFormula(t("provocare", 1500)) : "", da ? noFormula(t("sfat", 1500)) : "", da ? noFormula(t("interes", 1500)) : "",
-    da ? g("ia_acasa", 300) : "", da ? g("oameni", 300) : "", da ? noFormula(t("intrebare_invitati", 1500)) : "", da ? noFormula(t("ramane_activ", 1500)) : "",
+    g("ocupatie", 200), noFormula(t("provocare", 1500)), noFormula(t("sfat", 1500)), noFormula(t("interes", 1500)),
+    g("ia_acasa", 300), g("oameni", 300), noFormula(t("intrebare_invitati", 1500)), noFormula(t("ramane_activ", 1500)),
     statusFinal, TRI.includes(clean(b.vip, 10)) ? clean(b.vip, 10) : "", clean(b.revine_la, 20), g("motiv", 300),
     acordDate ? 1 : 0, acordViitor ? 1 : 0, acordBcr ? 1 : 0, ["da", "nu"].includes(clean(b.invitatie_trimisa, 5)) ? clean(b.invitatie_trimisa, 5) : "",
     noFormula(t("observatii", 2000)), rezultat).run();
@@ -314,7 +314,7 @@ async function saveCall(env, h, s, b) {
 
 // ---------- rutare ----------
 // Se schimbă la fiecare modificare a public/assets/js/apeluri.js, ca telefoanele să nu rămână cu versiunea veche din cache.
-const JS_VERSION = "20261112b";
+const JS_VERSION = "20261112c";
 export function apeluriPage(h, s) {
   return h.html(h.shell("Apeluri Beyond the Initiative", `<p class="k">Panoul echipei</p><h1>Apeluri</h1>
 <div id="ap" data-who="${h.esc(s.who)}"><div class="card"><p class="muted">Se încarcă...</p></div></div>

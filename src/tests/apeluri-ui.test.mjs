@@ -85,7 +85,8 @@ const neins = [...doc.querySelectorAll("button[data-form]")].find((b) => b.close
 neins.click(); await wait();
 const g = (id) => doc.getElementById(id);
 assert.equal(g("f_apelant").value, "Colega"); assert.equal(g("f_nume").value, "Cineva WhatsApp");
-assert.equal(g("sec2").hidden, true);
+assert.equal(g("sec2").hidden, false, "toate întrebările sunt vizibile de la început");
+assert.ok(g("f_rev") && g("f_revine") && g("f_motiv") && g("f_ocupatie") && g("f_activ") && g("f_obs"), "întrebările 5, 7-14, 17, 18, 20 există");
 assert.ok(g("f_status"), "statusul final e mereu vizibil (obligatoriu)");
 g("f_raspuns").value = "da"; g("f_raspuns").dispatchEvent(new w.Event("change", { bubbles: true }));
 assert.equal(g("sec2").hidden, false);

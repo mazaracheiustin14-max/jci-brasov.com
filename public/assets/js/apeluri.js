@@ -136,9 +136,9 @@
       tx("f_tel", "3. Telefon", c ? c.telefon : "", 40, 'inputmode="tel"') +
       (nou ? fld("f_sursa", "Sursa contactului (contact nou)", sel("f_sursa", D.surse.map(function (x) { return [x, x]; }), D.surse[0]).replace("<select", '<select class="mt"')) : "") +
       fld("f_raspuns", "4. Ați reușit să vorbiți? (obligatoriu)", sel("f_raspuns", [["", "Alege"], ["da", "Da"], ["nu", "Nu a răspuns"], ["mai_tarziu", "Mă suni mai târziu"]], "").replace("<select", '<select class="mt"')) +
-      '<div id="g_rev" hidden>' + fld("f_rev", "5. Dacă te-a rugat să suni mai târziu, când?", '<input id="f_rev" class="mt" type="datetime-local">') + "</div>" +
+      '<div id="g_rev">' + fld("f_rev", "5. Dacă te-a rugat să suni mai târziu, când?", '<input id="f_rev" class="mt" type="datetime-local">') + "</div>" +
       fld("f_era", "6. Era deja înscris la eveniment?", sel("f_era", [["da", "Da"], ["nu", "Nu"], ["nu_stie", "Nu știe"]], era).replace("<select", '<select class="mt"')) +
-      '</div><div class="card mt" id="sec2" hidden><p class="lab">SECȚIUNEA 2 – RĂSPUNSURI</p>' +
+      '</div><div class="card mt" id="sec2"><p class="lab">SECȚIUNEA 2 – RĂSPUNSURI</p>' +
       tx("f_ocupatie", "7. Cu ce se ocupă în prezent?", "", 200) +
       ta("f_provocare", "8. Care e cea mai mare provocare cu care se confruntă acum la locul de muncă sau în business?") +
       ta("f_sfat", "9. Dacă ar putea cere sfatul cuiva care a trecut deja prin asta, ce l-ar întreba?") +
@@ -150,8 +150,8 @@
       '</div><div class="card mt"><p class="lab">SECȚIUNEA 3 – REZULTAT</p>' +
       fld("f_status", "15. Status final (obligatoriu)", sel("f_status", [["", "Alege"], ["confirmat", "Confirmat"], ["revine", "Revine cu răspuns"], ["nu_participa", "Nu participă"]], "").replace("<select", '<select class="mt"')) +
       fld("f_vip", "16. E interesat de biletul VIP?", sel("f_vip", [["", "Nespecificat"], ["da", "Da"], ["nu", "Nu"], ["poate", "Poate"]], "").replace("<select", '<select class="mt"')) +
-      '<div id="g_revine" hidden>' + fld("f_revine", "17. Dacă revine cu răspuns, când îl sunăm din nou?", '<input id="f_revine" class="mt" type="datetime-local">') + "</div>" +
-      '<div id="g_motiv" hidden>' + tx("f_motiv", "18. Dacă nu participă, care e motivul?", "", 300) + "</div>" +
+      '<div id="g_revine">' + fld("f_revine", "17. Dacă revine cu răspuns, când îl sunăm din nou?", '<input id="f_revine" class="mt" type="datetime-local">') + "</div>" +
+      '<div id="g_motiv">' + tx("f_motiv", "18. Dacă nu participă, care e motivul?", "", 300) + "</div>" +
       fld("f_inv", "19. I s-a trimis linkul pe WhatsApp?", sel("f_inv", [["", "Nespecificat"], ["da", "Da"], ["nu", "Nu"]], "").replace("<select", '<select class="mt"')) +
       ta("f_obs", "20. Observații (opțional)") +
       (needReg ? '<div id="g_conf" hidden><p class="muted mt">Pentru înscriere sunt necesare un email valid și acordul verbal pentru prelucrarea datelor.</p>' +
@@ -163,9 +163,8 @@
     var val = function (id) { var e = g(id); return e ? e.value : ""; };
     var on = function (id) { var e = g(id); return !!(e && e.checked); };
     function sync() {
+      // Toate întrebările 1-20 sunt mereu vizibile; doar emailul și acordurile (pentru înscriere nouă) apar la „Confirmat”.
       var r = g("f_raspuns").value, st = g("f_status").value;
-      g("sec2").hidden = r !== "da"; g("g_rev").hidden = r !== "mai_tarziu";
-      g("g_revine").hidden = st !== "revine"; g("g_motiv").hidden = st !== "nu_participa";
       if (g("g_conf")) g("g_conf").hidden = !(st === "confirmat" && r === "da");
     }
     root.onchange = sync;
