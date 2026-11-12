@@ -2,6 +2,9 @@ import sys, re, json
 from playwright.sync_api import sync_playwright
 BASE = "http://127.0.0.1:8787"
 KEY = "Cheie-Locala-Test-2026"
+PW = "Parola-Test-2026"
+PW2 = "Alta-Parola-2027"
+PW3 = "Parola-Noua-2028"
 SH = "/tmp/jcib-e2e/"
 import os; os.makedirs(SH, exist_ok=True)
 fails = 0; n = 0
@@ -31,13 +34,18 @@ with sync_playwright() as p:
     ok(b.count() == 1 and "JCI Business" in b.inner_text(), "butonul de intrare exista pe pagina Echipa")
     pg.locator("#acces-echipa").scroll_into_view_if_needed(); pg.wait_for_timeout(400)
     pg.locator("#acces-echipa").screenshot(path=SH + "echipa_buton.png")
-    b.click(); pg.wait_for_url(re.compile(r"/app$")); pg.wait_for_selector("#svform")
+    b.click(); pg.wait_for_url(re.compile(r"/app$")); pg.wait_for_selector("#pwform")
     ok(True, "click pe buton duce la /app, ecranul de intrare")
     alllinks |= set(links(pg))
     pg.set_viewport_size({"width": 390, "height": 844}); pg.wait_for_timeout(300)
-    pg.screenshot(path=SH + "login.png")
+    pg.screenshot(path=SH + "e1b_intrare.png")
+    ok(pg.locator('#pwform input[type="email"][autocomplete="username"]').count() == 1 and pg.locator('#pwform input[type="password"][autocomplete="current-password"]').count() == 1, "ecranul de intrare are e-mail si parola")
+    # e-mail necunoscut
+    pg.fill("#lg_email", "nimeni@exemplu.ro"); pg.fill("#lg_pass", "oricare-parola"); pg.click("#pwform button[type=submit]")
+    pg.wait_for_function("() => document.getElementById('pwerr').textContent.length>0")
+    ok("E-mail sau parolă greșită" in pg.inner_text("#pwerr"), "e-mail necunoscut: mesaj generic")
     # cod gresit
-    pg.fill("#lg_code", "AAAA-BBBB-CCCC"); pg.click("#svform button[type=submit]"); pg.wait_for_function("() => document.getElementById('lgerr').textContent.length>0")
+    pg.click('summary:has-text("Prima intrare")'); pg.fill("#lg_code", "AAAA-BBBB-CCCC"); pg.click("#svform button[type=submit]"); pg.wait_for_function("() => document.getElementById('lgerr').textContent.length>0")
     ok("Cod invalid" in pg.inner_text("#lgerr"), "cod gresit: mesaj de eroare")
     def sheet_closed(pg):
         pg.wait_for_function("() => !document.getElementById('sheetwrap').classList.contains('open')")
@@ -46,10 +54,30 @@ with sync_playwright() as p:
     def shown_code(pg):
         pg.wait_for_selector("#sheet p.num"); c = pg.inner_text("#sheet p.num").strip()
         pg.click('#sheet [data-act="closesheet"]'); return c
-    def login(code, dark=False):
-        c, q = ctx(dark=dark)
-        q.goto(BASE + "/app"); q.wait_for_selector("#svform"); q.fill("#lg_code", code.lower()); q.click("#svform button[type=submit]")
+    def set_cred(q, email, pw=PW, shot=None):
+        q.wait_for_selector("#credform", timeout=15000)
+        if shot: q.screenshot(path=SH + shot)
+        q.fill("#sc_email", email); q.fill("#sc_pass", pw); q.fill("#sc_pass2", pw); q.click("#credform button[type=submit]")
+        q.wait_for_function("() => !document.getElementById('credform')", timeout=15000)
+    def enter_code(code, email, firm=None, shot=None, check_need=False):
+        c, q = ctx()
+        q.goto(BASE + "/app"); q.wait_for_selector("#pwform"); q.click('summary:has-text("Prima intrare")')
+        q.fill("#lg_code", code.lower()); q.click("#svform button[type=submit]")
+        if check_need:
+            q.wait_for_selector("#credform", timeout=15000)
+            r = pull(q, ["profiles"])
+            ok(r.get("needCred") is True, "dupa intrarea cu cod, pana la setarea parolei, API-ul refuza cu needCred")
+            ok(q.locator("nav.tabs").count() == 0, "ecranul Seteaza e-mailul si parola nu are nicio alta fila")
+        set_cred(q, email, shot=shot)
+        if firm: gate(q, firm)
+        else: q.wait_for_selector("nav.tabs", timeout=15000)
         return q
+    def pass_login(q, email, pw=PW):
+        q.fill("#lg_email", email); q.fill("#lg_pass", pw); q.click("#pwform button[type=submit]")
+    def logout(q):
+        q.locator('button[data-act="logout"]').first.click(); q.wait_for_selector("#pwform", timeout=15000)
+    def relogin(q, email, pw=PW):
+        logout(q); pass_login(q, email, pw); q.wait_for_selector("nav.tabs", timeout=15000)
     def tabs(pg):
         return pg.eval_on_selector_all("nav.tabs button", "els=>els.map(e=>e.getAttribute('data-id'))")
     def pull(pg, paths):
@@ -60,7 +88,7 @@ with sync_playwright() as p:
         pg.wait_for_selector("nav.tabs", timeout=15000)
 
     # 2) administratorul tehnic: doar Structura, numeste presedintele national
-    pg.click("details summary"); pg.fill("#lg_key", KEY); pg.click("#modform button[type=submit]")
+    pg.click('summary:has-text("Administrator tehnic")'); pg.fill("#lg_key", KEY); pg.click("#modform button[type=submit]")
     pg.wait_for_selector("nav.tabs", timeout=15000)
     ok(tabs(pg) == ["structura"], "administratorul vede doar fila Structura")
     ok(pg.locator("#brsel").count() == 0 and pg.locator('[data-act="goprofil"]').count() == 0, "administratorul nu are selector de filiala si nici profil")
@@ -75,8 +103,8 @@ with sync_playwright() as p:
     alllinks |= set(links(pg))
 
     # 3) presedintele national: gate, apoi adauga o filiala cu presedinte
-    cn, pn = ctx(); pn.goto(BASE + "/app"); pn.wait_for_selector("#svform"); pn.fill("#lg_code", code_nat); pn.click("#svform button[type=submit]")
-    gate(pn, "Firma Radu SRL")
+    pn = enter_code(code_nat, "radu@exemplu.ro", firm="Firma Radu SRL", shot="e1b_seteaza_parola.png", check_need=True)
+    relogin(pn, "radu@exemplu.ro")
     ok(tabs(pn) == ["director", "structura", "profil"], "presedintele national: Director, Structura, Profilul meu")
     ok(pn.locator("#brsel").count() == 0, "presedintele national nu are selector de filiala")
     pn.click('nav.tabs button[data-id="structura"]'); pn.wait_for_selector('text=Radu Național')
@@ -92,13 +120,24 @@ with sync_playwright() as p:
     alllinks |= set(links(pn))
 
     # 4) presedintele filialei noi
-    c1, p1 = ctx()
-    p1.goto(BASE + "/app"); p1.wait_for_selector("#svform"); p1.fill("#lg_code", code_ana.lower()); p1.click("#svform button[type=submit]")
-    p1.wait_for_selector("nav.tabs", timeout=15000)
+    p1 = enter_code(code_ana, "ana@exemplu.ro")
     ok("Profilul tău nu e completat" in p1.inner_text("#app"), "presedintele intra direct, cu indemn sa-si completeze profilul")
     p1.click('button[data-act="goprofil"]'); p1.wait_for_selector("#pform")
     ok(p1.input_value("#f_name") == "Ana Președinte" and p1.locator("#f_branch").count() == 0, "profilul are numele din evidenta, filiala fixata de server")
     p1.fill("#f_firm", "Firma Ana SRL"); p1.check('input[name="c_dir"]'); p1.click("#pform button[type=submit]"); p1.wait_for_timeout(1200)
+    # Contul: e-mail, schimbarea parolei
+    p1.locator('button[data-act="changecred"]').scroll_into_view_if_needed(); p1.wait_for_timeout(300)
+    ok("ana@exemplu.ro" in p1.inner_text("#main"), "Profilul meu: Contul arata e-mailul")
+    p1.screenshot(path=SH + "e1b_contul.png")
+    p1.click('button[data-act="changecred"]'); p1.fill("#cc_c", "parola-gresita-1"); p1.fill("#cc_n", PW2); p1.fill("#cc_n2", PW2); submit(p1)
+    p1.wait_for_function("() => document.getElementById('sheeterr').textContent.length>0")
+    ok(p1.locator("#sheet #cc_c").count() == 1, "schimbare cu parola actuala gresita: refuzata, foaia ramane")
+    p1.fill("#cc_c", PW); submit(p1); sheet_closed(p1)
+    logout(p1); pass_login(p1, "ana@exemplu.ro", PW)
+    p1.wait_for_function("() => document.getElementById('pwerr').textContent.length>0")
+    ok("E-mail sau parolă greșită" in p1.inner_text("#pwerr"), "dupa schimbare, vechea parola nu mai merge")
+    p1.fill("#lg_pass", PW2); p1.click("#pwform button[type=submit]"); p1.wait_for_selector("nav.tabs", timeout=15000)
+    ok(tabs(p1)[1] == "tablou", "presedintele intra cu noua parola")
     ok(p1.locator('nav.tabs button[data-id="cheltuieli"]').count() == 1 and p1.locator("#brsel").count() == 0, "presedintele vede tablourile filialei sale")
     p1.click('nav.tabs button[data-id="cotizatii"]'); p1.click('button[data-act="fv"][data-id="members"]')
     def add_member(name):
@@ -125,9 +164,8 @@ with sync_playwright() as p:
     alllinks |= set(links(p1))
 
     # 5) membrul, trezorierul si conducerea intra cu codurile lor
-    c2, p2 = ctx()
-    p2.goto(BASE + "/app"); p2.wait_for_selector("#svform"); p2.fill("#lg_code", code_bob); p2.click("#svform button[type=submit]")
-    gate(p2, "Atelier Bogdan")
+    p2 = enter_code(code_bob, "bogdan@exemplu.ro", firm="Atelier Bogdan")
+    relogin(p2, "bogdan@exemplu.ro")
     ok(tabs(p2) == ["director", "profil"], "membrul vede doar Director si Profilul meu")
     p2.wait_for_selector("text=Ana Președinte")
     ok("Firma Ana SRL" in p2.inner_text("#main"), "membrul vede in director profilul cu acord")
@@ -137,17 +175,19 @@ with sync_playwright() as p:
     ok(r == 403, "API: membrul nu poate folosi operatiile de structura")
     p2.screenshot(path=SH + "membru_director.png", full_page=True)
     c3, p3 = ctx()
-    p3.goto(BASE + "/app"); p3.wait_for_selector("#svform"); p3.fill("#lg_code", code_bob); p3.click("#svform button[type=submit]")
+    p3.goto(BASE + "/app"); p3.wait_for_selector("#pwform"); p3.click('summary:has-text("Prima intrare")'); p3.fill("#lg_code", code_bob); p3.click("#svform button[type=submit]")
     p3.wait_for_function("() => document.getElementById('lgerr').textContent.length>0")
-    ok("Cod invalid" in p3.inner_text("#lgerr"), "codul folosit o data nu mai poate fi refolosit")
-    pt = login(code_tudor); pt.wait_for_selector("nav.tabs", timeout=15000)
+    ok(("Cod invalid" in p3.inner_text("#lgerr") or "deja e-mail" in p3.inner_text("#lgerr")) and p3.locator("#credform").count() == 0, "dupa setarea parolei, codul vechi nu mai poate fi folosit")
+    pt = enter_code(code_tudor, "tudor@exemplu.ro")
+    relogin(pt, "tudor@exemplu.ro")
     ok(tabs(pt) == ["director", "tablou", "cotizatii", "donatii", "cheltuieli"], "vicepresedintele trezorier are tablourile filialei")
     pt.click('nav.tabs button[data-id="cotizatii"]'); pt.click('button[data-act="fv"][data-id="members"]'); pt.wait_for_selector('[data-act="member"]')
     ok(pt.locator('button[data-act="newmember"]').count() == 0, "trezorierul nu adauga membri")
     pt.click('button[data-act="goprofil"]'); pt.wait_for_selector("text=Funcția mea")
     ok(pt.locator('#main button[data-act="handover"]').count() == 1, "trezorierul are Functia mea cu Preda functia")
     pt.locator('text=Funcția mea').first.scroll_into_view_if_needed(); pt.wait_for_timeout(300); pt.screenshot(path=SH + "e1_functia_mea.png")
-    pc = login(code_carmen); gate(pc, "Firma Carmen")
+    pc = enter_code(code_carmen, "carmen@exemplu.ro", firm="Firma Carmen")
+    relogin(pc, "carmen@exemplu.ro")
     ok(tabs(pc) == ["director", "donatii", "cheltuieli", "profil"], "functia de conducere: Director, Donatii, Cheltuieli, Profilul meu")
     pc.click('nav.tabs button[data-id="cheltuieli"]'); pc.wait_for_selector("text=Cheltuieli")
     ok(pc.locator('button[data-act="newexp"]').count() == 0, "functia de conducere doar citeste cheltuielile")
@@ -157,8 +197,11 @@ with sync_playwright() as p:
     ok("Secretar" in pc.inner_text("#main"), "Functia mea arata titlul functiei")
 
     # 6) excluderea si reactivarea unui membru
+    p1.reload(); p1.wait_for_selector("nav.tabs", timeout=15000)  # evidenta se reimprospateaza: membrii si-au activat conturile
     p1.click('nav.tabs button[data-id="cotizatii"]'); p1.click('button[data-act="fv"][data-id="members"]')
-    p1.click('[data-act="member"]:has-text("Bogdan Membru")'); p1.wait_for_selector('button[data-act="exclude"]'); p1.screenshot(path=SH + "e1_fisa_membru_exclude.png")
+    p1.click('[data-act="member"]:has-text("Bogdan Membru")'); p1.wait_for_selector('button[data-act="exclude"]')
+    ok(p1.locator('button[data-act="resetaccess"]').count() == 1 and p1.locator('button[data-act="gencode"]').count() == 0, "fisa unui membru cu cont si parola: Reseteaza accesul, fara Genereaza cod")
+    p1.screenshot(path=SH + "e1_fisa_membru_exclude.png")
     p1.click('button[data-act="exclude"]'); p1.wait_for_selector('[data-act="exclude2"]')
     p1.click('button[data-act="exclude2"]'); sheet_closed(p1)
     p1.wait_for_selector('[data-act="member"]:has-text("Bogdan Membru") >> text=Exclus', timeout=10000)
@@ -170,7 +213,24 @@ with sync_playwright() as p:
     ok(p1.locator('button[data-act="gencode"]').count() == 0, "membrul exclus nu primeste cod nou")
     p1.click('button[data-act="reactivate"]'); sheet_closed(p1)
     p2.reload(); p2.wait_for_selector("nav.tabs", timeout=15000)
-    ok(tabs(p2) == ["director", "profil"], "dupa reactivare membrul intra din nou")
+    ok(tabs(p2) == ["director", "profil"], "dupa reactivare membrul intra din nou, fara sa-si puna alta parola")
+
+    # 6b) resetarea accesului de catre presedinte: vechea parola si sesiunea nu mai merg, reluare cu cod nou
+    p1.click('[data-act="member"]:has-text("Bogdan Membru")'); p1.wait_for_selector('button[data-act="resetaccess"]')
+    p1.click('button[data-act="resetaccess"]'); p1.wait_for_selector('[data-act="resetaccess2"]')
+    ok("Membrul nu va mai putea intra cu parola veche" in p1.inner_text("#sheet"), "resetare acces: foaie de confirmare")
+    p1.screenshot(path=SH + "e1b_reseteaza.png")
+    p1.click('button[data-act="resetaccess2"]'); code_bob2 = shown_code(p1)
+    ok(re.fullmatch(r"[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}", code_bob2) is not None, "resetarea intoarce un cod nou")
+    p2.reload(); p2.wait_for_selector("#pwform", timeout=15000)
+    ok(True, "dupa resetare, sesiunea veche a membrului nu mai e valida")
+    pass_login(p2, "bogdan@exemplu.ro", PW); p2.wait_for_function("() => document.getElementById('pwerr').textContent.length>0")
+    ok("E-mail sau parolă greșită" in p2.inner_text("#pwerr"), "dupa resetare, vechea parola nu mai merge")
+    p2.click('summary:has-text("Prima intrare")'); p2.fill("#lg_code", code_bob2); p2.click("#svform button[type=submit]")
+    set_cred(p2, "bogdan@exemplu.ro", PW3); p2.wait_for_selector("nav.tabs", timeout=15000)
+    ok(tabs(p2) == ["director", "profil"], "dupa resetare, membrul intra cu codul nou si isi pune din nou e-mailul si parola")
+    relogin(p2, "bogdan@exemplu.ro", PW3)
+    ok(tabs(p2) == ["director", "profil"], "membrul intra cu noua parola")
 
     # 7) predarea functiei de presedinte: Ana -> Tudor (cont activat)
     p1.click('nav.tabs button[data-id="tablou"]'); p1.wait_for_selector('button[data-act="handover"]')
@@ -183,13 +243,21 @@ with sync_playwright() as p:
     ok(pt.locator('button[data-act="newrole"]').count() == 1, "noul presedinte (fost trezorier) are drepturile presedintelui")
     pn.reload(); pn.wait_for_selector("nav.tabs"); pn.click('nav.tabs button[data-id="structura"]'); pn.wait_for_selector('text=Președinte: Tudor Trezorier', timeout=15000)
     ok(True, "presedintele national vede noul presedinte al filialei")
+    # resetarea accesului presedintelui de filiala, din Structura
+    pn.click('[data-act="branch"][data-id="Sibiu"]'); pn.wait_for_selector('#sheet [data-act="resetaccess"]')
+    ok("Cod nou pentru președinte" not in pn.inner_text("#sheet"), "Structura: Reseteaza accesul in loc de Cod nou")
+    pn.click('#sheet [data-act="resetaccess"]'); pn.wait_for_selector('[data-act="resetaccess2"]'); pn.click('[data-act="resetaccess2"]')
+    code_pres2 = shown_code(pn)
+    ok(re.fullmatch(r"[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}", code_pres2) is not None, "presedintele national reseteaza accesul presedintelui de filiala")
+    pt.reload(); pt.wait_for_selector("#pwform", timeout=15000)
+    ok(True, "presedintele resetat e deconectat")
 
     # 8) iesire din cont, tema inchisa, modul demonstrativ
     p2.click('nav.tabs button[data-id="profil"]'); p2.wait_for_selector('button[data-act="logout"]')
     alllinks |= set(links(p2))
-    p2.locator('#main button[data-act="logout"]').click(); p2.wait_for_selector("#svform", timeout=15000)
+    p2.locator('#main button[data-act="logout"]').click(); p2.wait_for_selector("#pwform", timeout=15000)
     ok(p2.evaluate("() => fetch('/api/app/me').then(r=>r.status)") == 401, "dupa iesire sesiunea nu mai e valida")
-    c5, p5 = ctx(dark=True); p5.goto(BASE + "/app"); p5.wait_for_selector("#svform"); p5.screenshot(path=SH + "login_dark.png")
+    c5, p5 = ctx(dark=True); p5.goto(BASE + "/app"); p5.wait_for_selector("#pwform"); p5.screenshot(path=SH + "login_dark.png")
     c6, p6 = ctx(w=1280, h=800)
     p6.goto(BASE + "/app?demo"); p6.wait_for_selector("nav.tabs"); p6.wait_for_timeout(500); p6.screenshot(path=SH + "demo_desktop.png")
     ok("Mod demonstrativ" in p6.inner_text("#app") and tabs(p6) == ["director", "structura", "profil"], "/app?demo porneste modul demonstrativ, cu presedintele national")

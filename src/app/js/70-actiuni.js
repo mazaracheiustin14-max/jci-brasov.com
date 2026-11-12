@@ -430,15 +430,15 @@ async function onAct(act, id) {
               (S.server ? "" : inp("userId", "Codul contului", m.userId || "", "text", "mu", 'autocomplete="off"')) +
               '<div class="sheet-acts"><button class="btn" type="submit">Salvează</button><button class="btn sec" type="button" data-act="closesheet">Închide</button></div></form>'
             : '<div class="sheet-acts"><button class="btn sec" data-act="closesheet">Închide</button></div>') +
-          (canCode && (S.server || !m.userId)
-            ? '<div class="sec-h"><h2>Cod de înscriere</h2></div><p class="small">' +
-              (S.server && m.userId
-                ? "Contul e deja activ. Generează un cod nou dacă membrul își schimbă telefonul sau pierde accesul. "
-                : "Generează codul pe care membrul îl introduce la prima intrare în aplicație. ") +
-              'Codul e valabil 14 zile și se poate folosi o singură dată.</p><button class="btn sec" data-act="gencode" data-id="' +
+          (canCode && S.server && m.userId
+            ? '<div class="sec-h"><h2>Acces</h2></div><p class="small">Contul e activ. Dacă membrul nu mai poate intra (parolă uitată sau cont pierdut), resetează accesul: primește un cod nou și își pune din nou e-mailul și parola.</p><button class="btn sec" data-act="resetaccess" data-id="' +
               esc(m.id) +
-              '">Generează cod</button>'
-            : "") +
+              '">Resetează accesul</button>'
+            : canCode && !m.userId
+              ? '<div class="sec-h"><h2>Cod de înscriere</h2></div><p class="small">Generează codul pe care membrul îl introduce la prima intrare în aplicație. Codul e valabil 14 zile și se poate folosi o singură dată.</p><button class="btn sec" data-act="gencode" data-id="' +
+                esc(m.id) +
+                '">Generează cod</button>'
+              : "") +
           (canExclude
             ? '<div class="sec-h"><h2>Acces în aplicație</h2></div><p class="small">' +
               (m.excluded
@@ -539,8 +539,14 @@ async function onAct(act, id) {
     case "natset":
       sheetSetNational();
       break;
-    case "natcode":
-      doLeaderCode(id);
+    case "resetaccess":
+      sheetResetAccess(id);
+      break;
+    case "resetaccess2":
+      doResetAccess(id);
+      break;
+    case "changecred":
+      sheetChangeCred();
       break;
     case "addbranch":
       sheetAddBranch();
@@ -550,9 +556,6 @@ async function onAct(act, id) {
       break;
     case "setpres":
       sheetSetPresident(id);
-      break;
-    case "prescode":
-      doLeaderCode(id);
       break;
     case "claim": {
       var c = col("claims").filter(function (x) {

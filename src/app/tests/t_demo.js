@@ -61,7 +61,7 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
   ok(/În modul demonstrativ, structura nu se poate modifica/.test(d.window.document.getElementById('toast').textContent),'demo: operatiile de structura nu se pot face');
   click(d,'[data-act="closesheet"]');
   click(d,'[data-act="branch"][data-id="Cluj"]');await sleep(50);
-  ok(/Schimbă președintele/.test(d.window.document.getElementById('sheet').textContent)&&/Cod nou pentru președinte/.test(d.window.document.getElementById('sheet').textContent),'foaia filialei: schimba presedintele, cod nou');
+  ok(/Schimbă președintele/.test(d.window.document.getElementById('sheet').textContent)&&/Resetează accesul/.test(d.window.document.getElementById('sheet').textContent),'foaia filialei: schimba presedintele, reseteaza accesul');
   click(d,'[data-act="closesheet"]');
 
   // ===== presedinte: vede doar Brasov, nu are selector =====
@@ -216,8 +216,8 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
   }
 
   /* ===== MODUL SERVER, cu server simulat: Structura, conducere, predare, excludere ===== */
-  async function mkServer(me,data,adminReply){
-    const calls=[];
+  async function mkServer(me,data,adminReply,otherReply){
+    const calls=[],others=[];
     const dom=await mk(w=>{
       w.fetch=async(url,o)=>{
         const body=o&&o.body?JSON.parse(o.body):{};
@@ -225,10 +225,11 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
         if(url==='/api/app/me')return J(200,me);
         if(url==='/api/app/pull'){const dd={},er={};body.paths.forEach(p=>{if(data[p]===undefined)er[p]=403;else dd[p]=data[p]});return J(200,{data:dd,errors:er,rev:{}})}
         if(url==='/api/app/admin'){calls.push(body);const r=adminReply(body);return J(r.status||200,r.body)}
+        if(url.startsWith('/api/app/')&&otherReply){others.push({url,body});const r=otherReply(url,body);return J(r.status||200,r.body)}
         return J(404,{});
       };
     },'https://x.test/app');
-    return {dom,calls};
+    return {dom,calls,others};
   }
   const BL=[{id:'brasov',name:'Brașov'},{id:'cluj',name:'Cluj'}];
   const base={branchlist:BL,profiles:[],badges:[],'data/users/m1':[]};
@@ -247,6 +248,59 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
     m.window.document.querySelector('#sheet form').dispatchEvent(new m.window.Event('submit',{bubbles:true,cancelable:true}));await sleep(200);
     ok(JSON.stringify(calls[0])===JSON.stringify({op:'setNational',branch:'Cluj',name:'Ion Popa'}),'setNational: corpul cererii '+JSON.stringify(calls[0]));
     ok(/ABCD-2345-EFGH/.test(m.window.document.getElementById('sheet').textContent),'setNational: codul primit se arata');
+  }
+  {
+    const {dom:m,calls}=await mkServer({id:'mod',isOwner:true,name:'',branch:'',role:'mod',title:''},Object.assign({},base,{roles:[{id:'nat',role:'national',branch:'Brașov',name:'Radu Național'}],audit:[]}),b=>({body:{ok:true,memberId:b.memberId,code:'ZZZZ2345EFGH',expires:'2026-12-01'}}));
+    await sleep(500);
+    t=txt(m);
+    ok(/Înlocuiește președintele național/.test(t)&&/Radu Național/.test(t)&&!/Cod nou de intrare/.test(t),'administrator: Inlocuieste presedintele national, numele din rol');
+    click(m,'[data-act="resetaccess"]');await sleep(40);
+    ok(/Resetează accesul: Radu Național/.test(m.window.document.getElementById('sheet').textContent),'administrator: confirmarea resetarii');
+    click(m,'[data-act="resetaccess2"]');await sleep(200);
+    ok(JSON.stringify(calls[0])===JSON.stringify({op:'resetAccess',memberId:'nat'})&&/ZZZZ-2345-EFGH/.test(m.window.document.getElementById('sheet').textContent),'administrator: resetAccess pentru presedintele national, cu cod');
+  }
+  // ecranul de intrare si ecranul „Setează e-mailul și parola”
+  async function mkRaw(meStatus,meBody){
+    const reqs=[];
+    const dom=await mk(w=>{w.fetch=async(url,o)=>{
+      const body=o&&o.body?JSON.parse(o.body):{};
+      const J=(st,b)=>({status:st,json:async()=>b});
+      if(url==='/api/app/me')return J(meStatus,meBody);
+      reqs.push({url,body});
+      if(url==='/api/app/passlogin')return J(400,{error:'E-mail sau parolă greșită.'});
+      return J(200,{ok:true});
+    }},'https://x.test/app');
+    return {dom,reqs};
+  }
+  {
+    const {dom:l,reqs}=await mkRaw(401,{});
+    await sleep(400);
+    const D=l.window.document;
+    ok(D.getElementById('pwform')&&D.getElementById('lg_email').type==='email'&&D.getElementById('lg_email').autocomplete==='username'&&D.getElementById('lg_pass').type==='password'&&D.getElementById('lg_pass').autocomplete==='current-password','intrare: formular cu e-mail si parola, autocomplete corect');
+    const sums=[...D.querySelectorAll('details summary')].map(x=>x.textContent);
+    ok(sums.join('|')==='Prima intrare? Am un cod|Administrator tehnic'&&D.querySelector('details #svform')&&D.querySelector('details #modform'),'intrare: Prima intrare si Administrator tehnic in details');
+    ok(/Intră/.test(D.querySelector('#pwform button').textContent),'intrare: butonul Intra');
+    const subf=f=>D.getElementById(f).dispatchEvent(new l.window.Event('submit',{bubbles:true,cancelable:true}));
+    subf('pwform');await sleep(30);ok(/Completează e-mailul și parola/.test(D.getElementById('pwerr').textContent)&&reqs.length===0,'intrare: campuri goale, nimic trimis');
+    D.getElementById('lg_email').value=' Ana@Exemplu.RO ';D.getElementById('lg_pass').value='Parola12345';subf('pwform');await sleep(100);
+    ok(reqs.length===1&&JSON.stringify(reqs[0])===JSON.stringify({url:'/api/app/passlogin',body:{email:'ana@exemplu.ro',password:'Parola12345'}}),'passlogin: corpul cererii');
+    ok(/E-mail sau parolă greșită/.test(D.getElementById('pwerr').textContent)&&D.getElementById('lg_pass').value==='','passlogin: eroarea serverului, parola golita din camp');
+    D.getElementById('lg_code').value='abcd-2345-efgh';subf('svform');await sleep(100);
+    ok(JSON.stringify(reqs[1].body)===JSON.stringify({code:'abcd-2345-efgh'})&&reqs[1].url==='/api/app/login','login cu cod: corpul cererii');
+  }
+  {
+    const {dom:c,reqs}=await mkRaw(200,{id:'u1',isOwner:false,name:'Ana',branch:'Brașov',role:'member',title:'',needCred:true});
+    await sleep(400);
+    const D=c.window.document;
+    ok(/Setează e-mailul și parola/.test(D.getElementById('app').textContent)&&/De acum intri cu e-mailul și parola\. Codul primit nu mai poate fi folosit\./.test(D.getElementById('app').textContent),'needCred: ecranul Seteaza e-mailul si parola');
+    ok(['sc_pass','sc_pass2'].every(i=>D.getElementById(i).autocomplete==='new-password')&&D.querySelector('#credform [data-act="logout"]'),'needCred: new-password si Iesi din cont');
+    ok(!D.querySelector('nav.tabs'),'needCred: nicio alta fila');
+    const subf=()=>D.getElementById('credform').dispatchEvent(new c.window.Event('submit',{bubbles:true,cancelable:true}));
+    D.getElementById('sc_email').value='gresit';subf();await sleep(30);ok(/adresă de e-mail validă/.test(D.getElementById('crerr').textContent),'needCred: e-mail invalid');
+    D.getElementById('sc_email').value='Ana@Exemplu.ro';D.getElementById('sc_pass').value='scurta';subf();await sleep(30);ok(/între 8 și 100/.test(D.getElementById('crerr').textContent),'needCred: parola scurta');
+    D.getElementById('sc_pass').value='Parola12345';D.getElementById('sc_pass2').value='Altceva123';subf();await sleep(30);ok(/nu coincid/.test(D.getElementById('crerr').textContent)&&reqs.length===0,'needCred: confirmare diferita, nimic trimis');
+    D.getElementById('sc_pass2').value='Parola12345';subf();await sleep(100);
+    ok(reqs.length===1&&JSON.stringify(reqs[0])===JSON.stringify({url:'/api/app/setcred',body:{email:'ana@exemplu.ro',password:'Parola12345'}}),'setcred la prima setare: corpul cererii');
   }
   // presedinte national
   {
@@ -276,14 +330,18 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
     n.window.document.getElementById('ab_n').value='Sibiu';n.window.document.getElementById('ab_p').value='Ana Test';
     n.window.document.querySelector('#sheet form').dispatchEvent(new n.window.Event('submit',{bubbles:true,cancelable:true}));await sleep(200);
     ok(JSON.stringify(calls[4])===JSON.stringify({op:'addBranch',name:'Sibiu',presidentName:'Ana Test'})&&/QQQQ-2345-WWWW/.test(n.window.document.getElementById('sheet').textContent),'addBranch: corpul cererii si codul presedintelui');
+    click(n,'[data-act="branch"][data-id="Brașov"]');await sleep(40);
+    ok(!/Cod nou pentru președinte/.test(n.window.document.getElementById('sheet').textContent)&&n.window.document.querySelector('#sheet [data-act="resetaccess"]'),'Structura: Reseteaza accesul in loc de Cod nou pentru presedinte');
+    click(n,'[data-act="resetaccess"]');await sleep(40);click(n,'[data-act="resetaccess2"]');await sleep(200);
+    ok(JSON.stringify(calls[5])===JSON.stringify({op:'resetAccess',memberId:'p1'}),'Structura: resetAccess pentru presedintele filialei '+JSON.stringify(calls[5]));
   }
   // presedinte de filiala
   {
     const roles=[{id:'p1',role:'president',branch:'Brașov',title:'Președinte'},{id:'t1',role:'treasurer',branch:'Brașov',title:'Vicepreședinte trezorier'}];
-    const members=[{id:'p1',name:'Paul Președinte',userId:'p1',branch:'Brașov',validUntil:'2027-12-31'},{id:'t1',name:'Tina Trezorier',userId:'t1',branch:'Brașov',validUntil:'2027-12-31'},{id:'m2',name:'Mihai Membru',userId:'m2',branch:'Brașov',validUntil:'2027-12-31'},{id:'m3',name:'Nelu Exclus',userId:'m3',branch:'Brașov',excluded:true}];
+    const members=[{id:'p1',name:'Paul Președinte',userId:'p1',branch:'Brașov',validUntil:'2027-12-31'},{id:'t1',name:'Tina Trezorier',userId:'t1',branch:'Brașov',validUntil:'2027-12-31'},{id:'m2',name:'Mihai Membru',userId:'m2',branch:'Brașov',validUntil:'2027-12-31'},{id:'m3',name:'Nelu Exclus',userId:'m3',branch:'Brașov',excluded:true},{id:'m4',name:'Vera Neactivată',userId:'',branch:'Brașov',validUntil:'2027-12-31'}];
     const pd=Object.assign({},base,{roles,audit:[],profiles:[{id:'p1',name:'Paul Președinte',branch:'Brașov',consent:{}}],badges:[],'data/users/p1':[],
       'branches/Brașov/members':members,'branches/Brașov/fees':[],'branches/Brașov/donations':[],'branches/Brașov/expenses':[],'branches/Brașov/settings':[]});
-    const {dom:p,calls}=await mkServer({id:'p1',isOwner:false,name:'Paul',branch:'Brașov',role:'president',title:'Președinte'},pd,b=>({body:{ok:true}}));
+    const {dom:p,calls,others}=await mkServer({id:'p1',isOwner:false,name:'Paul',branch:'Brașov',role:'president',title:'Președinte',email:'paul@exemplu.ro'},pd,b=>b.op==='resetAccess'?{body:{ok:true,memberId:b.memberId,code:'RRRR2345TTTT',expires:'2026-12-01'}}:{body:{ok:true}},(u,b)=>({body:{ok:true}}));
     await sleep(500);
     click(p,'nav.tabs [data-id="tablou"]');await sleep(100);
     ok(/Tina Trezorier/.test(txt(p))&&/Conducerea filialei/.test(txt(p)),'server, presedinte: Conducerea filialei cu nume din evidenta');
@@ -296,15 +354,45 @@ function setRole(d,v){const s=d.window.document.getElementById('demorole');s.val
     click(p,'nav.tabs [data-id="cotizatii"]');await sleep(60);click(p,'[data-act="fv"][data-id="members"]');await sleep(60);
     ok(/Exclus/.test(p.window.document.getElementById('main').textContent),'server: membrul exclus are eticheta');
     click(p,'[data-act="member"][data-id="m2"]');await sleep(40);
-    ok(!p.window.document.querySelector('[data-act="exclude"]')===false&&p.window.document.querySelector('[data-act="gencode"]'),'fisa membrului: Exclude si cod');
+    ok(!!p.window.document.querySelector('[data-act="exclude"]')&&p.window.document.querySelector('[data-act="resetaccess"]')&&!p.window.document.querySelector('[data-act="gencode"]'),'fisa membrului cu cont activat: Exclude si Reseteaza accesul, fara Genereaza cod');
+    click(p,'[data-act="resetaccess"]');await sleep(40);
+    ok(/Membrul nu va mai putea intra cu parola veche\. Primește un cod nou și își pune din nou e-mailul și parola\./.test(p.window.document.getElementById('sheet').textContent),'resetare acces: foaie de confirmare');
+    click(p,'[data-act="resetaccess2"]');await sleep(200);
+    ok(calls.some(c=>JSON.stringify(c)===JSON.stringify({op:'resetAccess',memberId:'m2'}))&&/RRRR-2345-TTTT/.test(p.window.document.getElementById('sheet').textContent),'resetAccess: corpul cererii si codul nou');
+    click(p,'[data-act="closesheet"]');
+    click(p,'[data-act="member"][data-id="m4"]');await sleep(40);
+    ok(p.window.document.querySelector('[data-act="gencode"]')&&!p.window.document.querySelector('[data-act="resetaccess"]'),'fisa membrului cu cont neactivat: Genereaza cod');
+    click(p,'[data-act="closesheet"]');
+    click(p,'[data-act="member"][data-id="m2"]');await sleep(40);
+    const ci=calls.length;
     click(p,'[data-act="exclude"]');await sleep(40);click(p,'[data-act="exclude2"]');await sleep(200);
-    ok(JSON.stringify(calls[2])===JSON.stringify({op:'exclude',memberId:'m2'}),'exclude: corpul cererii');
+    ok(JSON.stringify(calls[ci])===JSON.stringify({op:'exclude',memberId:'m2'}),'exclude: corpul cererii');
     click(p,'[data-act="member"][data-id="m3"]');await sleep(40);
     ok(!p.window.document.querySelector('[data-act="gencode"]'),'membru exclus: fara cod nou');
     click(p,'[data-act="reactivate"]');await sleep(200);
-    ok(JSON.stringify(calls[3])===JSON.stringify({op:'reactivate',memberId:'m3'}),'reactivate: corpul cererii');
+    ok(JSON.stringify(calls[ci+1])===JSON.stringify({op:'reactivate',memberId:'m3'}),'reactivate: corpul cererii');
     click(p,'[data-act="member"][data-id="p1"]');await sleep(40);
     ok(!p.window.document.querySelector('[data-act="exclude"]'),'presedintele nu se poate exclude pe sine');
+    click(p,'[data-act="closesheet"]');
+    // Profilul meu: sectiunea Contul
+    click(p,'[data-act="goprofil"]');await sleep(80);
+    t=txt(p);
+    ok(/Contul/.test(t)&&/paul@exemplu\.ro/.test(t)&&p.window.document.querySelector('#main [data-act="changecred"]')&&p.window.document.querySelector('#main [data-act="logout"]'),'Profilul meu: Contul cu e-mail, Schimba, Iesi din cont');
+    click(p,'[data-act="changecred"]');await sleep(40);
+    const types=['cc_e','cc_c','cc_n','cc_n2'].map(i=>p.window.document.getElementById(i).type+':'+p.window.document.getElementById(i).autocomplete).join();
+    ok(types==='email:username,password:current-password,password:new-password,password:new-password','foaia de schimbare: tipuri si autocomplete '+types);
+    const sub=()=>p.window.document.querySelector('#sheet form').dispatchEvent(new p.window.Event('submit',{bubbles:true,cancelable:true}));
+    sub();await sleep(40);ok(/Introdu parola actuală/.test(p.window.document.getElementById('sheet').textContent),'schimbare: cere parola actuala');
+    p.window.document.getElementById('cc_c').value='ParolaVeche1';p.window.document.getElementById('cc_n').value='scurta';sub();await sleep(40);
+    ok(/între 8 și 100/.test(p.window.document.getElementById('sheet').textContent)&&others.length===0,'schimbare: parola noua prea scurta, nimic trimis');
+    p.window.document.getElementById('cc_n').value='ParolaNoua123';p.window.document.getElementById('cc_n2').value='Alta12345';sub();await sleep(40);
+    ok(/nu coincid/.test(p.window.document.getElementById('sheet').textContent)&&others.length===0,'schimbare: confirmare diferita');
+    p.window.document.getElementById('cc_n2').value='ParolaNoua123';p.window.document.getElementById('cc_e').value='Nou@Exemplu.ro';sub();await sleep(200);
+    ok(others.length===1&&others[0].url==='/api/app/setcred'&&JSON.stringify(others[0].body)===JSON.stringify({email:'nou@exemplu.ro',password:'ParolaNoua123',current:'ParolaVeche1'}),'setcred la schimbare: corpul cererii');
+    ok(/nou@exemplu\.ro/.test(txt(p)),'Contul arata noul e-mail');
+    click(p,'[data-act="changecred"]');await sleep(40);
+    p.window.document.getElementById('cc_c').value='ParolaNoua123';sub();await sleep(200);
+    ok(JSON.stringify(others[1].body)===JSON.stringify({email:'nou@exemplu.ro',password:'ParolaNoua123',current:'ParolaNoua123'}),'schimbare doar a e-mailului: parola actuala trimisa ca password');
   }
 
   /* ===== CATALOGUL DE COMPONENTE (/app?ui) ===== */

@@ -30,7 +30,7 @@ function tabsFor() {
 }
 function render() {
   var app = document.getElementById("app");
-  if (S.mode === "login" || S.mode === "excluded" || S.mode === "ui") return;
+  if (S.mode === "login" || S.mode === "excluded" || S.mode === "needcred" || S.mode === "ui") return;
   var ae = document.activeElement;
   if (ae && ae.closest && ae.closest("#main") && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) {
     S._stale = true;

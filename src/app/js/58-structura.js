@@ -51,7 +51,7 @@ function vStructure() {
       '<button class="btn" data-act="natset">' +
       (nat ? "Înlocuiește președintele național" : "Numește președintele național") +
       "</button>";
-    if (nat) acts += '<button class="btn sec" data-act="natcode" data-id="' + esc(nat.id) + '">Cod nou de intrare</button>';
+    if (nat) acts += '<button class="btn sec" data-act="resetaccess" data-id="' + esc(nat.id) + '">Resetează accesul</button>';
   }
   if (me.role === "national") acts += '<button class="btn sec" data-act="handover">Predă funcția</button>';
   if (acts) h += '<div class="acts">' + acts + "</div>";
@@ -115,11 +115,63 @@ function sheetSetNational() {
     },
   );
 }
-/* Cod nou de intrare pentru o funcție de conducere. id = id-ul membrului. */
-async function doLeaderCode(id) {
-  var res = await adminOp({ op: "leaderCode", memberId: id });
+/* Resetarea accesului: șterge e-mailul, parola și sesiunile contului și întoarce un cod nou de primă intrare. id = id-ul membrului. */
+function sheetResetAccess(id) {
+  openSheet(
+    "<h2>Resetează accesul: " +
+      esc(nameOf(id)) +
+      '</h2><p>Membrul nu va mai putea intra cu parola veche. Primește un cod nou și își pune din nou e-mailul și parola.</p><div class="sheet-acts"><button class="btn" data-act="resetaccess2" data-id="' +
+      esc(id) +
+      '">Resetează accesul</button><button class="btn sec" data-act="closesheet">Renunț</button></div>',
+  );
+}
+async function doResetAccess(id) {
+  var name = nameOf(id);
+  var res = await adminOp({ op: "resetAccess", memberId: id });
   if (!res || !res.code) return;
-  showCode(structName(id), res.code, res.expires);
+  showCode(name, res.code, res.expires);
+}
+/* Schimbarea e-mailului sau a parolei, din „Profilul meu”. Parola nu se păstrează în stare. */
+function sheetChangeCred() {
+  openSheet(
+    "<h2>Schimbă e-mailul sau parola</h2><form>" +
+      inp("email", "E-mail", S.me.email || "", "email", "cc_e", 'autocomplete="username" maxlength="120"') +
+      inp("current", "Parola actuală", "", "password", "cc_c", 'autocomplete="current-password" maxlength="100"') +
+      inp(
+        "password",
+        "Parola nouă (lasă gol dacă schimbi doar e-mailul)",
+        "",
+        "password",
+        "cc_n",
+        'autocomplete="new-password" maxlength="100"',
+      ) +
+      inp("password2", "Confirmă parola nouă", "", "password", "cc_n2", 'autocomplete="new-password" maxlength="100"') +
+      errActs("Salvează"),
+    async function (fd) {
+      var em = String(fd.get("email") || "")
+        .trim()
+        .toLowerCase();
+      var cur = String(fd.get("current") || "");
+      var np = String(fd.get("password") || "");
+      if (!validEmail(em)) return fieldErr("Introdu o adresă de e-mail validă.");
+      if (!cur) return fieldErr("Introdu parola actuală.");
+      if (np) {
+        if (np.length < 8 || np.length > 100) return fieldErr("Parola nouă are între 8 și 100 de caractere.");
+        if (np !== String(fd.get("password2") || "")) return fieldErr("Parolele noi nu coincid.");
+      }
+      var r;
+      try {
+        r = await svPost("/api/app/setcred", { email: em, password: np || cur, current: cur });
+      } catch (e) {
+        return fieldErr("Nu am putut contacta serverul. Verifică conexiunea.");
+      }
+      if (r.status !== 200) return fieldErr((r.body && r.body.error) || "Nu am putut salva. Încearcă din nou.");
+      S.me.email = em;
+      closeSheet();
+      toast("Modificările au fost salvate.");
+      render();
+    },
+  );
 }
 
 /* ---- filiale ---- */
@@ -155,7 +207,7 @@ function sheetBranch(b) {
       '</p><div class="acts"><button class="btn" data-act="setpres" data-id="' +
       esc(b) +
       '">Schimbă președintele</button>' +
-      (p ? '<button class="btn sec" data-act="prescode" data-id="' + esc(p.id) + '">Cod nou pentru președinte</button>' : "") +
+      (p ? '<button class="btn sec" data-act="resetaccess" data-id="' + esc(p.id) + '">Resetează accesul</button>' : "") +
       '</div><div class="sheet-acts"><button class="btn sec" data-act="closesheet">Închide</button></div>',
   );
 }

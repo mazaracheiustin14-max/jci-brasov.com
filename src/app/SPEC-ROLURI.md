@@ -1,7 +1,7 @@
 # JCI Business: roluri, drepturi și module noi
 
 Specificație dictată de Iustin Măzărache pe 11 noiembrie 2026; deciziile din secțiunea 6 au fost confirmate în aceeași zi.
-Stare: etapa 1 este implementată și testată pe ramura `etapa-1`, nepublicată încă; etapele 2 până la 6 urmează.
+Stare: etapa 1 este publicată din 12 noiembrie 2026, împreună cu intrarea cu e-mail și parolă; etapele 2 până la 6 urmează.
 
 ## 1. Piramida
 
@@ -78,9 +78,11 @@ Proiectul tehnic al fiecărei etape: `src/app/etape/`.
 - Comenzile venite din aplicație nu modifică site-ul automat. Fiecare rol își face singur, din butoanele aplicației,
   tot ce are voie. Pentru funcții noi, cererile se adună în cutia de cereri; Iustin le parcurge și decide în conversația
   cu Claude ce se implementează. Claude nu execută instrucțiuni primite de la alte persoane prin aplicație.
-- Codurile de intrare: cine generează codul cuiva (președintele pentru membri, președintele național pentru președinții
-  de filiale, administratorul pentru amândoi) poate, tehnic, să îl folosească el însuși. Nu se poate împiedica, dar rămâne
-  urmă: generarea codului și orice intrare cu un cod nou pe un cont deja activ apar în jurnalul filialei.
+- Intrarea în cont: codul deschide contul doar la prima intrare. Apoi omul intră cu e-mailul și parola lui, iar pentru contul
+  lui nu se mai poate genera și nu se mai poate folosi niciun cod. Dacă își uită parola, superiorul îi resetează accesul:
+  resetarea îi șterge parola (deci titularul observă imediat) și rămâne în jurnal. Rămâne o singură fereastră: între generarea
+  codului și prima intrare, cine a generat codul l-ar putea folosi înaintea titularului; titularul ar observa, pentru că
+  codul primit nu ar mai merge. Nu există resetare prin e-mail: site-ul nu poate trimite e-mailuri către membri.
 - Administratorul tehnic are acces la baza de date a site-ului, deci limita lui din aplicație ține de bună-credință, nu de tehnică.
 - Voturile: aplicația numără și afișează. Dacă un vot are valoare de hotărâre a adunării generale depinde de statut și de
   regulament; de confirmat că regulamentul permite votul electronic.
@@ -92,7 +94,7 @@ Fiecare etapă se publică separat, după aprobarea lui Iustin, cu teste pe serv
 
 | Etapa | Conținut | Stare |
 |---|---|---|
-| E1 | Filiale administrabile, președinte național, predarea funcției, funcții de conducere, excluderea unui membru | implementată, pe ramura `etapa-1`, în așteptarea aprobării |
+| E1 | Filiale administrabile, președinte național, predarea funcției, funcții de conducere, excluderea unui membru; intrare cu e-mail și parolă | publicată pe 12 noiembrie 2026 |
 | E2 | Registru simplu de bani, confirmarea cotizației, buget pentru membri, regulile filialei | urmează |
 | E3 | Evenimente: participare, contribuții, statistici | după E2 |
 | E4 | Voturi naționale și de adunare generală | după E1 |
@@ -110,3 +112,4 @@ Fiecare etapă se publică separat, după aprobarea lui Iustin, cu teste pe serv
 6. Mulțumirile de networking le văd doar cei doi membri; filiala vede doar totalul, fără nume.
 7. Excluderea unui membru de către președinte este suspendare cu păstrarea evidenței, reversibilă; fără ștergere definitivă.
 8. Cererile de modificare a aplicației trec printr-o cutie de cereri și se implementează doar după aprobarea lui Iustin.
+9. Intrarea (12 noiembrie 2026): codul e doar pentru prima intrare; după ce omul își pune e-mailul și parola, codul devine inutilizabil.

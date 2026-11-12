@@ -106,22 +106,30 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - Viteză: paginile publice ale site-ului nu încarcă nimic din aplicație. În aplicație, datele se reîmprospătează la 60 s doar cât pagina e vizibilă
   și omul a fost activ în ultimele 3 minute, plus la revenirea în pagină și după fiecare scriere.
 - `worker/app.js` (API la `/api/app/*`) și `worker/index.js` (antete noindex și no-cache pentru `/app`). Tabele D1, create automat la prima cerere:
-  `app_docs` (path, id, data JSON), `app_meta` (revizii pe cale), `app_sessions`, `app_codes`, `app_state` (valabilitatea fiecărui cont).
-- Autentificare:
-  - membrii, președinții și trezorierii intră cu un cod de 12 caractere, de unică folosință, valabil 14 zile. Codul îl generează președintele filialei
-    (sau moderatorul) din fișa membrului; în bază se ține doar amprenta lui. Sesiunea ține 60 de zile (cookie `jci_app`, HttpOnly, Secure, SameSite=Strict, doar pe `/api/app`), maximum 5 dispozitive.
-  - moderatorul intră cu o cheie; în `setari` se țin doar `app_mod_salt` și `app_mod_hash` = SHA-256(sare:cheie). Sesiune de 14 zile.
+  `app_docs` (path, id, data JSON), `app_meta` (revizii pe cale), `app_sessions`, `app_codes`, `app_state` (valabilitatea și suspendarea fiecărui cont),
+  `app_auth` (e-mailul și amprenta parolei fiecărui cont).
+- Autentificare (12 nov 2026, `src/app/etape/E1b-autentificare.md`):
+  - codul de 12 caractere, de unică folosință, valabil 14 zile, deschide contul doar la PRIMA intrare. Imediat după, omul își pune e-mail și parolă
+    și de acolo intră doar cu ele. Pentru un cont cu parolă nu se mai poate genera și nu se mai poate folosi niciun cod.
+  - parola: PBKDF2 cu SHA-256, sare pe cont, 20.000 de iterații (limita de procesor a platformei); în bază nu există parola în clar.
+  - parolă uitată: superiorul face „Resetează accesul” (președintele pentru membrii lui, președintele național pentru președinți, administratorul
+    pentru președintele național și președinți). Resetarea șterge e-mailul, parola și sesiunile, întoarce un cod nou și rămâne în jurnal.
+  - sesiunea ține 60 de zile (cookie `jci_app`, HttpOnly, Secure, SameSite=Strict, doar pe `/api/app`), maximum 5 dispozitive.
+  - administratorul tehnic intră cu o cheie; în `setari` se țin doar `app_mod_salt` și `app_mod_hash` = SHA-256(sare:cheie). Sesiune de 14 zile.
     Schimbarea cheii: se rescriu cele două rânduri din `setari`, apoi `DELETE FROM app_sessions WHERE user_id='mod'`.
-  - se numără doar încercările greșite (tabelul `rate_log`): 10 pe oră la coduri, 5 pe oră la cheia moderatorului.
-- Roluri: moderatorul adaugă președintele în evidența filialei, îi atribuie rolul și îi generează codul. Rolurile le scrie doar moderatorul,
-  inclusiv predarea anuală a mandatului (noul președinte primește rolul, fostul rămâne membru).
+  - se numără doar încercările greșite (tabelul `rate_log`): 10 pe oră de la aceeași adresă la coduri și la parole, 8 pe oră pe același cont, 5 pe oră la cheia administratorului.
+- Roluri și structură (etapa 1, `src/app/etape/E1.md`): administrator tehnic, președinte național, președinte de filială, vicepreședinte trezorier,
+  alte funcții de conducere (cu titlu liber), membru. Filialele sunt o listă în baza de date (`branchlist`). Rolurile și filialele se schimbă doar prin
+  operațiile de la `/api/app/admin`: `setNational`, `addBranch`, `setPresident`, `setRole`, `handover`, `exclude`, `reactivate`, `resetAccess`, `candidates`.
+  Administratorul tehnic și președintele național nu citesc datele interne ale filialelor. Președintele poate suspenda și reactiva un membru.
 - Excluderea automată: contul e suspendat când au trecut mai mult de 3 luni de la expirarea calității de membru (`valid_until`), fără cotizație achitată.
   Se calculează pe server la fiecare cerere, după data din Europe/Bucharest; plata cotizației sau prelungirea valabilității redă accesul. Se aplică și conducerii.
-- Ce verifică serverul: filialele sunt izolate (conducerea unei filiale citește doar datele ei); membrii simpli nu citesc cotizații, donații, cheltuieli, evidență sau jurnal;
-  profilul fără acord pentru director ajunge doar la titular și la conducerea filialei lui; data de valabilitate a altui membru nu se trimite membrilor;
-  numele donatorilor ajung doar la președintele și trezorierul filialei; jurnalul nu se rescrie; cotizațiile, donațiile și cheltuielile nu se șterg, doar se anulează.
+- Ce verifică serverul: filialele sunt izolate (conducerea unei filiale citește doar datele ei; un identificator de membru aparține unei singure filiale);
+  membrii simpli nu citesc cotizații, donații, cheltuieli, evidență sau jurnal; profilul fără acord pentru director ajunge doar la titular și la președintele
+  și trezorierul filialei lui; data de valabilitate a altui membru nu se trimite membrilor; numele donatorilor ajung doar la președintele și trezorierul filialei;
+  jurnalul nu se rescrie și nu poate imita intrări de structură; cotizațiile, donațiile și cheltuielile nu se șterg, doar se anulează.
   Regulile de separare a atribuțiilor la cheltuieli (cine propune nu aprobă) sunt deocamdată doar în interfață.
 - Mod demonstrativ, cu date fictive și fără server: `/app?demo`. Catalogul vizual al componentelor (referința grafică): `/app?ui`.
-- Teste (`src/app/tests/`): `t_backend.mjs` (82 de verificări ale API-ului și ale drepturilor, pe o bază SQLite locală), `t_demo.js`
-  (interfața în mod demonstrativ și catalogul, în jsdom) și `e2e.py` (Playwright pe mediul local Cloudflare: fluxul complet moderator,
-  președinte, membru, predarea mandatului, CSP și lipsa linkurilor către site). Comenzile sunt în `src/app/README.md`.
+- Teste (`src/app/tests/`): `t_backend.mjs` (drepturile fiecărui rol și autentificarea, pe o bază SQLite locală), `t_demo.js`
+  (interfața în mod demonstrativ, catalogul și un server simulat, în jsdom) și `e2e.py` (Playwright pe mediul local Cloudflare: fluxul complet
+  administrator, președinte național, președinte, trezorier, membru; CSP și lipsa linkurilor către site). Comenzile sunt în `src/app/README.md`.

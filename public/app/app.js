@@ -192,7 +192,7 @@ var ICON = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
   empty: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 10h8M8 14h5"/>',
 };
-var LOGO_SRC = "/app/logo.png?v=b4a1539125";
+var LOGO_SRC = "/app/logo.png?v=2f55ed211b";
 function logoHtml() {
   return (
     '<div class="logo" style="display:flex;align-items:center"><img src="' +
@@ -702,7 +702,7 @@ function makeHttpStore() {
       .then(function (r) {
         inflight = false;
         if (g !== gen) return; /* abonările au fost refăcute între timp: răspunsul e depășit */
-        if (r.status === 401 || (r.status === 403 && r.body && r.body.excluded)) {
+        if (r.status === 401 || (r.status === 403 && r.body && (r.body.excluded || r.body.needCred))) {
           location.reload();
           return;
         }
@@ -748,7 +748,7 @@ function makeHttpStore() {
   }
   function write(body) {
     return post("/api/app/write", body).then(function (r) {
-      if (r.status === 401) {
+      if (r.status === 401 || (r.status === 403 && r.body && r.body.needCred)) {
         location.reload();
         throw new Error("sesiune");
       }
@@ -1672,7 +1672,7 @@ function tabsFor() {
 }
 function render() {
   var app = document.getElementById("app");
-  if (S.mode === "login" || S.mode === "excluded" || S.mode === "ui") return;
+  if (S.mode === "login" || S.mode === "excluded" || S.mode === "needcred" || S.mode === "ui") return;
   var ae = document.activeElement;
   if (ae && ae.closest && ae.closest("#main") && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) {
     S._stale = true;
@@ -1968,9 +1968,58 @@ function renderServerLogin() {
   return (
     '<div class="gate"><div class="gate-top">' +
     logoHtml() +
-    '</div><div class="gate-in" style="margin-top:120px"><h1>Intră în aplicație</h1><p class="small" style="margin:8px 0 16px">Introdu codul de membru primit de la președintele filialei tale. Conducerea intră tot cu un cod, primit de la persoana care a numit-o în funcție.</p><form id="svform"><div class="field"><label for="lg_code">Codul de membru</label><input type="text" id="lg_code" name="code" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" maxlength="20"></div><div class="err" id="lgerr" role="alert"></div><div class="sheet-acts"><button class="btn" type="submit">Continuă</button></div></form>' +
-    '<details style="margin-top:24px"><summary class="small">Administrator tehnic</summary><form id="modform" style="margin-top:12px"><div class="field"><label for="lg_key">Cheia administratorului</label><input type="password" id="lg_key" name="key" autocomplete="off"></div><div class="err" id="mderr" role="alert"></div><div class="sheet-acts"><button class="btn sec" type="submit">Intră ca administrator</button></div></form></details></div></div>'
+    '</div><div class="gate-in" style="margin-top:120px"><h1>Intră în aplicație</h1><p class="small" style="margin:8px 0 16px">Intră cu e-mailul și parola contului tău. Codul primit de la președintele filialei se folosește o singură dată, la prima intrare.</p><form id="pwform"><div class="field"><label for="lg_email">E-mail</label><input type="email" id="lg_email" name="email" autocomplete="username" maxlength="120"></div><div class="field"><label for="lg_pass">Parolă</label><input type="password" id="lg_pass" name="password" autocomplete="current-password" maxlength="100"></div><div class="err" id="pwerr" role="alert"></div><div class="sheet-acts"><button class="btn" type="submit">Intră</button></div></form>' +
+    '<details style="margin-top:24px"><summary class="small">Prima intrare? Am un cod</summary><form id="svform" style="margin-top:12px"><div class="field"><label for="lg_code">Codul de membru</label><input type="text" id="lg_code" name="code" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" maxlength="20"></div><div class="err" id="lgerr" role="alert"></div><div class="sheet-acts"><button class="btn sec" type="submit">Continuă</button></div></form></details>' +
+    '<details style="margin-top:16px"><summary class="small">Administrator tehnic</summary><form id="modform" style="margin-top:12px"><div class="field"><label for="lg_key">Cheia administratorului</label><input type="password" id="lg_key" name="key" autocomplete="off"></div><div class="err" id="mderr" role="alert"></div><div class="sheet-acts"><button class="btn sec" type="submit">Intră ca administrator</button></div></form></details></div></div>'
   );
+}
+/* Ecranul „Setează e-mailul și parola”: după intrarea cu cod, până se pun e-mailul și parola nu se poate face nimic altceva. */
+function renderNeedCred() {
+  return (
+    '<div class="gate"><div class="gate-top">' +
+    logoHtml() +
+    '</div><div class="gate-in" style="margin-top:120px"><h1>Setează e-mailul și parola</h1><p class="small" style="margin:8px 0 16px">De acum intri cu e-mailul și parola. Codul primit nu mai poate fi folosit.</p><form id="credform"><div class="field"><label for="sc_email">E-mail</label><input type="email" id="sc_email" name="email" autocomplete="username" maxlength="120"></div><div class="field"><label for="sc_pass">Parolă</label><input type="password" id="sc_pass" name="password" autocomplete="new-password" maxlength="100"><span class="help">Între 8 și 100 de caractere.</span></div><div class="field"><label for="sc_pass2">Confirmă parola</label><input type="password" id="sc_pass2" name="password2" autocomplete="new-password" maxlength="100"></div><div class="err" id="crerr" role="alert"></div><div class="sheet-acts"><button class="btn" type="submit">Salvează</button><button class="btn sec" type="button" data-act="logout">Ieși din cont</button></div></form></div></div>'
+  );
+}
+function validEmail(e) {
+  return e.length <= 120 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+}
+function bindNeedCred() {
+  var f = document.getElementById("credform");
+  if (!f) return;
+  f.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var fd = new FormData(f);
+    var e = document.getElementById("crerr");
+    var em = String(fd.get("email") || "")
+      .trim()
+      .toLowerCase();
+    var pw = String(fd.get("password") || "");
+    e.textContent = "";
+    if (!validEmail(em)) {
+      e.textContent = "Introdu o adresă de e-mail validă.";
+      return;
+    }
+    if (pw.length < 8 || pw.length > 100) {
+      e.textContent = "Parola are între 8 și 100 de caractere.";
+      return;
+    }
+    if (pw !== String(fd.get("password2") || "")) {
+      e.textContent = "Parolele nu coincid.";
+      return;
+    }
+    svPost("/api/app/setcred", { email: em, password: pw })
+      .then(function (r) {
+        if (r.status === 200) {
+          location.reload();
+          return;
+        }
+        e.textContent = (r.body && r.body.error) || "Nu am putut salva. Încearcă din nou.";
+      })
+      .catch(function () {
+        e.textContent = "Nu am putut contacta serverul. Verifică conexiunea.";
+      });
+  });
 }
 function svPost(url, body) {
   return fetch(url, {
@@ -1985,6 +2034,7 @@ function svPost(url, body) {
         return {};
       })
       .then(function (j) {
+        if (r.status === 403 && j && j.needCred) location.reload();
         return { status: r.status, body: j };
       });
   });
@@ -1992,18 +2042,32 @@ function svPost(url, body) {
 function showServerLogin() {
   var app = document.getElementById("app");
   app.innerHTML = renderServerLogin();
-  function handle(form, errId, url, field) {
+  /* fields: numele câmpurilor trimise; parola nu se păstrează nicăieri, câmpul se golește după trimitere */
+  function handle(form, errId, url, fields) {
     form.addEventListener("submit", function (ev) {
       ev.preventDefault();
       var e = document.getElementById(errId);
       e.textContent = "";
-      var v = String(new FormData(form).get(field) || "");
-      if (field === "code" && normCode(v).length !== 12) {
+      var fd = new FormData(form);
+      var b = {};
+      fields.forEach(function (f) {
+        b[f] = String(fd.get(f) || "");
+      });
+      if (b.code !== undefined && normCode(b.code).length !== 12) {
         e.textContent = "Codul are 12 caractere, de exemplu K7M2-9QXA-4TLD.";
         return;
       }
-      var b = {};
-      b[field] = v;
+      if (b.email !== undefined) {
+        b.email = b.email.trim().toLowerCase();
+        if (!b.email || !b.password) {
+          e.textContent = "Completează e-mailul și parola.";
+          return;
+        }
+      }
+      if (b.password !== undefined) {
+        var pf = form.querySelector('input[type="password"]');
+        if (pf) pf.value = "";
+      }
       svPost(url, b)
         .then(function (r) {
           if (r.status === 200) {
@@ -2015,15 +2079,17 @@ function showServerLogin() {
             app.innerHTML = renderExcluded(r.body);
             return;
           }
-          e.textContent = r.body.error || "Nu am putut intra. Încearcă din nou.";
+          e.textContent =
+            r.body.error || (r.status === 429 ? "Prea multe încercări. Așteaptă o oră." : "Nu am putut intra. Încearcă din nou.");
         })
         .catch(function () {
           e.textContent = "Nu am putut contacta serverul. Verifică conexiunea.";
         });
     });
   }
-  handle(document.getElementById("svform"), "lgerr", "/api/app/login", "code");
-  handle(document.getElementById("modform"), "mderr", "/api/app/modlogin", "key");
+  handle(document.getElementById("pwform"), "pwerr", "/api/app/passlogin", ["email", "password"]);
+  handle(document.getElementById("svform"), "lgerr", "/api/app/login", ["code"]);
+  handle(document.getElementById("modform"), "mderr", "/api/app/modlogin", ["key"]);
 }
 function renderGate() {
   return (
@@ -2149,7 +2215,9 @@ function vProfile() {
     '<div class="sec-h"><h2>Drepturile tale</h2></div><p class="small">Poți descărca datele tale sau poți șterge profilul. Evidențele financiare se păstrează restrâns pe perioada legală. Pentru cereri speciale (obiecție, restricționare) scrie conducerii filialei.</p>' +
     '<div class="acts"><button class="btn sec" data-act="export">Descarcă datele mele</button><button class="btn crit" data-act="delprofile">Șterge profilul</button></div>' +
     (S.server
-      ? '<div class="sec-h"><h2>Contul</h2></div><button class="btn sec" data-act="logout">Ieși din cont</button>'
+      ? uiSection("Contul") +
+        uiKV([["E-mail", S.me.email || "nesetat"]]) +
+        '<div class="acts" style="margin-top:12px"><button class="btn sec" data-act="changecred">Schimbă e-mailul sau parola</button><button class="btn sec" data-act="logout">Ieși din cont</button></div>'
       : '<div class="sec-h"><h2>Codul contului</h2></div><p class="small">Dacă conducerea îți cere codul contului, copiază-l de aici.</p><p class="num" style="overflow-wrap:anywhere;font-family:monospace;margin:8px 0">' +
         esc(S.me.id) +
         '</p><button class="btn sec sm" data-act="copyid">Copiază codul</button>')
@@ -2754,7 +2822,7 @@ function vStructure() {
       '<button class="btn" data-act="natset">' +
       (nat ? "Înlocuiește președintele național" : "Numește președintele național") +
       "</button>";
-    if (nat) acts += '<button class="btn sec" data-act="natcode" data-id="' + esc(nat.id) + '">Cod nou de intrare</button>';
+    if (nat) acts += '<button class="btn sec" data-act="resetaccess" data-id="' + esc(nat.id) + '">Resetează accesul</button>';
   }
   if (me.role === "national") acts += '<button class="btn sec" data-act="handover">Predă funcția</button>';
   if (acts) h += '<div class="acts">' + acts + "</div>";
@@ -2818,11 +2886,63 @@ function sheetSetNational() {
     },
   );
 }
-/* Cod nou de intrare pentru o funcție de conducere. id = id-ul membrului. */
-async function doLeaderCode(id) {
-  var res = await adminOp({ op: "leaderCode", memberId: id });
+/* Resetarea accesului: șterge e-mailul, parola și sesiunile contului și întoarce un cod nou de primă intrare. id = id-ul membrului. */
+function sheetResetAccess(id) {
+  openSheet(
+    "<h2>Resetează accesul: " +
+      esc(nameOf(id)) +
+      '</h2><p>Membrul nu va mai putea intra cu parola veche. Primește un cod nou și își pune din nou e-mailul și parola.</p><div class="sheet-acts"><button class="btn" data-act="resetaccess2" data-id="' +
+      esc(id) +
+      '">Resetează accesul</button><button class="btn sec" data-act="closesheet">Renunț</button></div>',
+  );
+}
+async function doResetAccess(id) {
+  var name = nameOf(id);
+  var res = await adminOp({ op: "resetAccess", memberId: id });
   if (!res || !res.code) return;
-  showCode(structName(id), res.code, res.expires);
+  showCode(name, res.code, res.expires);
+}
+/* Schimbarea e-mailului sau a parolei, din „Profilul meu”. Parola nu se păstrează în stare. */
+function sheetChangeCred() {
+  openSheet(
+    "<h2>Schimbă e-mailul sau parola</h2><form>" +
+      inp("email", "E-mail", S.me.email || "", "email", "cc_e", 'autocomplete="username" maxlength="120"') +
+      inp("current", "Parola actuală", "", "password", "cc_c", 'autocomplete="current-password" maxlength="100"') +
+      inp(
+        "password",
+        "Parola nouă (lasă gol dacă schimbi doar e-mailul)",
+        "",
+        "password",
+        "cc_n",
+        'autocomplete="new-password" maxlength="100"',
+      ) +
+      inp("password2", "Confirmă parola nouă", "", "password", "cc_n2", 'autocomplete="new-password" maxlength="100"') +
+      errActs("Salvează"),
+    async function (fd) {
+      var em = String(fd.get("email") || "")
+        .trim()
+        .toLowerCase();
+      var cur = String(fd.get("current") || "");
+      var np = String(fd.get("password") || "");
+      if (!validEmail(em)) return fieldErr("Introdu o adresă de e-mail validă.");
+      if (!cur) return fieldErr("Introdu parola actuală.");
+      if (np) {
+        if (np.length < 8 || np.length > 100) return fieldErr("Parola nouă are între 8 și 100 de caractere.");
+        if (np !== String(fd.get("password2") || "")) return fieldErr("Parolele noi nu coincid.");
+      }
+      var r;
+      try {
+        r = await svPost("/api/app/setcred", { email: em, password: np || cur, current: cur });
+      } catch (e) {
+        return fieldErr("Nu am putut contacta serverul. Verifică conexiunea.");
+      }
+      if (r.status !== 200) return fieldErr((r.body && r.body.error) || "Nu am putut salva. Încearcă din nou.");
+      S.me.email = em;
+      closeSheet();
+      toast("Modificările au fost salvate.");
+      render();
+    },
+  );
 }
 
 /* ---- filiale ---- */
@@ -2858,7 +2978,7 @@ function sheetBranch(b) {
       '</p><div class="acts"><button class="btn" data-act="setpres" data-id="' +
       esc(b) +
       '">Schimbă președintele</button>' +
-      (p ? '<button class="btn sec" data-act="prescode" data-id="' + esc(p.id) + '">Cod nou pentru președinte</button>' : "") +
+      (p ? '<button class="btn sec" data-act="resetaccess" data-id="' + esc(p.id) + '">Resetează accesul</button>' : "") +
       '</div><div class="sheet-acts"><button class="btn sec" data-act="closesheet">Închide</button></div>',
   );
 }
@@ -3926,15 +4046,15 @@ async function onAct(act, id) {
               (S.server ? "" : inp("userId", "Codul contului", m.userId || "", "text", "mu", 'autocomplete="off"')) +
               '<div class="sheet-acts"><button class="btn" type="submit">Salvează</button><button class="btn sec" type="button" data-act="closesheet">Închide</button></div></form>'
             : '<div class="sheet-acts"><button class="btn sec" data-act="closesheet">Închide</button></div>') +
-          (canCode && (S.server || !m.userId)
-            ? '<div class="sec-h"><h2>Cod de înscriere</h2></div><p class="small">' +
-              (S.server && m.userId
-                ? "Contul e deja activ. Generează un cod nou dacă membrul își schimbă telefonul sau pierde accesul. "
-                : "Generează codul pe care membrul îl introduce la prima intrare în aplicație. ") +
-              'Codul e valabil 14 zile și se poate folosi o singură dată.</p><button class="btn sec" data-act="gencode" data-id="' +
+          (canCode && S.server && m.userId
+            ? '<div class="sec-h"><h2>Acces</h2></div><p class="small">Contul e activ. Dacă membrul nu mai poate intra (parolă uitată sau cont pierdut), resetează accesul: primește un cod nou și își pune din nou e-mailul și parola.</p><button class="btn sec" data-act="resetaccess" data-id="' +
               esc(m.id) +
-              '">Generează cod</button>'
-            : "") +
+              '">Resetează accesul</button>'
+            : canCode && !m.userId
+              ? '<div class="sec-h"><h2>Cod de înscriere</h2></div><p class="small">Generează codul pe care membrul îl introduce la prima intrare în aplicație. Codul e valabil 14 zile și se poate folosi o singură dată.</p><button class="btn sec" data-act="gencode" data-id="' +
+                esc(m.id) +
+                '">Generează cod</button>'
+              : "") +
           (canExclude
             ? '<div class="sec-h"><h2>Acces în aplicație</h2></div><p class="small">' +
               (m.excluded
@@ -4035,8 +4155,14 @@ async function onAct(act, id) {
     case "natset":
       sheetSetNational();
       break;
-    case "natcode":
-      doLeaderCode(id);
+    case "resetaccess":
+      sheetResetAccess(id);
+      break;
+    case "resetaccess2":
+      doResetAccess(id);
+      break;
+    case "changecred":
+      sheetChangeCred();
       break;
     case "addbranch":
       sheetAddBranch();
@@ -4046,9 +4172,6 @@ async function onAct(act, id) {
       break;
     case "setpres":
       sheetSetPresident(id);
-      break;
-    case "prescode":
-      doLeaderCode(id);
       break;
     case "claim": {
       var c = col("claims").filter(function (x) {
@@ -4477,6 +4600,12 @@ async function start() {
       var js = await rs.json().catch(function () {
         return {};
       });
+      if (rs.status === 200 && js.needCred) {
+        S.mode = "needcred";
+        document.getElementById("app").innerHTML = renderNeedCred();
+        bindNeedCred();
+        return;
+      }
       if (rs.status === 200) {
         S.me = {
           id: String(js.id),
@@ -4485,6 +4614,7 @@ async function start() {
           branch: String(js.branch || ""),
           role: String(js.role || ""),
           title: String(js.title || ""),
+          email: String(js.email || ""),
         };
         S.store = makeHttpStore();
         S.mode = "ready";

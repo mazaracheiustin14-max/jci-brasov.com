@@ -107,7 +107,7 @@ function makeHttpStore() {
       .then(function (r) {
         inflight = false;
         if (g !== gen) return; /* abonările au fost refăcute între timp: răspunsul e depășit */
-        if (r.status === 401 || (r.status === 403 && r.body && r.body.excluded)) {
+        if (r.status === 401 || (r.status === 403 && r.body && (r.body.excluded || r.body.needCred))) {
           location.reload();
           return;
         }
@@ -153,7 +153,7 @@ function makeHttpStore() {
   }
   function write(body) {
     return post("/api/app/write", body).then(function (r) {
-      if (r.status === 401) {
+      if (r.status === 401 || (r.status === 403 && r.body && r.body.needCred)) {
         location.reload();
         throw new Error("sesiune");
       }

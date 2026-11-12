@@ -1,6 +1,6 @@
 import { makeD1 } from "./d1shim.mjs";
 import { handleApp } from "../../../worker/app.js";
-import { createHash } from "node:crypto";
+import { createHash, pbkdf2Sync } from "node:crypto";
 let fails=0,n=0;const ok=(c,m)=>{n++;if(!c){fails++;console.log("ESEC:",m)}else console.log("ok  :",m)};
 const env={DB:makeD1()};
 env.DB._db.exec("CREATE TABLE setari (cheie TEXT PRIMARY KEY, valoare TEXT)");
@@ -9,19 +9,19 @@ const salt="s4lt",KEY="Cheia-Moderator-12345";
 const hash=createHash("sha256").update(salt+":"+KEY).digest("hex");
 env.DB._db.prepare("INSERT INTO setari VALUES ('app_mod_salt',?),('app_mod_hash',?)").run(salt,hash);
 const ORI="https://jci-brasov.com";
-let calls=0;const overLimit=async()=>false;
+let calls=0;const overLimit=async()=>false;const LOG=[];const CRED={};
 async function api(path,{method="POST",body,cookie,origin=ORI}={}){
   const headers={"Content-Type":"application/json"};if(origin)headers.Origin=origin;if(cookie)headers.Cookie=cookie;
   const req=new Request(ORI+path,{method,headers,body:body?JSON.stringify(body):undefined});
   const r=await handleApp(req,env,new URL(req.url),overLimit);
-  const sc=r.headers.get("Set-Cookie");const j=await r.json();
+  const sc=r.headers.get("Set-Cookie");const j=await r.json();LOG.push(JSON.stringify(j));
   return{status:r.status,j,cookie:sc?sc.split(";")[0]:null,sc};
 }
 const T=new Date().toLocaleDateString("sv-SE",{timeZone:"Europe/Bucharest"});
 const addM=(d,n)=>{const x=new Date(d+"T12:00:00Z");x.setUTCMonth(x.getUTCMonth()+n);return x.toISOString().slice(0,10)};
 const Y=T.slice(0,4);
 // --- moderator
-let r=await api("/api/app/modlogin",{body:{key:"gresit-gresit-1"}});ok(r.status===400,"cheie moderator gresita respinsa");
+let r2;let r=await api("/api/app/modlogin",{body:{key:"gresit-gresit-1"}});ok(r.status===400,"cheie moderator gresita respinsa");
 r=await api("/api/app/modlogin",{body:{key:KEY}});ok(r.status===200&&r.cookie,"moderator intra");
 ok(/HttpOnly/.test(r.sc)&&/Secure/.test(r.sc)&&/SameSite=Strict/.test(r.sc)&&/Path=\/api\/app/.test(r.sc),"cookie HttpOnly Secure Strict pe /api/app");
 const MOD=r.cookie;
@@ -33,11 +33,13 @@ r=await api("/api/app/write",{body:{path:"profiles",id:"x",data:{name:"x"}},orig
 const W=(cookie,path,id,data,del)=>api("/api/app/write",{cookie,body:{path,id,data,del}});
 const A=(cookie,body)=>api("/api/app/admin",{cookie,body});
 const PULL=async(cookie,paths)=>(await api("/api/app/pull",{cookie,body:{paths}})).j;
-const login=async(code)=>(await api("/api/app/login",{body:{code}})).cookie;
+// intrarea cu cod urmata imediat de e-mail si parola (parolele de test incep cu "Pw!")
+const cred=async(ck)=>{const id=(await api("/api/app/me",{method:"GET",cookie:ck})).j.id;const c={email:id+"@exemplu.ro",password:"Pw!"+id+"-x9z1"};const x=await api("/api/app/setcred",{cookie:ck,body:c});if(x.status===200)CRED[id]=c;return x};
+const login=async(code)=>{const ck=(await api("/api/app/login",{body:{code}})).cookie;if(!ck)return null;await cred(ck);return ck};
 // 1. mod numeste presedintele national (in Brasov, ca sa poata fi tinta unor refuzuri)
 r=await A(MOD,{op:"setNational",branch:"Brașov",name:"Nina Națională"});
 ok(r.status===200&&r.j.ok&&r.j.branch==="Brașov"&&/^[A-Z2-9]{12}$/.test(r.j.code)&&r.j.expires&&r.j.memberId,"mod: setNational merge si intoarce cod");
-const nat=r.j.memberId;const NAT=await login(r.j.code);ok(!!NAT,"presedintele national intra cu codul primit");
+const nat=r.j.memberId;let NAT=await login(r.j.code);ok(!!NAT,"presedintele national intra cu codul primit");
 r=await api("/api/app/me",{method:"GET",cookie:NAT});ok(r.j.role==="national"&&r.j.title==="Președinte național"&&r.j.id===nat,"me: role si title pentru national");
 // 2. national numeste presedinti de filiala
 r=await A(NAT,{op:"setPresident",branch:"Brașov",name:"Ana Pres"});ok(r.status===200&&r.j.code&&r.j.branch==="Brașov","national: setPresident cu nume nou (Brasov)");
@@ -47,8 +49,21 @@ const pcluj=r.j.memberId;const PCLUJ=await login(r.j.code);
 r=await A(MOD,{op:"setPresident",branch:"Nicaieri",name:"X Y"});ok(r.status===400,"filiala invalida respinsa");
 // membri adaugati de presedinti
 r=await api("/api/app/login",{body:{code:"AAAAAAAAAAAA"}});ok(r.status===400,"cod gresit respins");
-r=await api("/api/app/login",{body:{code:codeAna.slice(0,4)+"-"+codeAna.slice(4,8).toLowerCase()+" "+codeAna.slice(8)}});ok(r.status===200&&r.cookie,"cod cu separatori si litere mici accepta");
+r=await api("/api/app/login",{body:{code:codeAna.slice(0,4)+"-"+codeAna.slice(4,8).toLowerCase()+" "+codeAna.slice(8)}});ok(r.status===200&&r.cookie&&r.j.needCred===true,"cod cu separatori si litere mici accepta, raspunsul cere e-mail si parola");
 const ANA=r.cookie;
+// E1b 1 si 2: dupa intrarea cu cod nu se poate face nimic pana la setcred
+r=await api("/api/app/me",{method:"GET",cookie:ANA});ok(r.status===200&&r.j.needCred===true&&r.j.email==="","E1b 1 /me dupa intrarea cu cod: needCred true, fara e-mail");
+for(const [nm,path,body] of [["pull","/api/app/pull",{paths:["roles"]}],["write","/api/app/write",{path:"profiles",id:ana,data:{name:"x"}}],["admin","/api/app/admin",{op:"candidates",for:"handover"}],["code","/api/app/code",{branch:"Brașov",memberId:"x"}],["cale necunoscuta","/api/app/nimic",{}]]){
+  r=await api(path,{cookie:ANA,body});ok(r.status===403&&r.j.needCred===true,"E1b 1 "+nm+": 403 cu needCred pana la setcred");
+}
+r=await api("/api/app/setcred",{body:{email:"ana@exemplu.ro",password:"Pw!ana-x9z1"}});ok(r.status===401,"E1b 2 setcred cere sesiune");
+r=await api("/api/app/setcred",{cookie:ANA,body:{email:"ana@exemplu.ro",password:"scurta"}});ok(r.status===400,"E1b 2 parola scurta: 400");
+r=await api("/api/app/setcred",{cookie:ANA,body:{email:"ana@exemplu.ro",password:"x".repeat(101)}});ok(r.status===400,"E1b 2 parola prea lunga: 400");
+for(const bad of ["ana-exemplu.ro","ana@exemplu","@exemplu.ro","a na@exemplu.ro",""]){r=await api("/api/app/setcred",{cookie:ANA,body:{email:bad,password:"Pw!ana-x9z1"}});ok(r.status===400,"E1b 2 e-mail gresit respins: "+JSON.stringify(bad));}
+r=await api("/api/app/setcred",{cookie:ANA,body:{email:CRED[nat].email,password:"Pw!ana-x9z1"}});ok(r.status===400,"E1b 2 e-mail deja folosit de alt cont: 400");
+r=await api("/api/app/setcred",{cookie:ANA,body:{email:"  ANA@Exemplu.RO ",password:"Pw!ana-x9z1"}});ok(r.status===200&&r.j.ok,"E1b 2 setcred reuseste");
+CRED[ana]={email:"ana@exemplu.ro",password:"Pw!ana-x9z1"};
+r=await api("/api/app/me",{method:"GET",cookie:ANA});ok(r.j.needCred===false&&r.j.email==="ana@exemplu.ro","E1b 2 /me dupa setcred: needCred false si e-mailul normalizat");
 r=await api("/api/app/login",{body:{code:codeAna}});ok(r.status===400,"cod folosit nu mai merge");
 const dump=env.DB._db.prepare("SELECT hash FROM app_codes").all();ok(dump.every(x=>x.hash.length===64&&x.hash!==codeAna),"codurile sunt stocate doar ca amprenta");
 r=await api("/api/app/me",{method:"GET",cookie:ANA});ok(r.j.id===ana&&r.j.state==="active"&&r.j.role==="president"&&r.j.title==="Președinte","presedinte autentificat, cu role si title");
@@ -83,7 +98,7 @@ r=await W(ANA,"audit","a1",{summary:"Test",path:"x",byName:"Ana",action:"update"
 r=await W(ANA,"audit","a1",{summary:"Alt text"});ok(r.status===403,"jurnalul nu se rescrie");
 rows=await api("/api/app/pull",{cookie:ANA,body:{paths:["audit"]}});ok(rows.j.data.audit.find(a=>a.id==="a1").by===ana,"jurnal: autorul e pus de server");
 // --- membru
-r=await api("/api/app/login",{body:{code:codeBob}});const BOB=r.cookie;ok(r.status===200,"membru intra cu cod");
+r=await api("/api/app/login",{body:{code:codeBob}});const BOB=r.cookie;ok(r.status===200,"membru intra cu cod");await cred(BOB);
 rows=await api("/api/app/pull",{cookie:BOB,body:{paths:["branches/Brașov/fees","branches/Brașov/members","audit","roles","profiles","badges","data/users/bob","data/users/"+ana,"branchlist"]}});
 ok(rows.j.errors["branches/Brașov/fees"]===403&&rows.j.errors["branches/Brașov/members"]===403&&rows.j.errors.audit===403,"membrul nu vede finante, evidenta, jurnal");
 ok(rows.j.errors["data/users/"+ana]===403&&!rows.j.errors["data/users/bob"],"datele private doar ale lui");
@@ -111,8 +126,7 @@ r=await W(ANA,"branches/Brașov/members","bob",{...mo,validUntil:old});ok(r.stat
 rows=await api("/api/app/pull",{cookie:BOB,body:{paths:["badges"]}});ok(rows.status===403&&rows.j.excluded===true&&rows.j.reason==="expired","membru expirat de peste 3 luni: exclus de server, reason expired");
 r=await api("/api/app/me",{method:"GET",cookie:BOB});ok(r.status===403&&r.j.excluded&&r.j.validUntil===old&&r.j.reason==="expired","me: exclus cu data expirarii");
 rows=await api("/api/app/pull",{cookie:ANA,body:{paths:["profiles"]}});ok(!rows.j.data.profiles.some(p=>p.id==="bob"),"profilul excluditului dispare din director");
-r=await api("/api/app/code",{cookie:ANA,body:{branch:"Brașov",memberId:"bob"}});const codeBob2=r.j.code;
-r=await api("/api/app/login",{body:{code:codeBob2}});ok(r.status===403&&r.j.excluded&&r.j.reason==="expired","exclusul nu intra nici cu cod nou");
+r=await api("/api/app/passlogin",{body:CRED.bob});ok(r.status===403&&r.j.excluded&&r.j.reason==="expired","exclusul (expirat) nu intra nici cu e-mail si parola");
 r=await W(ANA,"branches/Brașov/fees","f1",{memberId:"bob",year:2027,due:30000,paid:30000,state:"platita",createdAt:T});
 rows=await api("/api/app/pull",{cookie:BOB,body:{paths:["badges"]}});ok(rows.status===200,"dupa plata, accesul revine");
 const grace=addM(T,-1);
@@ -147,13 +161,16 @@ ok(d.find(x=>x.id==="d1").donor==="Firma X","presedintele filialei vede donatori
   ok(bg.every(x=>!("validUntil" in x)),"moderatorul nu vede date de valabilitate");
   globalThis.CORA=CORA;
 }
-const CORA=globalThis.CORA;const cora="cora";
+let CORA=globalThis.CORA;const cora="cora";
 // presedintele revine dupa delogare, cu cod de la presedintele national
 r=await api("/api/app/logout",{cookie:ANA});ok(r.status===200&&/Max-Age=0/.test(r.sc),"logout");
 r=await api("/api/app/me",{method:"GET",cookie:ANA});ok(r.status===401,"sesiune inchisa");
-r=await A(MOD,{op:"leaderCode",memberId:ana});ok(r.status===200&&r.j.code&&r.j.memberId===ana,"mod: leaderCode pentru presedinte");
-const ANA2=await login(r.j.code);ok(!!ANA2,"presedintele revine cu codul nou");
-r=await A(NAT,{op:"leaderCode",memberId:ana});ok(r.status===200&&r.j.code,"national: leaderCode pentru presedinte");
+r=await A(MOD,{op:"resetAccess",memberId:ana});ok(r.status===200&&r.j.ok&&r.j.code&&r.j.memberId===ana&&r.j.expires,"mod: resetAccess pentru presedinte");
+r2=await api("/api/app/passlogin",{body:CRED[ana]});ok(r2.status===400,"resetAccess: vechea parola nu mai merge");
+let ANA2=await login(r.j.code);ok(!!ANA2,"presedintele revine cu codul nou si isi pune din nou e-mail si parola");
+r=await A(NAT,{op:"resetAccess",memberId:ana});ok(r.status===200&&r.j.code,"national: resetAccess pentru presedinte");
+r2=await api("/api/app/me",{method:"GET",cookie:ANA2});ok(r2.status===401,"resetAccess inchide sesiunile contului");
+ANA2=await login(r.j.code);ok(!!ANA2,"presedintele reintra cu al doilea cod");
 // sesiuni
 let cks=[];for(let i=0;i<7;i++){const c=(await api("/api/app/code",{cookie:ANA2,body:{branch:"Brașov",memberId:"tim"}})).j.code;const l=await api("/api/app/login",{body:{code:c}});cks.push(l.cookie)}
 const alive=[];for(const c of cks){alive.push((await api("/api/app/me",{method:"GET",cookie:c})).status===200)}
@@ -170,7 +187,7 @@ r=await W(ANA2,"branches/Brașov/members","big",{name:"A",x:"y".repeat(7000)});o
 r=await W(MOD,"badges","bob",{verified:true});ok(r.status===403,"insignele nu se scriu de client");
 
 // ======= verificari noi (A7)
-const TIM=cks[6];
+const TIM=cks[6];await cred(TIM);
 const singles=(roles)=>{const per={};for(const x of roles)if(x.role==="president")per[x.branch]=(per[x.branch]||0)+1;return roles.filter(x=>x.role==="national").length===1&&Object.values(per).every(v=>v===1)};
 const ROLES_NOW=async()=>(await PULL(MOD,["roles"])).data.roles;
 const addM2=async(cookie,id,name,b,account)=>{const w=await W(cookie,`branches/${b}/members`,id,{name,branch:b,validUntil:Y+"-12-31"});if(!account||w.status!==200)return null;const c=await api("/api/app/code",{cookie,body:{branch:b,memberId:id}});return login(c.j.code)};
@@ -185,9 +202,11 @@ r=await A(MOD,{op:"exclude",memberId:"dan"});ok(r.status===403,"1 mod: nu poate 
 r=await A(MOD,{op:"handover",to:"dan"});ok(r.status===403,"1 mod: nu are ce preda");
 r=await A(MOD,{op:"candidates",for:"handover"});ok(r.status===403,"1 mod: candidates handover 403");
 r=await A(MOD,{op:"nimic"});ok(r.status===400,"op necunoscut: 400");
-r=await A(MOD,{op:"leaderCode",memberId:nat});ok(r.status===200&&r.j.code,"1 mod: leaderCode pentru presedintele national");
-r=await A(MOD,{op:"leaderCode",memberId:"tim"});ok(r.status===403,"1 mod: leaderCode nu merge pentru trezorier");
-r=await A(MOD,{op:"leaderCode",memberId:"nimeni"});ok(r.status===404,"leaderCode pentru persoana inexistenta: 404");
+r=await A(MOD,{op:"resetAccess",memberId:nat});ok(r.status===200&&r.j.code,"1 mod: resetAccess pentru presedintele national");
+NAT=await login(r.j.code);ok(!!NAT,"presedintele national reintra cu codul nou");
+r=await A(MOD,{op:"resetAccess",memberId:"tim"});ok(r.status===403,"1 mod: resetAccess nu merge pentru un membru");
+r=await A(MOD,{op:"resetAccess",memberId:"nimeni"});ok(r.status===404,"resetAccess pentru persoana inexistenta: 404");
+r=await A(MOD,{op:"leaderCode",memberId:ana});ok(r.status===400,"leaderCode a disparut: operatie necunoscuta");
 r=await A(MOD,{op:"candidates",for:"president",branch:"Brașov"});
 ok(r.status===200&&r.j.ok&&Array.isArray(r.j.list)&&r.j.list.some(x=>x.id===ana&&x.active===true)&&r.j.list.some(x=>x.id==="dan"&&x.active===false)&&r.j.list.every(x=>Object.keys(x).sort().join()==="active,branch,id,name"),"1 mod: candidates president, doar id/name/branch/active");
 // 2. national
@@ -211,8 +230,8 @@ r=await A(NAT,{op:"setRole",memberId:"tim",role:"board",title:"Secretar"});ok(r.
 r=await A(NAT,{op:"exclude",memberId:"dan"});ok(r.status===403,"2 national nu poate exclude");
 r=await api("/api/app/code",{cookie:NAT,body:{branch:"Brașov",memberId:"dan"}});ok(r.status===403,"2 national nu genereaza coduri de membru");
 r=await A(NAT,{op:"candidates",for:"president",branch:"Sibiu"});ok(r.status===200&&r.j.list.some(x=>x.id==="sm1")&&r.j.list.some(x=>x.id===sib1),"2 national: candidates president");
-r=await A(NAT,{op:"leaderCode",memberId:nat});ok(r.status===403,"2 national nu da cod pentru national");
-r=await A(NAT,{op:"leaderCode",memberId:"tim"});ok(r.status===403,"2 national nu da cod pentru trezorier");
+r=await A(NAT,{op:"resetAccess",memberId:nat});ok(r.status===403,"2 national nu reseteaza accesul national");
+r=await A(NAT,{op:"resetAccess",memberId:"tim"});ok(r.status===403,"2 national nu reseteaza accesul unui trezorier");
 r=await A(ANA2,{op:"candidates",for:"president",branch:"Brașov"});ok(r.status===403,"candidates president: doar mod si national");
 // 4. president: setRole
 const BEA=await addM2(ANA2,"bea","Bea Board","Brașov",true);ok(!!BEA,"membru bea cu cont");
@@ -290,7 +309,7 @@ const EVE=await addM2(ANA2,"eve","Eve Exclusa","Brașov",true);ok(!!EVE,"membru 
 await W(EVE,"profiles","eve",{name:"Eve",firm:"E SRL",consent:{directory:true}});
 await A(ANA2,{op:"setRole",memberId:"eve",role:"board",title:"Casier"});
 rows=await PULL(TIM,["profiles"]);ok(rows.data.profiles.some(p=>p.id==="eve"),"8 eve apare in director");
-r=await api("/api/app/code",{cookie:ANA2,body:{branch:"Brașov",memberId:"eve"}});const codeEve=r.j.code;
+const codeEve="QRSTUVWXYZ23";env.DB._db.prepare("INSERT INTO app_codes (hash,member_id,branch,created_by,created,expires) VALUES (?,?,?,?,?,?)").run(createHash("sha256").update("jci-app-code:"+codeEve).digest("hex"),"eve","Brașov","test",T,addM(T,1));
 r=await A(ANA2,{op:"exclude",memberId:ana});ok(r.status===403,"8 presedintele nu se exclude pe sine");
 r=await A(ANA2,{op:"exclude",memberId:nat});ok(r.status===403,"8 nu se exclude national");
 r=await A(ANA2,{op:"exclude",memberId:"nimeni"});ok(r.status===404,"8 exclude: persoana inexistenta 404");
@@ -303,7 +322,9 @@ r=await api("/api/app/me",{method:"GET",cookie:EVE});ok(r.status===403&&r.j.excl
 rows=await api("/api/app/pull",{cookie:EVE,body:{paths:["profiles"]}});ok(rows.status===403&&rows.j.reason==="manual","8 pull pentru exclus: 403");
 r=await W(EVE,"profiles","eve",{name:"Eve"});ok(r.status===403,"8 excluditul nu scrie nimic");
 r=await A(EVE,{op:"candidates",for:"handover"});ok(r.status===403,"8 excluditul nu are operatii de structura");
+r=await api("/api/app/passlogin",{body:CRED.eve});ok(r.status===403&&r.j.excluded===true&&r.j.reason==="manual"&&r.j.branch==="Brașov","8 exclus: nici cu e-mail si parola nu intra");
 r=await api("/api/app/login",{body:{code:codeEve}});ok(r.status===400,"8 codul nefolosit a fost sters la excludere");
+r=await A(ANA2,{op:"resetAccess",memberId:"eve"});ok(r.status===400,"E1b 6 resetAccess pentru un exclus: 400");
 {const cx="ABCDEFGHJKLM";const hh=createHash("sha256").update("jci-app-code:"+cx).digest("hex");
  env.DB._db.prepare("INSERT INTO app_codes (hash,member_id,branch,created_by,created,expires) VALUES (?,?,?,?,?,?)").run(hh,"eve","Brașov","test",T,addM(T,1));
  r=await api("/api/app/login",{body:{code:cx}});ok(r.status===403&&r.j.excluded&&r.j.reason==="manual","8 nici cu un cod nou nu intra");
@@ -317,7 +338,7 @@ r=await A(PCLUJ,{op:"reactivate",memberId:"eve"});ok(r.status===404||r.status===
 r=await A(ANA2,{op:"reactivate",memberId:"eve"});ok(r.status===200,"8 reactivate merge");
 rows=await PULL(TIM,["profiles","badges"]);ok(rows.data.profiles.some(p=>p.id==="eve")&&rows.data.badges.find(x=>x.id==="eve").active===true,"8 reactivate: eve revine in director si insigna e activa");
 r=await api("/api/app/me",{method:"GET",cookie:EVE});ok(r.status===200&&r.j.role==="member","8 dupa reactivare, sesiunea veche merge din nou, fara functie");
-r=await api("/api/app/code",{cookie:ANA2,body:{branch:"Brașov",memberId:"eve"}});const EVE2=await login(r.j.code);ok(!!EVE2,"8 dupa reactivare intra cu cod nou");
+r=await api("/api/app/passlogin",{body:CRED.eve});ok(r.status===200&&r.cookie,"8 dupa reactivare intra cu aceeasi parola (randul din app_auth a ramas)");
 r=await W(ANA2,"branches/Brașov/members","eve",{name:"Eve Exclusa",excluded:true,userId:"x"});
 rows=await PULL(ANA2,["branches/Brașov/members"]);ok(!rows.data["branches/Brașov/members"].find(x=>x.id==="eve").excluded&&rows.data["branches/Brașov/members"].find(x=>x.id==="eve").userId==="eve","8 clientul nu poate seta excluded/userId");
 r=await A(ANA2,{op:"exclude",memberId:"eve"});r=await W(ANA2,"branches/Brașov/members","eve",{name:"Eve Exclusa"});
@@ -332,8 +353,12 @@ r=await api("/api/app/me",{method:"GET",cookie:BOB});ok(r.status===200&&r.j.bran
 r=await W(ANA2,"audit","fals1",{summary:"Fals",path:"roles",byName:"X",action:"setNational"});
 {const au2=(await PULL(MOD,["audit"])).data.audit;ok(!au2.some(a=>a.id==="fals1"),"12 jurnalul scris de client nu poate imita intrari de structura");}
 {const rr=(await PULL(BOB,["roles"])).data.roles;ok(rr.length>0&&rr.every(x=>typeof x.name==="string"&&x.name.length>0),"12 rolurile vin cu numele omului");}
-{const cR=(await api("/api/app/code",{cookie:ANA2,body:{branch:"Brașov",memberId:"bob"}})).j.code;await login(cR);
- const au3=(await PULL(ANA2,["audit"])).data.audit;ok(au3.some(a=>a.action==="relogin"&&a.docId==="bob"),"12 intrarea cu un cod nou pe un cont activ ramane in jurnal");}
+{await addM2(ANA2,"relo","Relo Membru","Brașov",false);
+ const c1=(await api("/api/app/code",{cookie:ANA2,body:{branch:"Brașov",memberId:"relo"}})).j.code;await api("/api/app/login",{body:{code:c1}});
+ const c2=(await api("/api/app/code",{cookie:ANA2,body:{branch:"Brașov",memberId:"relo"}})).j.code;r=await api("/api/app/login",{body:{code:c2}});
+ ok(r.status===200&&r.j.needCred===true,"E1b: un cont activat dar fara parola poate primi si folosi un cod nou");
+ r2=await api("/api/app/logout",{cookie:r.cookie});ok(r2.status===200&&/Max-Age=0/.test(r2.sc),"E1b 1 logout merge si fara e-mail si parola");
+ const au3=(await PULL(ANA2,["audit"])).data.audit;ok(au3.some(a=>a.action==="relogin"&&a.docId==="relo"),"12 intrarea cu un cod nou pe un cont activat, dar fara parola, ramane in jurnal");}
 // 9. scrieri directe
 for(const [nm,ck] of [["mod",MOD],["national",NAT],["president",ANA2],["membru",BOB]]){
   r=await W(ck,"roles","zz",{role:"president",branch:"Brașov"});const a=r.status;
@@ -375,6 +400,97 @@ r=await api("/api/app/me",{method:"GET",cookie:CORA});ok(r.j.role==="national","
 r=await A(MOD,{op:"setNational",branch:"Cluj",memberId:"nimeni"});ok(r.status===404,"setNational: persoana inexistenta 404");
 r=await A(MOD,{op:"setNational",branch:"Cluj"});ok(r.status===400,"setNational fara persoana: 400");
 r=await A(NAT,{op:"setNational",branch:"Cluj",name:"Alt Nume"});ok(r.status===403,"setNational: doar mod");
+// ======= E1b: e-mail si parola, codul doar la prima intrare
+const PWD=(id)=>CRED[id].password;
+// 8 administratorul tehnic
+r=await api("/api/app/me",{method:"GET",cookie:MOD});ok(r.j.needCred===false&&r.j.role==="mod","E1b 8 mod: needCred false");
+r=await api("/api/app/setcred",{cookie:MOD,body:{email:"mod@exemplu.ro",password:"Pw!modmodmod1"}});ok(r.status===403,"E1b 8 mod nu isi pune e-mail si parola");
+r=await api("/api/app/passlogin",{body:{email:"mod@exemplu.ro",password:"Pw!modmodmod1"}});ok(r.status===400,"E1b 8 mod nu intra cu e-mail si parola");
+r=await api("/api/app/modlogin",{body:{key:KEY}});ok(r.status===200&&r.cookie,"E1b 8 mod intra in continuare cu cheia");
+rows=await PULL(r.cookie,["roles","branchlist"]);ok(Array.isArray(rows.data.roles)&&Array.isArray(rows.data.branchlist),"E1b 8 mod nu e afectat de needCred");
+// 4 cod generat inainte de setcred, 5 schimbarea parolei
+await addM2(ANA2,"late","Late Membru","Brașov",false);
+const cA=(await api("/api/app/code",{cookie:ANA2,body:{branch:"Brașov",memberId:"late"}})).j.code;
+r=await api("/api/app/login",{body:{code:cA}});const LATE=r.cookie;ok(r.status===200&&r.j.needCred===true,"E1b 1 login cu cod: needCred in raspuns");
+r=await api("/api/app/code",{cookie:ANA2,body:{branch:"Brașov",memberId:"late"}});const cB=r.j.code;ok(r.status===200&&!!cB,"E1b 4 pana la setcred se poate genera un cod nou");
+r=await api("/api/app/setcred",{cookie:LATE,body:{email:"late@exemplu.ro",password:"Pw!late-one-1"}});ok(r.status===200,"E1b 2 setcred pentru late");
+CRED.late={email:"late@exemplu.ro",password:"Pw!late-one-1"};
+r=await api("/api/app/login",{body:{code:cB}});ok(r.status===400,"E1b 4 codul generat inainte de setarea parolei nu mai merge");
+r=await api("/api/app/code",{cookie:ANA2,body:{branch:"Brașov",memberId:"late"}});ok(r.status===400&&/e-mail și parolă/.test(r.j.error),"E1b 4 /code refuza un cont cu e-mail si parola");
+{const cx2="ZYXWVUTSRQ23";const hh=createHash("sha256").update("jci-app-code:"+cx2).digest("hex");
+ env.DB._db.prepare("INSERT INTO app_codes (hash,member_id,branch,created_by,created,expires) VALUES (?,?,?,?,?,?)").run(hh,"late","Brașov","test",T,addM(T,1));
+ r=await api("/api/app/login",{body:{code:cx2}});ok(r.status===400&&r.j.error==="Contul are deja e-mail și parolă. Intră cu ele."&&!r.cookie,"E1b 4 un cod pentru un cont cu parola nu mai poate fi folosit");
+ ok(env.DB._db.prepare("SELECT used FROM app_codes WHERE hash=?").get(hh).used===null,"E1b 4 codul ramane nefolosit");}
+// 3 passlogin
+r=await api("/api/app/passlogin",{body:{email:" LATE@Exemplu.ro ",password:PWD("late")}});const S2=r.cookie;ok(r.status===200&&S2,"E1b 3 passlogin cu parola buna (e-mail cu majuscule si spatii)");
+r=await api("/api/app/me",{method:"GET",cookie:S2});ok(r.status===200&&r.j.id==="late"&&r.j.needCred===false,"E1b 3 sesiunea de la passlogin merge, fara needCred");
+const b1=await api("/api/app/passlogin",{body:{email:"late@exemplu.ro",password:"parola-gresita"}});
+const b2=await api("/api/app/passlogin",{body:{email:"nimeni@exemplu.ro",password:"parola-gresita"}});
+ok(b1.status===400&&b2.status===400&&b1.j.error==="E-mail sau parolă greșită."&&JSON.stringify(b1.j)===JSON.stringify(b2.j)&&!b1.cookie,"E1b 3 parola gresita si e-mail necunoscut: acelasi 400");
+r=await api("/api/app/passlogin",{body:{}});ok(r.status===400,"E1b 3 fara date: 400");
+// 5 schimbarea
+r=await api("/api/app/setcred",{cookie:LATE,body:{email:"late2@exemplu.ro",password:"Pw!late-two-2"}});ok(r.status===403,"E1b 5 schimbare fara current: 403");
+r=await api("/api/app/setcred",{cookie:LATE,body:{email:"late2@exemplu.ro",password:"Pw!late-two-2",current:"gresita-gresita"}});ok(r.status===403,"E1b 5 current gresit: 403");
+r=await api("/api/app/setcred",{cookie:LATE,body:{email:CRED[nat].email,password:"Pw!late-two-2",current:PWD("late")}});ok(r.status===400,"E1b 5 e-mail folosit de alt cont: 400");
+r=await api("/api/app/setcred",{cookie:LATE,body:{email:"late@exemplu.ro",password:"scurta",current:PWD("late")}});ok(r.status===400,"E1b 5 parola noua prea scurta: 400");
+r=await api("/api/app/setcred",{cookie:LATE,body:{email:"late@exemplu.ro",password:"Pw!late-two-2",current:PWD("late")}});ok(r.status===200,"E1b 5 schimbarea parolei cu current bun");
+const oldLate=CRED.late.password;CRED.late.password="Pw!late-two-2";
+r=await api("/api/app/passlogin",{body:{email:"late@exemplu.ro",password:oldLate}});ok(r.status===400,"E1b 5 vechea parola nu mai merge");
+r=await api("/api/app/passlogin",{body:CRED.late});ok(r.status===200,"E1b 5 noua parola merge");
+r=await api("/api/app/me",{method:"GET",cookie:S2});ok(r.status===401,"E1b 5 celelalte sesiuni se inchid la schimbare");
+r=await api("/api/app/me",{method:"GET",cookie:LATE});ok(r.status===200,"E1b 5 sesiunea curenta ramane");
+r=await api("/api/app/setcred",{cookie:LATE,body:{email:"late3@exemplu.ro",password:PWD("late"),current:PWD("late")}});ok(r.status===200,"E1b 5 schimbare doar a e-mailului");
+r=await api("/api/app/passlogin",{body:{email:"late3@exemplu.ro",password:PWD("late")}});ok(r.status===200,"E1b 5 intra cu noul e-mail");
+r=await api("/api/app/passlogin",{body:{email:"late@exemplu.ro",password:PWD("late")}});ok(r.status===400,"E1b 5 vechiul e-mail nu mai merge");
+CRED.late.email="late3@exemplu.ro";
+// 3 limitarea
+env.DB._db.exec("DELETE FROM rate_log");
+{const codes=[];for(let i=0;i<8;i++)codes.push((await api("/api/app/passlogin",{body:{email:CRED.hugo.email,password:"gresita-"+i}})).status);
+ ok(codes.every(c=>c===400),"E1b 3 primele 8 esecuri pe cont: 400");}
+r=await api("/api/app/passlogin",{body:{email:CRED.hugo.email,password:"gresita-9"}});ok(r.status===429,"E1b 3 dupa 8 esecuri pe cont: 429");
+r=await api("/api/app/passlogin",{body:CRED.hugo});ok(r.status===429,"E1b 3 contul blocat nu intra nici cu parola buna");
+{const ips=env.DB._db.prepare("SELECT ip FROM rate_log WHERE bucket='appacct'").all();ok(ips.length===8&&ips.every(x=>/^[a-f0-9]{64}$/.test(x.ip)),"E1b 3 pe cont se tine amprenta e-mailului, nu e-mailul");}
+env.DB._db.exec("DELETE FROM rate_log");
+{const st=[];for(let i=0;i<10;i++)st.push((await api("/api/app/passlogin",{body:{email:"n"+i+"@exemplu.ro",password:"gresita-gresita"}})).status);
+ ok(st.every(c=>c===400),"E1b 3 10 esecuri de la aceeasi adresa, pe conturi diferite: 400");}
+r=await api("/api/app/passlogin",{body:{email:"n99@exemplu.ro",password:"gresita-gresita"}});ok(r.status===429,"E1b 3 al 11-lea esec de la aceeasi adresa: 429");
+env.DB._db.exec("DELETE FROM rate_log");
+// 6 resetAccess
+{const bobOld=CRED.bob;
+ r=await A(ANA2,{op:"resetAccess",memberId:"bob"});ok(r.status===200&&r.j.ok&&r.j.memberId==="bob"&&r.j.code&&r.j.expires,"E1b 6 presedintele reseteaza accesul unui membru al lui");
+ const codeR=r.j.code;
+ r=await api("/api/app/passlogin",{body:bobOld});ok(r.status===400,"E1b 6 vechea parola nu mai merge");
+ r=await api("/api/app/me",{method:"GET",cookie:BOB});ok(r.status===401,"E1b 6 vechea sesiune nu mai merge");
+ r=await api("/api/app/login",{body:{code:codeR}});const BOB2=r.cookie;ok(r.status===200&&r.j.needCred===true,"E1b 6 codul nou merge si cere din nou setcred");
+ r=await api("/api/app/pull",{cookie:BOB2,body:{paths:["badges"]}});ok(r.status===403&&r.j.needCred===true,"E1b 6 pana la setcred: 403 needCred");
+ r=await api("/api/app/login",{body:{code:codeR}});ok(r.status===400,"E1b 6 codul nu se refoloseste");
+ r=await api("/api/app/setcred",{cookie:BOB2,body:{email:bobOld.email,password:"Pw!bob-nou-1"}});ok(r.status===200,"E1b 6 membrul isi pune din nou e-mail si parola (acelasi e-mail e liber dupa resetare)");
+ r=await api("/api/app/passlogin",{body:{email:bobOld.email,password:"Pw!bob-nou-1"}});ok(r.status===200,"E1b 6 intra cu noua parola");
+ r=await api("/api/app/passlogin",{body:bobOld});ok(r.status===400,"E1b 6 vechea parola ramane inutilizabila");
+ r=await A(BOB2,{op:"resetAccess",memberId:"dan"});ok(r.status===403,"E1b 6 membrul simplu nu reseteaza nimic");}
+r=await A(ANA2,{op:"resetAccess",memberId:"cora"});ok(r.status===404,"E1b 6 resetAccess pentru un membru din alta filiala: 404");
+r=await A(ANA2,{op:"resetAccess",memberId:ana});ok(r.status===403,"E1b 6 presedintele nu isi reseteaza singur accesul");
+r=await A(ANA2,{op:"resetAccess"});ok(r.status===400,"E1b 6 resetAccess fara tinta: 400");
+r=await A(TIM,{op:"resetAccess",memberId:"hugo"});ok(r.status===403,"E1b 6 trezorierul nu reseteaza accesul");
+r=await A(CORA,{op:"resetAccess",memberId:"bob"});ok(r.status===403,"E1b 6 national nu reseteaza accesul unui membru simplu");
+r=await A(CORA,{op:"resetAccess",memberId:"cora"});ok(r.status===403,"E1b 6 national nu isi reseteaza propriul acces");
+r=await A(ANA2,{op:"resetAccess",memberId:"hugo"});ok(r.status===200&&r.j.code,"E1b 6 presedintele reseteaza accesul unui trezorier/membru");
+r=await A(CORA,{op:"resetAccess",memberId:ana});ok(r.status===200&&r.j.code,"E1b 6 national reseteaza accesul unui presedinte");
+r2=await api("/api/app/me",{method:"GET",cookie:ANA2});ok(r2.status===401,"E1b 6 sesiunea presedintelui s-a inchis");
+ANA2=await login(r.j.code);ok(!!ANA2,"E1b 6 presedintele reintra cu codul nou");
+r=await A(MOD,{op:"resetAccess",memberId:"cora"});ok(r.status===200&&r.j.code,"E1b 6 mod reseteaza accesul presedintelui national");
+r2=await api("/api/app/me",{method:"GET",cookie:CORA});ok(r2.status===401,"E1b 6 sesiunea nationalului s-a inchis");
+CORA=await login(r.j.code);ok(!!CORA,"E1b 6 nationalul reintra cu codul nou");
+{const au=(await PULL(ANA2,["audit"])).data.audit;ok(au.some(a=>a.action==="resetAccess"&&a.docId==="bob"&&a.path==="branches/Brașov/members"&&a.summary==="Acces resetat: Bob Membru"&&a.branch==="Brașov"),"E1b 6 resetarea unui membru ramane in jurnalul filialei");
+ const am=(await PULL(MOD,["audit"])).data.audit;ok(am.some(a=>a.action==="resetAccess"&&a.docId==="cora"&&a.path==="roles")&&am.some(a=>a.action==="resetAccess"&&a.docId===ana&&a.path==="roles")&&!am.some(a=>a.action==="resetAccess"&&a.docId==="bob"),"E1b 6 resetarea unui presedinte sau national e in jurnalul de structura, a unui membru nu");}
+// 7 parolele nu apar nicaieri
+ok(LOG.length>200&&LOG.every(x=>!x.includes("Pw!")),"E1b 7 nicio parola in raspunsurile serverului");
+{const docs=env.DB._db.prepare("SELECT data FROM app_docs").all().map(x=>x.data).join("\n");ok(!docs.includes("Pw!"),"E1b 7 nicio parola in documente si in jurnal");
+ const auth=env.DB._db.prepare("SELECT * FROM app_auth").all();
+ ok(auth.length>5&&auth.every(x=>x.iter===20000&&/^[a-f0-9]{32}$/.test(x.salt)&&/^[a-f0-9]{64}$/.test(x.hash)&&!JSON.stringify(x).includes("Pw!")),"E1b 7 app_auth: doar sare, amprenta PBKDF2 si numarul de iteratii");
+ ok(new Set(auth.map(x=>x.salt)).size===auth.length,"E1b 7 sare diferita pe cont");
+ const hr=auth.find(x=>x.member_id==="late");ok(hr&&pbkdf2Sync(PWD("late"),Buffer.from(hr.salt,"hex"),20000,32,"sha256").toString("hex")===hr.hash,"E1b 7 amprenta este PBKDF2-SHA256 cu 20000 de iteratii");
+ ok(!JSON.stringify(env.DB._db.prepare("SELECT * FROM app_sessions").all()).includes("Pw!"),"E1b 7 nici in sesiuni");}
 // limitarea incercarilor gresite: doar esecurile se numara
 env.DB._db.exec("DELETE FROM rate_log");
 const cg=(await api("/api/app/code",{cookie:ANA2,body:{branch:"Brașov",memberId:"dan"}})).j.code;

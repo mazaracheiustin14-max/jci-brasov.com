@@ -158,9 +158,58 @@ function renderServerLogin() {
   return (
     '<div class="gate"><div class="gate-top">' +
     logoHtml() +
-    '</div><div class="gate-in" style="margin-top:120px"><h1>Intră în aplicație</h1><p class="small" style="margin:8px 0 16px">Introdu codul de membru primit de la președintele filialei tale. Conducerea intră tot cu un cod, primit de la persoana care a numit-o în funcție.</p><form id="svform"><div class="field"><label for="lg_code">Codul de membru</label><input type="text" id="lg_code" name="code" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" maxlength="20"></div><div class="err" id="lgerr" role="alert"></div><div class="sheet-acts"><button class="btn" type="submit">Continuă</button></div></form>' +
-    '<details style="margin-top:24px"><summary class="small">Administrator tehnic</summary><form id="modform" style="margin-top:12px"><div class="field"><label for="lg_key">Cheia administratorului</label><input type="password" id="lg_key" name="key" autocomplete="off"></div><div class="err" id="mderr" role="alert"></div><div class="sheet-acts"><button class="btn sec" type="submit">Intră ca administrator</button></div></form></details></div></div>'
+    '</div><div class="gate-in" style="margin-top:120px"><h1>Intră în aplicație</h1><p class="small" style="margin:8px 0 16px">Intră cu e-mailul și parola contului tău. Codul primit de la președintele filialei se folosește o singură dată, la prima intrare.</p><form id="pwform"><div class="field"><label for="lg_email">E-mail</label><input type="email" id="lg_email" name="email" autocomplete="username" maxlength="120"></div><div class="field"><label for="lg_pass">Parolă</label><input type="password" id="lg_pass" name="password" autocomplete="current-password" maxlength="100"></div><div class="err" id="pwerr" role="alert"></div><div class="sheet-acts"><button class="btn" type="submit">Intră</button></div></form>' +
+    '<details style="margin-top:24px"><summary class="small">Prima intrare? Am un cod</summary><form id="svform" style="margin-top:12px"><div class="field"><label for="lg_code">Codul de membru</label><input type="text" id="lg_code" name="code" placeholder="XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" maxlength="20"></div><div class="err" id="lgerr" role="alert"></div><div class="sheet-acts"><button class="btn sec" type="submit">Continuă</button></div></form></details>' +
+    '<details style="margin-top:16px"><summary class="small">Administrator tehnic</summary><form id="modform" style="margin-top:12px"><div class="field"><label for="lg_key">Cheia administratorului</label><input type="password" id="lg_key" name="key" autocomplete="off"></div><div class="err" id="mderr" role="alert"></div><div class="sheet-acts"><button class="btn sec" type="submit">Intră ca administrator</button></div></form></details></div></div>'
   );
+}
+/* Ecranul „Setează e-mailul și parola”: după intrarea cu cod, până se pun e-mailul și parola nu se poate face nimic altceva. */
+function renderNeedCred() {
+  return (
+    '<div class="gate"><div class="gate-top">' +
+    logoHtml() +
+    '</div><div class="gate-in" style="margin-top:120px"><h1>Setează e-mailul și parola</h1><p class="small" style="margin:8px 0 16px">De acum intri cu e-mailul și parola. Codul primit nu mai poate fi folosit.</p><form id="credform"><div class="field"><label for="sc_email">E-mail</label><input type="email" id="sc_email" name="email" autocomplete="username" maxlength="120"></div><div class="field"><label for="sc_pass">Parolă</label><input type="password" id="sc_pass" name="password" autocomplete="new-password" maxlength="100"><span class="help">Între 8 și 100 de caractere.</span></div><div class="field"><label for="sc_pass2">Confirmă parola</label><input type="password" id="sc_pass2" name="password2" autocomplete="new-password" maxlength="100"></div><div class="err" id="crerr" role="alert"></div><div class="sheet-acts"><button class="btn" type="submit">Salvează</button><button class="btn sec" type="button" data-act="logout">Ieși din cont</button></div></form></div></div>'
+  );
+}
+function validEmail(e) {
+  return e.length <= 120 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+}
+function bindNeedCred() {
+  var f = document.getElementById("credform");
+  if (!f) return;
+  f.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var fd = new FormData(f);
+    var e = document.getElementById("crerr");
+    var em = String(fd.get("email") || "")
+      .trim()
+      .toLowerCase();
+    var pw = String(fd.get("password") || "");
+    e.textContent = "";
+    if (!validEmail(em)) {
+      e.textContent = "Introdu o adresă de e-mail validă.";
+      return;
+    }
+    if (pw.length < 8 || pw.length > 100) {
+      e.textContent = "Parola are între 8 și 100 de caractere.";
+      return;
+    }
+    if (pw !== String(fd.get("password2") || "")) {
+      e.textContent = "Parolele nu coincid.";
+      return;
+    }
+    svPost("/api/app/setcred", { email: em, password: pw })
+      .then(function (r) {
+        if (r.status === 200) {
+          location.reload();
+          return;
+        }
+        e.textContent = (r.body && r.body.error) || "Nu am putut salva. Încearcă din nou.";
+      })
+      .catch(function () {
+        e.textContent = "Nu am putut contacta serverul. Verifică conexiunea.";
+      });
+  });
 }
 function svPost(url, body) {
   return fetch(url, {
@@ -175,6 +224,7 @@ function svPost(url, body) {
         return {};
       })
       .then(function (j) {
+        if (r.status === 403 && j && j.needCred) location.reload();
         return { status: r.status, body: j };
       });
   });
@@ -182,18 +232,32 @@ function svPost(url, body) {
 function showServerLogin() {
   var app = document.getElementById("app");
   app.innerHTML = renderServerLogin();
-  function handle(form, errId, url, field) {
+  /* fields: numele câmpurilor trimise; parola nu se păstrează nicăieri, câmpul se golește după trimitere */
+  function handle(form, errId, url, fields) {
     form.addEventListener("submit", function (ev) {
       ev.preventDefault();
       var e = document.getElementById(errId);
       e.textContent = "";
-      var v = String(new FormData(form).get(field) || "");
-      if (field === "code" && normCode(v).length !== 12) {
+      var fd = new FormData(form);
+      var b = {};
+      fields.forEach(function (f) {
+        b[f] = String(fd.get(f) || "");
+      });
+      if (b.code !== undefined && normCode(b.code).length !== 12) {
         e.textContent = "Codul are 12 caractere, de exemplu K7M2-9QXA-4TLD.";
         return;
       }
-      var b = {};
-      b[field] = v;
+      if (b.email !== undefined) {
+        b.email = b.email.trim().toLowerCase();
+        if (!b.email || !b.password) {
+          e.textContent = "Completează e-mailul și parola.";
+          return;
+        }
+      }
+      if (b.password !== undefined) {
+        var pf = form.querySelector('input[type="password"]');
+        if (pf) pf.value = "";
+      }
       svPost(url, b)
         .then(function (r) {
           if (r.status === 200) {
@@ -205,15 +269,17 @@ function showServerLogin() {
             app.innerHTML = renderExcluded(r.body);
             return;
           }
-          e.textContent = r.body.error || "Nu am putut intra. Încearcă din nou.";
+          e.textContent =
+            r.body.error || (r.status === 429 ? "Prea multe încercări. Așteaptă o oră." : "Nu am putut intra. Încearcă din nou.");
         })
         .catch(function () {
           e.textContent = "Nu am putut contacta serverul. Verifică conexiunea.";
         });
     });
   }
-  handle(document.getElementById("svform"), "lgerr", "/api/app/login", "code");
-  handle(document.getElementById("modform"), "mderr", "/api/app/modlogin", "key");
+  handle(document.getElementById("pwform"), "pwerr", "/api/app/passlogin", ["email", "password"]);
+  handle(document.getElementById("svform"), "lgerr", "/api/app/login", ["code"]);
+  handle(document.getElementById("modform"), "mderr", "/api/app/modlogin", ["key"]);
 }
 function renderGate() {
   return (

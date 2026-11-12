@@ -15,6 +15,12 @@ async function start() {
       var js = await rs.json().catch(function () {
         return {};
       });
+      if (rs.status === 200 && js.needCred) {
+        S.mode = "needcred";
+        document.getElementById("app").innerHTML = renderNeedCred();
+        bindNeedCred();
+        return;
+      }
       if (rs.status === 200) {
         S.me = {
           id: String(js.id),
@@ -23,6 +29,7 @@ async function start() {
           branch: String(js.branch || ""),
           role: String(js.role || ""),
           title: String(js.title || ""),
+          email: String(js.email || ""),
         };
         S.store = makeHttpStore();
         S.mode = "ready";

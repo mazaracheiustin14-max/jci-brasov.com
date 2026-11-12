@@ -14,6 +14,7 @@ Ce urmează să se construiască: `SPEC-ROLURI.md`. Istoricul și detaliile de s
 6. Un ecran nou se compune din piesele setului de componente. Stil nou doar dacă nicio piesă nu se potrivește, și atunci
    piesa se adaugă în `js/12-ui-module.js`, `css/45-componente-module.css` și în catalog.
 7. Drepturile se verifică pe server (`worker/app.js`). Interfața doar ascunde ce nu e permis.
+   Intrarea: codul deschide contul doar prima dată; apoi e-mail și parolă. Parola nu se ține în starea aplicației și nu se scrie nicăieri.
 8. Sumele se țin în bani (întregi) și se afișează cu `fmt(bani)`. Tot textul venit din date trece prin `esc()`.
 9. Nimic nu se șterge din evidențe: se anulează, cu urmă în jurnal.
 10. Aplicația nu trebuie să încarce site-ul: fără interogări periodice mai dese de 60 s, fără biblioteci externe,
@@ -45,7 +46,7 @@ src/app/js/00-util.js            constante, formatare, date
            80-catalog.js         catalogul vizual /app?ui
            90-pornire.js         start()
 src/app/img/                     logo.png, icon.png
-src/app/etape/                   proiectul tehnic al fiecărei etape (E1.md ...)
+src/app/etape/                   proiectul tehnic al fiecărei etape (E1.md, E1b-autentificare.md ...)
 src/app/tests/                   teste (vezi mai jos)
 worker/app.js                    API-ul /api/app/* și regulile de acces
 ```

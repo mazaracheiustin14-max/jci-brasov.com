@@ -36,7 +36,9 @@ function vProfile() {
     '<div class="sec-h"><h2>Drepturile tale</h2></div><p class="small">Poți descărca datele tale sau poți șterge profilul. Evidențele financiare se păstrează restrâns pe perioada legală. Pentru cereri speciale (obiecție, restricționare) scrie conducerii filialei.</p>' +
     '<div class="acts"><button class="btn sec" data-act="export">Descarcă datele mele</button><button class="btn crit" data-act="delprofile">Șterge profilul</button></div>' +
     (S.server
-      ? '<div class="sec-h"><h2>Contul</h2></div><button class="btn sec" data-act="logout">Ieși din cont</button>'
+      ? uiSection("Contul") +
+        uiKV([["E-mail", S.me.email || "nesetat"]]) +
+        '<div class="acts" style="margin-top:12px"><button class="btn sec" data-act="changecred">Schimbă e-mailul sau parola</button><button class="btn sec" data-act="logout">Ieși din cont</button></div>'
       : '<div class="sec-h"><h2>Codul contului</h2></div><p class="small">Dacă conducerea îți cere codul contului, copiază-l de aici.</p><p class="num" style="overflow-wrap:anywhere;font-family:monospace;margin:8px 0">' +
         esc(S.me.id) +
         '</p><button class="btn sec sm" data-act="copyid">Copiază codul</button>')

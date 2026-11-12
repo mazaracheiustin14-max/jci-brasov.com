@@ -1,5 +1,7 @@
 // JCI Business: aplicația pentru membri, la /app. Datele stau în D1 (tabelele app_*), iar accesul se verifică aici, pe server.
-//  - Intrare cu cod de membru (generat de președintele filialei; conturile de conducere le creează administratorul tehnic și președintele național) sau cu cheia moderatorului.
+//  - Codul de unică folosință (generat de președintele filialei sau întors de operațiile de structură) deschide contul doar la prima intrare;
+//    imediat după, omul își pune e-mail și parolă (/api/app/setcred) și de acolo intră doar cu ele (/api/app/passlogin).
+//    Parola uitată: superiorul face resetAccess (șterge e-mailul, parola și sesiunile și întoarce un cod nou). Administratorul tehnic intră cu cheia.
 //  - Sesiune în cookie HttpOnly (Path=/api/app), stocată în D1 doar ca amprentă SHA-256.
 //  - Reguli: membrii văd directorul; conducerea unei filiale vede doar filiala ei; administratorul tehnic (mod) și președintele național
 //    (national) nu văd datele interne ale filialelor, doar structura (filiale, președinți). Rolurile se schimbă doar prin /api/app/admin.
@@ -18,6 +20,8 @@ const COLLS = ["members", "fees", "donations", "expenses", "settings", "codes"];
 const CODE_ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const MAX_DOC = 6000;
+const PBKDF2_ITER = 20000; // limita de procesor a platformei nu permite mult mai mult; numărul se ține pe rând, ca să poată crește
+const DUMMY_SALT = "00112233445566778899aabbccddeeff"; // pentru un e-mail necunoscut se face același calcul, ca timpul să nu-l trădeze
 
 const enc = new TextEncoder();
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -35,6 +39,17 @@ function genCode() {
   return o;
 }
 const normCode = (c) => String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+async function pbkdf2(password, saltHex, iter) {
+  const key = await crypto.subtle.importKey("raw", enc.encode(String(password)), "PBKDF2", false, ["deriveBits"]);
+  const salt = new Uint8Array(saltHex.match(/../g).map((h) => parseInt(h, 16)));
+  return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: iter, hash: "SHA-256" }, key, 256));
+}
+function cleanEmail(v) {
+  if (typeof v !== "string") return "";
+  const e = v.trim().toLowerCase();
+  return e.length <= 120 && /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(e) ? e : "";
+}
+const okPassword = (p) => typeof p === "string" && p.length >= 8 && p.length <= 100;
 
 const HEADERS = {
   "Cache-Control": "no-store",
@@ -100,6 +115,7 @@ function ensureSchema(env) {
       "CREATE INDEX IF NOT EXISTS app_sessions_user ON app_sessions (user_id)",
       "CREATE TABLE IF NOT EXISTS app_codes (hash TEXT PRIMARY KEY, member_id TEXT NOT NULL, branch TEXT NOT NULL, created_by TEXT, created TEXT, expires TEXT NOT NULL, used TEXT)",
       "CREATE TABLE IF NOT EXISTS app_state (member_id TEXT PRIMARY KEY, branch TEXT NOT NULL, valid_until TEXT, active INTEGER NOT NULL DEFAULT 0)",
+      "CREATE TABLE IF NOT EXISTS app_auth (member_id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, salt TEXT NOT NULL, hash TEXT NOT NULL, iter INTEGER NOT NULL, updated TEXT NOT NULL)",
     ];
     schemaReady = (async () => {
       await env.DB.batch(q.map((s) => env.DB.prepare(s)));
@@ -197,9 +213,10 @@ async function getUser(request, env) {
   const h = await sha256("jci-app-session:" + tok);
   const s = await env.DB.prepare("SELECT user_id, expires FROM app_sessions WHERE hash=?").bind(h).first();
   if (!s || s.expires < new Date().toISOString()) return null;
-  if (s.user_id === "mod") return { id: "mod", mod: true, state: "active", role: "mod", title: "Administrator", branch: "", hash: h };
+  if (s.user_id === "mod") return { id: "mod", mod: true, state: "active", role: "mod", title: "Administrator", branch: "", hasCred: true, hash: h };
   const st = await env.DB.prepare("SELECT branch, valid_until, active, excluded FROM app_state WHERE member_id=?").bind(s.user_id).first();
   const rr = await env.DB.prepare("SELECT data FROM app_docs WHERE path='roles' AND id=?").bind(s.user_id).first();
+  const au = await env.DB.prepare("SELECT email FROM app_auth WHERE member_id=?").bind(s.user_id).first();
   const own = st ? st.branch : "";
   let role = "member", title = "Membru";
   if (rr) {
@@ -212,7 +229,7 @@ async function getUser(request, env) {
       }
     } catch (e) { /* rol invalid: rămâne membru */ }
   }
-  return { id: s.user_id, mod: false, state: stateOf(st), reason: st && st.excluded ? "manual" : "expired", role, title, branch: own, ownBranch: own, validUntil: st ? st.valid_until : "", hash: h };
+  return { id: s.user_id, mod: false, state: stateOf(st), reason: st && st.excluded ? "manual" : "expired", role, title, branch: own, ownBranch: own, validUntil: st ? st.valid_until : "", hasCred: !!au, email: au ? au.email : "", hash: h };
 }
 async function newSession(env, userId, days) {
   const tok = randHex(32); const h = await sha256("jci-app-session:" + tok);
@@ -278,6 +295,7 @@ export async function handleApp(request, env, url) {
   }
 
   if (p === "/api/app/login" && request.method === "POST") return login(request, env, body);
+  if (p === "/api/app/passlogin" && request.method === "POST") return passLogin(request, env, body);
   if (p === "/api/app/modlogin" && request.method === "POST") return modLogin(request, env, body);
 
   const u = await getUser(request, env);
@@ -288,8 +306,13 @@ export async function handleApp(request, env, url) {
   }
   if (u.state === "excluded") return fail(403, "Acces suspendat.", { excluded: true, reason: u.reason, validUntil: u.validUntil, branch: u.ownBranch });
   if (!inApp(u)) return fail(401, "Neautentificat.");
+  // fără e-mail și parolă nu se poate face nimic în afară de me, setcred și logout (logout e tratat mai sus)
+  const isMe = p === "/api/app/me" && request.method === "GET";
+  if (!u.mod && !u.hasCred && !isMe && !(p === "/api/app/setcred" && request.method === "POST"))
+    return fail(403, "Setează mai întâi e-mailul și parola.", { needCred: true });
 
-  if (p === "/api/app/me" && request.method === "GET") return me(env, u);
+  if (isMe) return me(env, u);
+  if (p === "/api/app/setcred" && request.method === "POST") return setCred(env, u, body);
   if (p === "/api/app/pull" && request.method === "POST") return pull(env, u, body);
   if (p === "/api/app/write" && request.method === "POST") return write(env, u, body);
   if (p === "/api/app/code" && request.method === "POST") return makeCode(env, u, body);
@@ -309,6 +332,9 @@ async function login(request, env, body) {
   const m = await getDoc(env, path, c.member_id);
   if (!m) return bad();
   if (m.excluded) return fail(403, "Acces suspendat.", { excluded: true, reason: "manual", validUntil: m.validUntil || "", branch: c.branch });
+  // contul cu e-mail și parolă nu se mai deschide cu cod
+  if (await env.DB.prepare("SELECT member_id FROM app_auth WHERE member_id=?").bind(c.member_id).first())
+    return fail(400, "Contul are deja e-mail și parolă. Intră cu ele.");
   // starea după recalculare, înainte să consumăm codul
   const fut = Object.assign({}, m);
   if (!fut.validUntil) fut.validUntil = defaultValid();
@@ -328,7 +354,64 @@ async function login(request, env, body) {
   const mname = String(m.name || "").slice(0, 100);
   await auditLog(env, c.member_id, mname, path, c.member_id, first ? "activate" : "relogin", (first ? "Cont activat prin cod: " : "Intrare cu un cod nou: ") + mname, c.branch);
   const tok = await newSession(env, c.member_id, SESSION_DAYS);
+  return json({ ok: true, needCred: true }, 200, { "Set-Cookie": cookieHeader(tok, SESSION_DAYS) });
+}
+
+// ---------- e-mail și parolă ----------
+const acctKey = async (email) => sha256("jci-app-email:" + String(email).slice(0, 200));
+async function acctLocked(env, key) {
+  try {
+    const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM rate_log WHERE bucket='appacct' AND ip=? AND creat > datetime('now','-1 hour')").bind(key).first();
+    return !!(r && (r.n || 0) >= 8);
+  } catch (e) { console.log("app rate:", e && e.message); return false; }
+}
+async function noteAcct(env, key) {
+  try { await env.DB.prepare("INSERT INTO rate_log (bucket, ip) VALUES ('appacct', ?)").bind(key).run(); }
+  catch (e) { console.log("app rate:", e && e.message); }
+}
+
+async function passLogin(request, env, body) {
+  if (await tooManyFails(request, env, "apppass", 10, 40)) return fail(429, "Prea multe încercări greșite. Încearcă din nou peste o oră.");
+  const rawEmail = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const email = cleanEmail(body.email);
+  const pw = typeof body.password === "string" && body.password.length <= 100 ? body.password : "";
+  const key = await acctKey(rawEmail);
+  if (await acctLocked(env, key)) return fail(429, "Prea multe încercări greșite pe acest cont. Încearcă din nou peste o oră.");
+  const bad = async () => { await noteFail(request, env, "apppass"); await noteAcct(env, key); return fail(400, "E-mail sau parolă greșită."); };
+  const row = email ? await env.DB.prepare("SELECT member_id, salt, hash, iter FROM app_auth WHERE email=?").bind(email).first() : null;
+  // același calcul și pentru un e-mail necunoscut
+  const calc = await pbkdf2(pw, row ? row.salt : DUMMY_SALT, row ? row.iter : PBKDF2_ITER);
+  if (!row || !pw || !eqConst(calc, row.hash)) return bad();
+  const st = await env.DB.prepare("SELECT branch, valid_until, active, excluded FROM app_state WHERE member_id=?").bind(row.member_id).first();
+  if (!st) return bad();
+  if (stateOf(st) === "excluded") return fail(403, "Acces suspendat.", { excluded: true, reason: st.excluded ? "manual" : "expired", validUntil: st.valid_until || "", branch: st.branch });
+  if (!inApp({ state: stateOf(st) })) return bad();
+  const tok = await newSession(env, row.member_id, SESSION_DAYS);
   return json({ ok: true }, 200, { "Set-Cookie": cookieHeader(tok, SESSION_DAYS) });
+}
+
+async function setCred(env, u, body) {
+  if (u.mod) return fail(403, "Administratorul tehnic intră cu cheia.");
+  const row = await env.DB.prepare("SELECT member_id, email, salt, hash, iter FROM app_auth WHERE member_id=?").bind(u.id).first();
+  if (row) { // schimbare: cere parola actuală
+    const key = await acctKey(row.email);
+    if (await acctLocked(env, key)) return fail(429, "Prea multe încercări greșite pe acest cont. Încearcă din nou peste o oră.");
+    const cur = typeof body.current === "string" && body.current.length <= 100 ? body.current : "";
+    if (!cur || !eqConst(await pbkdf2(cur, row.salt, row.iter), row.hash)) { await noteAcct(env, key); return fail(403, "Parola actuală nu este corectă."); }
+  }
+  const email = cleanEmail(body.email);
+  if (!email) return fail(400, "Introdu o adresă de e-mail validă.");
+  if (!okPassword(body.password)) return fail(400, "Parola trebuie să aibă între 8 și 100 de caractere.");
+  const other = await env.DB.prepare("SELECT member_id FROM app_auth WHERE email=? AND member_id<>?").bind(email, u.id).first();
+  if (other) return fail(400, "Această adresă de e-mail este folosită de alt cont.");
+  const salt = randHex(16); const hash = await pbkdf2(body.password, salt, PBKDF2_ITER); const now = new Date().toISOString();
+  try {
+    if (row) await env.DB.prepare("UPDATE app_auth SET email=?, salt=?, hash=?, iter=?, updated=? WHERE member_id=?").bind(email, salt, hash, PBKDF2_ITER, now, u.id).run();
+    else await env.DB.prepare("INSERT INTO app_auth (member_id, email, salt, hash, iter, updated) VALUES (?,?,?,?,?,?)").bind(u.id, email, salt, hash, PBKDF2_ITER, now).run();
+  } catch (e) { return fail(400, "Această adresă de e-mail este folosită de alt cont."); }
+  if (!row) await env.DB.prepare("DELETE FROM app_codes WHERE member_id=? AND used IS NULL").bind(u.id).run();
+  else await env.DB.prepare("DELETE FROM app_sessions WHERE user_id=? AND hash<>?").bind(u.id, u.hash).run();
+  return json({ ok: true });
 }
 
 async function modLogin(request, env, body) {
@@ -345,9 +428,9 @@ async function modLogin(request, env, body) {
 }
 
 async function me(env, u) {
-  if (u.mod) return json({ id: "mod", isOwner: true, name: "Moderator", role: "mod", title: "Administrator" });
+  if (u.mod) return json({ id: "mod", isOwner: true, name: "Moderator", role: "mod", title: "Administrator", needCred: false, email: "" });
   const m = await getDoc(env, membersPath(u.ownBranch), u.id);
-  return json({ id: u.id, isOwner: false, name: m ? String(m.name || "") : "", state: u.state, validUntil: u.validUntil, branch: u.ownBranch, role: u.role, title: u.title });
+  return json({ id: u.id, isOwner: false, name: m ? String(m.name || "") : "", state: u.state, validUntil: u.validUntil, branch: u.ownBranch, role: u.role, title: u.title, needCred: !u.hasCred, email: u.email || "" });
 }
 
 async function pull(env, u, body) {
@@ -500,6 +583,7 @@ async function issueCode(env, createdBy, b, mid) {
   await env.DB.prepare("INSERT INTO app_codes (hash, member_id, branch, created_by, created, expires) VALUES (?,?,?,?,?,?)").bind(h, mid, b, createdBy, today(), exp).run();
   return { code, expires: exp };
 }
+const hasCredOf = async (env, id) => !!(await env.DB.prepare("SELECT member_id FROM app_auth WHERE member_id=?").bind(id).first());
 async function actorName(env, u) {
   if (u.mod) return "Administrator";
   const m = await getDoc(env, membersPath(u.ownBranch), u.id);
@@ -514,6 +598,7 @@ async function makeCode(env, u, body) {
   const m = await getDoc(env, path, mid);
   if (!m) return fail(404, "Membrul nu există.");
   if (m.excluded) return fail(400, "Membrul este exclus din aplicație.");
+  if (await hasCredOf(env, mid)) return fail(400, "Contul are deja e-mail și parolă. Folosește «Resetează accesul» dacă membrul nu mai poate intra.");
   const { code, expires } = await issueCode(env, u.id, b, mid);
   await auditLog(env, u.id, await actorName(env, u), path, mid, "code", "Cod de înscriere generat pentru " + String(m.name || "").slice(0, 100), b);
   return json({ ok: true, code, expires });
@@ -562,9 +647,9 @@ async function ensureMember(env, b, pr, by) {
   await putDoc(env, membersPath(b), pr.id, pr.m, by);
   await recomputeState(env, b, pr.id);
 }
-// „întoarce cod”: doar dacă persoana nu are cont activat
+// „întoarce cod”: doar dacă persoana nu are e-mail și parolă
 async function codeIfNew(env, u, b, pr, out) {
-  if (pr.m && pr.m.userId) return out;
+  if (pr.m && await hasCredOf(env, pr.id)) return out;
   const c = await issueCode(env, u.id, b, pr.id);
   out.code = c.code; out.expires = c.expires;
   return out;
@@ -625,20 +710,28 @@ async function admin(env, u, body) {
     return okJ(await codeIfNew(env, u, b, pr, { memberId: pr.id, branch: b }));
   }
 
-  if (op === "leaderCode") {
-    if (!nat) return fail(403, "Nu ai dreptul să generezi acest cod.");
+  if (op === "resetAccess") {
+    if (!(u.mod || u.role === "national" || u.role === "president")) return fail(403, "Nu ai dreptul să resetezi accesul.");
     const mid = rolePerson(body.memberId);
     if (!mid) return fail(400, "Cerere invalidă.");
+    const st = await env.DB.prepare("SELECT branch FROM app_state WHERE member_id=?").bind(mid).first();
+    if (!st || (u.role === "president" && st.branch !== u.branch)) return fail(404, "Membrul nu există în filiala ta.");
     const rr = await rawRole(env, mid);
-    if (!rr) return fail(404, "Persoana nu are o funcție de conducere.");
-    if (rr.role !== "national" && rr.role !== "president") return fail(403, "Nu ai dreptul să generezi codul acestei persoane.");
-    if (!u.mod && rr.role !== "president") return fail(403, "Nu ai dreptul să generezi codul acestei persoane.");
-    const b = String(rr.branch || "");
-    const m = branches.includes(b) ? await getDoc(env, membersPath(b), mid) : null;
-    if (!m) return fail(404, "Persoana nu există în evidența filialei.");
-    if (m.excluded) return fail(400, "Persoana este exclusă din aplicație.");
-    const c = await issueCode(env, by, b, mid);
-    await auditLog(env, by, who, "roles", mid, "leaderCode", "Cod nou de intrare pentru " + String(m.name || "").slice(0, 100), b);
+    const cat = rr ? rr.role : "member";
+    if (cat === "national") { if (!u.mod) return fail(403, "Accesul președintelui național îl resetează administratorul tehnic."); }
+    else if (cat === "president") { if (!(u.mod || u.role === "national")) return fail(403, "Accesul unui președinte îl resetează președintele național sau administratorul tehnic."); }
+    else {
+      if (u.role !== "president") return fail(403, "Accesul unui membru îl resetează președintele filialei lui.");
+      if (mid === u.id) return fail(403, "Nu îți poți reseta propriul acces.");
+    }
+    const path = membersPath(st.branch);
+    const m = await getDoc(env, path, mid);
+    if (!m) return fail(404, "Membrul nu există în evidența filialei.");
+    if (m.excluded) return fail(400, "Membrul este exclus din aplicație.");
+    await env.DB.prepare("DELETE FROM app_auth WHERE member_id=?").bind(mid).run();
+    await env.DB.prepare("DELETE FROM app_sessions WHERE user_id=?").bind(mid).run();
+    const c = await issueCode(env, by, st.branch, mid); // șterge și codurile nefolosite
+    await auditLog(env, by, who, cat === "president" || cat === "national" ? "roles" : path, mid, "resetAccess", "Acces resetat: " + String(m.name || "").slice(0, 100), st.branch);
     return okJ({ memberId: mid, code: c.code, expires: c.expires });
   }
 
