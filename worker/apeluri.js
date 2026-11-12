@@ -226,8 +226,9 @@ async function saveCall(env, h, s, b) {
   if (!numeSunat) return err(h, "Completează numele persoanei sunate.");
   if (!RASPUNS.includes(raspuns)) return err(h, "Alege dacă ați reușit să vorbiți.");
   const da = raspuns === "da";
-  const statusFinal = da ? clean(b.status_final, 20) : "";
-  if (da && !STATUS_FINAL.includes(statusFinal)) return err(h, "Alege statusul final al discuției.");
+  const statusFinal = clean(b.status_final, 20);
+  if (!STATUS_FINAL.includes(statusFinal)) return err(h, "Alege statusul final al discuției.");
+  if (!da && statusFinal === "confirmat") return err(h, "„Confirmat” se poate alege doar dacă ați reușit să vorbiți cu persoana.");
 
   await ensure(env);
   // Contactul: existent (id) sau nou (nume, telefon, sursă), cu verificare după telefon normalizat.
@@ -300,7 +301,7 @@ async function saveCall(env, h, s, b) {
   // Starea contactului: „contactat” se bifează când s-a vorbit; reveniri apar în listă după dată.
   let revenire = null;
   if (raspuns === "mai_tarziu") revenire = clean(b.revenire_la, 20) || null;
-  if (da && statusFinal === "revine") revenire = clean(b.revine_la, 20) || null;
+  if (statusFinal === "revine") revenire = clean(b.revine_la, 20) || revenire;
   const statusApel = da ? statusFinal : (raspuns === "nu" ? "nu_a_raspuns" : "mai_tarziu");
   if (da) {
     await env.DB.prepare("UPDATE contacte SET contactat=1, contactat_de=?, contactat_la=datetime('now'), status_apel=?, revenire=?, email=COALESCE(NULLIF(email,''),?) WHERE id=?")

@@ -86,12 +86,14 @@ neins.click(); await wait();
 const g = (id) => doc.getElementById(id);
 assert.equal(g("f_apelant").value, "Colega"); assert.equal(g("f_nume").value, "Cineva WhatsApp");
 assert.equal(g("sec2").hidden, true);
+assert.ok(g("f_status"), "statusul final e mereu vizibil (obligatoriu)");
 g("f_raspuns").value = "da"; g("f_raspuns").dispatchEvent(new w.Event("change", { bubbles: true }));
-assert.equal(g("sec2").hidden, false); assert.equal(g("g_status").hidden, false);
+assert.equal(g("sec2").hidden, false);
 // salvare fără status: eroare afișată
 g("f_save").click(); await wait();
 assert.match(g("ferr").textContent, /statusul final/i);
 g("f_status").value = "confirmat"; g("f_status").dispatchEvent(new w.Event("change", { bubbles: true }));
+assert.equal(g("g_conf").hidden, false, "email și acord apar la Confirmat");
 g("f_intrebare").value = "Cum găsim clienți?";
 g("f_save").click(); await wait();
 assert.match(g("ferr").textContent, /email/i);
@@ -105,6 +107,6 @@ assert.match(txt(), /Cum găsim clienți\?/, "întrebarea din apel apare pe card
 // contact nou
 doc.querySelector("[data-new]").click(); await wait();
 g("f_nume").value = "Persoană Nouă"; g("f_tel").value = "0700 000 077"; g("f_sursa").value = "Partener";
-g("f_raspuns").value = "nu"; g("f_save").click(); await wait(150);
+g("f_raspuns").value = "nu"; g("f_status").value = "revine"; g("f_save").click(); await wait(150);
 assert.equal(DB._db.prepare("SELECT telefon FROM contacte WHERE nume='Persoană Nouă'").get().telefon, "+40700000077");
 console.log("UI: toate verificările au trecut");

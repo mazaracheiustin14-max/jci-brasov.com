@@ -78,8 +78,14 @@ r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_
 assert.equal(r.status, 400, "lipsește statusul final");
 
 // nu a răspuns: apel salvat, fără înscriere
-r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_sunat: "Cineva Nou", raspuns: "nu" });
+r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_sunat: "Cineva Nou", raspuns: "nu", status_final: "revine" });
 assert.ok(r.j.ok);
+
+// „Confirmat” fără să fi vorbit: refuz; fără status final: refuz
+r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_sunat: "Cineva Nou", raspuns: "nu", status_final: "confirmat" });
+assert.equal(r.status, 400); assert.match(r.j.error, /vorbi/);
+r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_sunat: "Cineva Nou", raspuns: "nu" });
+assert.equal(r.status, 400); assert.match(r.j.error, /statusul final/);
 
 // confirmă, dar fără email: refuz
 r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_sunat: "Cineva Nou", raspuns: "da", status_final: "confirmat", acord_date: true });
@@ -117,17 +123,17 @@ assert.ok(r.j.ok && r.j.rezultat === "email_existent" && r.j.warning);
 assert.equal((DB._db.prepare("SELECT COUNT(*) n FROM inscrieri WHERE telefon='+40700000050'").get()).n, 0);
 
 // „sună mai târziu” intră în reveniri
-r = await call("/api/echipa/apel", { contact_id: bob.id, apelant: "Colega", nume_sunat: "Bob Test Doi", raspuns: "mai_tarziu", revenire_la: "2026-11-14T10:00" });
+r = await call("/api/echipa/apel", { contact_id: bob.id, apelant: "Colega", nume_sunat: "Bob Test Doi", raspuns: "mai_tarziu", status_final: "revine", revenire_la: "2026-11-14T10:00" });
 ({ j } = await call("/api/echipa/contacte"));
 const bob2 = j.contacte.find((c) => c.id === bob.id);
 assert.equal(bob2.revenire, "2026-11-14T10:00"); assert.equal(bob2.status_apel, "mai_tarziu"); assert.equal(bob2.contactat, false);
 
 // contact nou, inexistent în bază
-r = await call("/api/echipa/apel", { apelant: "Colega", nume_sunat: "Persoană Nouă", telefon: "0700 000 099", sursa: "Partener", raspuns: "nu" });
+r = await call("/api/echipa/apel", { apelant: "Colega", nume_sunat: "Persoană Nouă", telefon: "0700 000 099", sursa: "Partener", raspuns: "nu", status_final: "revine" });
 assert.ok(r.j.ok && r.j.nou);
-r = await call("/api/echipa/apel", { apelant: "Colega", nume_sunat: "Persoană Nouă", telefon: "+40700000099", sursa: "Partener", raspuns: "nu" });
+r = await call("/api/echipa/apel", { apelant: "Colega", nume_sunat: "Persoană Nouă", telefon: "+40700000099", sursa: "Partener", raspuns: "nu", status_final: "revine" });
 assert.ok(r.j.ok && !r.j.nou, "același telefon normalizat nu creează al doilea contact");
-r = await call("/api/echipa/apel", { apelant: "Colega", nume_sunat: "Prost", telefon: "12", sursa: "Partener", raspuns: "nu" });
+r = await call("/api/echipa/apel", { apelant: "Colega", nume_sunat: "Prost", telefon: "12", sursa: "Partener", raspuns: "nu", status_final: "revine" });
 assert.equal(r.status, 400);
 
 // duplicate: „Diana” (WhatsApp) și „Diana Mare” (site), telefoane diferite; unire manuală
