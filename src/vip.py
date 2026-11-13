@@ -54,7 +54,7 @@ T = {
         free_li=['Loc în sală, în limita celor 150 de locuri', 'Cele două paneluri ale serii', 'Sesiunile de Blitz Networking', 'Comunitatea evenimentului pe WhatsApp', 'Tot ce se oferă la standul Hillden'],
         free_btn='Înscrie-te gratuit', free_bar='Consumația de la bar se achită separat.', ribbon='Locuri limitate',
         vip='Acces VIP', all='Tot ce include accesul gratuit, plus:',
-        vip_li=['Locuri rezervate în primele rânduri', 'Întâlnire directă cu invitații din paneluri', 'Acces prioritar la sesiunile de networking', 'Degustare de vin și preparate culinare'],
+        vip_li=['Locuri rezervate în primele rânduri', 'Întâlnire directă cu invitații din paneluri', 'Acces prioritar la sesiunile de networking', 'Networking curatoriat: la Blitz Networking ești așezat la masă cu participanți din domeniile tale de interes, în funcție de profilul participanților prezenți', 'Degustare de vin și preparate culinare'],
         left='locuri VIP disponibile', sold='din %d ocupate' % TOTAL, live='Actualizat în timp real',
         buy='Cumpără biletul VIP', note='Plata se face online, cu cardul, prin Stripe. Băuturile comandate de la bar se achită separat.',
         hint='Vrei loc în primele rânduri? Vezi biletul VIP', cd='Bilet VIP, 200 lei',
@@ -67,7 +67,7 @@ T = {
         free_li=['A seat in the room, within the 150-seat capacity', 'Both panels of the evening', 'The Blitz Networking sessions', 'The event community on WhatsApp', 'Everything offered at the Hillden stand'],
         free_btn='Register for free', free_bar='Drinks from the bar are paid separately.', ribbon='Limited seats',
         vip='VIP access', all='Everything in free access, plus:',
-        vip_li=['Reserved front-row seating', 'Direct meeting with the panel speakers', 'Priority access to the networking sessions', 'Wine and food tasting'],
+        vip_li=['Reserved front-row seating', 'Direct meeting with the panel speakers', 'Priority access to the networking sessions', 'Curated networking: at Blitz Networking you are seated with participants from your fields of interest, depending on the profile of those attending', 'Wine and food tasting'],
         left='VIP seats available', sold='of %d taken' % TOTAL, live='Updated in real time',
         buy='Buy the VIP ticket', note='Secure online card payment via Stripe. Drinks ordered at the bar are paid separately.',
         hint='Want a front-row seat? See the VIP ticket', cd='VIP ticket, 200 RON',
@@ -214,7 +214,8 @@ def confirm_page(lang):
 
 def texts():
     vip = ('- Bilet VIP, 200 lei (separat de pachetele de sponsorizare): locuri în primele rânduri, întâlnire directă cu invitații din paneluri, '
-           'acces prioritar la networking, degustare de vin și preparate culinare; %d de locuri VIP. Băuturile de la bar se achită separat. '
+           'acces prioritar la networking, networking curatoriat (la Blitz Networking, invitații VIP sunt așezați la masă cu participanți '
+           'din domeniile lor de interes, în funcție de profilul participanților prezenți), degustare de vin și preparate culinare; %d de locuri VIP. Băuturile de la bar se achită separat. '
            'Se cumpără online, cu cardul, de pe /eveniment#vip.' % TOTAL)
     p = R + 'worker/kb.js'
     s = rd(p)
