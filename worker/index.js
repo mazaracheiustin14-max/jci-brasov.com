@@ -7,6 +7,7 @@ import { handleCheckin } from "./checkin.js";
 import { handleInvitatii } from "./invitatii.js";
 import { handleApp } from "./app.js";
 import { EVENT, CAPACITY, DEADLINE, EMAIL_RE, countRegistrations, registerPerson } from "./inscriere-core.js";
+import { domClean, domLabel, parseTinte, ensureDomCols, syncVipDomenii, paidVipCond } from "./domenii.js";
 
 const SITE = "https://jci-brasov.com";
 const FROM = "formular@jci-brasov.com";
@@ -42,7 +43,7 @@ export default {
       if (r) return r;
     }
     // Bilete nominale cu QR și check-in la intrare (worker/checkin.js)
-    if (/^\/(bilet|c|confirma)\/|^\/checkin(\/apeluri)?\/?$|^\/api\/(echipa\/|checkin$)/.test(url.pathname)) {
+    if (/^\/(bilet|c|confirma)\/|^\/checkin(\/apeluri|\/blitz)?\/?$|^\/api\/(echipa\/|checkin$)/.test(url.pathname)) {
       const r = await handleCheckin(request, env, url, overLimit);
       if (r) return r;
     }
@@ -50,6 +51,11 @@ export default {
       if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
       if (await overLimit(request, env, "inscriere", 8, 20)) return tooMany(request);
       return handleEventSignup(request, env, ctx);
+    }
+    if (url.pathname === "/api/vip-domenii") {
+      if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
+      if (await overLimit(request, env, "vipdom", 8, 20)) return tooMany(request);
+      return handleVipDomenii(request, env);
     }
     if (url.pathname === "/api/stats") return handleStats(request, env, ctx);
     if (url.pathname === "/api/chat") {
@@ -234,6 +240,7 @@ async function handleEventSignup(request, env, ctx) {
     nume: clean(data.get("nume"), 120), email: clean(data.get("email"), 160).toLowerCase(), telefon: clean(data.get("telefon"), 40),
     companie: clean(data.get("companie"), 160), functie: clean(data.get("functie"), 120), profil: clean(data.get("profil"), 60),
     intrebare: clean(data.get("intrebare"), 1500), sursa: clean(data.get("sursa"), 80),
+    domeniu: domClean(data.get("domeniu")),
   };
   const fail = (msg) => new Response(msg, { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } });
   if (f.nume.length < 3) return fail(en ? "Please enter your full name." : "Vă rugăm să completați numele complet.");
@@ -241,6 +248,7 @@ async function handleEventSignup(request, env, ctx) {
   if (f.telefon.replace(/\D/g, "").length < 9) return fail(en ? "Please enter a valid phone number." : "Numărul de telefon nu este valid.");
   if (f.profil && !PROFILES.includes(f.profil)) f.profil = "";
   if (!f.sursa) return fail(en ? "Please tell us how you heard about the event." : "Vă rugăm să alegeți de unde ați aflat de eveniment.");
+  if (!f.domeniu) return fail(en ? "Please choose your field of activity." : "Vă rugăm să alegeți domeniul de activitate.");
   for (const k of ["nume", "companie", "functie", "intrebare", "sursa"]) f[k] = noFormula(f[k]);
   if (!data.get("acord")) return fail(en ? "Please accept the data processing terms." : "Este necesar acordul pentru prelucrarea datelor.");
   if (Date.now() > DEADLINE) return Response.redirect(`${base}/inscriere-confirmata?s=inchis`, 303);
@@ -264,7 +272,7 @@ async function handleEventSignup(request, env, ctx) {
 
   const lines = [
     ["Nume", f.nume], ["Email", f.email], ["Telefon", f.telefon], ["Companie", f.companie], ["Funcție", f.functie],
-    ["Profil", f.profil], ["Întrebare pentru invitați", f.intrebare], ["De unde a aflat", f.sursa], ["Status", status], ["Bilet", newToken ? `${SITE}/bilet/${newToken}` : ""], ["Limba", en ? "EN" : "RO"],
+    ["Profil", f.profil], ["Domeniu", domLabel(f.domeniu)], ["Întrebare pentru invitați", f.intrebare], ["De unde a aflat", f.sursa], ["Status", status], ["Bilet", newToken ? `${SITE}/bilet/${newToken}` : ""], ["Limba", en ? "EN" : "RO"],
   ].filter(([, v]) => v);
   // Emailul către organizatori pleacă în fundal: vizitatorul primește confirmarea imediat.
   const mail = notify(env, `Înscriere nouă Beyond the Initiative: ${f.nume}`, lines, f.email);
@@ -379,6 +387,34 @@ async function handleChat(request, env, ctx) {
 }
 
 
+// ===== Formularul de după plata biletului VIP: domeniul propriu și domeniile țintă pentru Blitz Networking =====
+// Răspunsul se salvează pe email (tabelul vip_domenii) și se leagă de înscriere. Răspunsul către vizitator este același
+// indiferent dacă adresa există sau nu, ca să nu se poată verifica cine a cumpărat bilet.
+async function handleVipDomenii(request, env) {
+  const origin = request.headers.get("Origin");
+  if (origin && !/^https:\/\/(www\.)?jci-brasov\.com$/.test(origin)) return new Response("Forbidden", { status: 403 });
+  const b = await request.json().catch(() => null);
+  const bad = (error) => new Response(JSON.stringify({ ok: false, error }), { status: 400, headers: { "Content-Type": "application/json; charset=utf-8" } });
+  if (!b || typeof b !== "object") return bad("date");
+  const email = clean(b.email, 160).toLowerCase();
+  const domeniu = domClean(b.domeniu);
+  const tinte = parseTinte(b.tinte);
+  if (!EMAIL_RE.test(email)) return bad("email");
+  if (!domeniu) return bad("domeniu");
+  if (!tinte.length || (Array.isArray(b.tinte) && b.tinte.length > 3)) return bad("tinte");
+  try {
+    await ensureDomCols(env);
+    await env.DB.prepare("INSERT INTO vip_domenii (email, domeniu, tinte) VALUES (?,?,?) ON CONFLICT(email) DO UPDATE SET domeniu=excluded.domeniu, tinte=excluded.tinte, creat=datetime('now')")
+      .bind(email, domeniu, tinte.join(",")).run();
+    // Răspunsul cel mai nou îl înlocuiește pe cel vechi, dar numai pentru cine are bilet VIP plătit.
+    await env.DB.prepare("UPDATE inscrieri SET domeniu=?, tinte=? WHERE eveniment=? AND lower(email)=? AND " + (await paidVipCond(env, EVENT))).bind(domeniu, tinte.join(","), EVENT, email).run();
+  } catch (e) {
+    console.log("vip-domenii:", e && e.message);
+    return new Response(JSON.stringify({ ok: false, error: "server" }), { status: 500, headers: { "Content-Type": "application/json; charset=utf-8" } });
+  }
+  return json({ ok: true });
+}
+
 // ===== Bilete VIP plătite prin Stripe (Payment Link) =====
 // Stripe trimite evenimentul checkout.session.completed la /api/stripe-webhook. Semnătura se verifică cu secretul
 // STRIPE_WEBHOOK_SECRET (Cloudflare: Worker, Settings, Variables and Secrets). Cumpărătorul se salvează în D1 (tabelul vip),
@@ -427,6 +463,8 @@ async function handleStripe(request, env, ctx) {
         await env.DB.prepare(
           "INSERT OR IGNORE INTO inscrieri (eveniment,nume,email,telefon,companie,functie,profil,intrebare,sursa,limba,acord_marketing,status,tara) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
         ).bind(EVENT, f.nume || f.email, f.email, f.telefon, "", "", "", "", "Bilet VIP (Stripe)", "ro", 0, "confirmat", null).run();
+        // Dacă formularul de după plată a fost trimis înaintea acestui mesaj de la Stripe, domeniile se leagă acum de înscriere.
+        try { await syncVipDomenii(env, EVENT); } catch (e) { console.log("vip domenii:", e && e.message); }
       }
     } catch (e) { console.log("vip d1:", e && e.message); }
   }

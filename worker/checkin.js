@@ -5,6 +5,8 @@
 // PIN-ul (hash + sare) și secretul de semnare a sesiunii stau în D1, tabelul setari.
 
 import { handleApeluri } from "./apeluri.js";
+import { domLabel, parseTinte, ensureDomCols, syncVipDomenii, paidVipCond } from "./domenii.js";
+import { preallocVip, domainCandidates, suggestK } from "./blitz-match.js";
 
 const EVENT = "beyond-2026";
 const COOKIE = "jci_echipa";
@@ -105,6 +107,7 @@ function blitzInfo(bloc, slot) {
 }
 let blitzCols = false;
 async function ensureBlitzCols(env) {
+  await ensureDomCols(env);
   if (blitzCols) return;
   for (const col of ["bloc INTEGER", "slot INTEGER"]) {
     try { await env.DB.prepare(`ALTER TABLE inscrieri ADD COLUMN ${col}`).run(); } catch (e) { /* există deja */ }
@@ -121,18 +124,23 @@ async function ensureBlitzCols(env) {
 const FRIEND_WINDOW_S = 180;
 async function blitzState(env, id) {
   const rows = (await env.DB.prepare(
-    "SELECT bloc, slot, CASE WHEN prezent_la >= datetime('now', ?) THEN 1 ELSE 0 END AS rec FROM inscrieri WHERE eveniment=? AND bloc IS NOT NULL AND id<>?"
+    "SELECT bloc, slot, domeniu, tinte, CASE WHEN prezent_la >= datetime('now', ?) THEN 1 ELSE 0 END AS rec FROM inscrieri WHERE eveniment=? AND bloc IS NOT NULL AND id<>?"
   ).bind(`-${FRIEND_WINDOW_S} seconds`, EVENT, id).all()).results || [];
-  const used = {}, rec = {};
+  const used = {}, rec = {}, members = {};
   for (const r of rows) {
     (used[r.bloc] = used[r.bloc] || new Set()).add(r.slot);
     if (r.rec) rec[r.bloc] = (rec[r.bloc] || 0) + 1;
+    (members[r.bloc] = members[r.bloc] || []).push({ dom: r.domeniu || "", tinte: parseTinte(r.tinte) });
   }
-  return { used, size: (b) => (used[b] ? used[b].size : 0), rec: (b) => rec[b] || 0 };
+  // k = în câte blocuri au fost așezați invitații VIP (0 = fără prealocare): aceste blocuri se umplu împreună, în primul val.
+  const k = Math.min(MAX_BLOCKS, Number(await setting(env, "blitz_vip_blocuri")) || 0);
+  return { used, k, size: (b) => (used[b] ? used[b].size : 0), rec: (b) => rec[b] || 0, members: (b) => members[b] || [] };
 }
 // Intervalele de blocuri ale valurilor: [1..3], [4..5], [6], apoi câte unul.
-function waveRanges() {
+// Dacă invitații VIP au fost așezați în mai mult de 3 blocuri (k), primul val cuprinde toate blocurile lor, apoi câte unul.
+function waveRanges(k) {
   const out = []; let from = 1, w = 0;
+  if (k > WAVES[0]) { out.push([1, k]); from = k + 1; w = WAVES.length; }
   while (from <= MAX_BLOCKS) { const len = w < WAVES.length ? WAVES[w] : 1; out.push([from, Math.min(MAX_BLOCKS, from + len - 1)]); from += len; w++; }
   return out;
 }
@@ -166,7 +174,7 @@ async function spreadFriends(env, id, pick) {
   ).bind(EVENT, pick, id).first();
   if (!near || !near.n) return null;
   const st = await blitzState(env, id);
-  const range = waveRanges().find(([f, t]) => pick >= f && pick <= t);
+  const range = waveRanges(st.k).find(([f, t]) => pick >= f && pick <= t);
   const open = openIn(st, range).filter((b) => b !== pick);
   if (!open.length) return null;
   const better = open.filter((b) => st.rec(b) < st.rec(pick) && st.size(b) <= st.size(pick) + 1);
@@ -178,17 +186,24 @@ async function spreadFriends(env, id, pick) {
   const r = await env.DB.prepare("UPDATE inscrieri SET bloc=?, slot=? WHERE id=? AND bloc=? AND slot=?").bind(alt, slot, id, pick, cur.slot).run();
   return r.meta && r.meta.changes ? blitzInfo(alt, slot) : null;
 }
-async function assignBlitz(env, id) {
+export async function assignBlitz(env, id) {
   await ensureBlitzCols(env);
-  const cur = await env.DB.prepare("SELECT bloc, slot FROM inscrieri WHERE id=?").bind(id).first();
-  if (cur && cur.bloc) return blitzInfo(cur.bloc, cur.slot);
+  try { await maybePrealloc(env); } catch (e) { console.warn("maybePrealloc", e && e.message); }
+  const cur = await env.DB.prepare("SELECT bloc, slot, domeniu, tinte FROM inscrieri WHERE id=?").bind(id).first();
+  if (cur && cur.bloc) return blitzInfo(cur.bloc, cur.slot); // inclusiv locul rezervat din timp al unui invitat VIP
+  const person = { dom: (cur && cur.domeniu) || "", tinte: parseTinte(cur && cur.tinte) };
   for (let attempt = 0; attempt < 40; attempt++) {
     const st = await blitzState(env, id);
-    // primul val care nu e plin
-    let pick = 0;
-    for (const range of waveRanges()) {
+    // primul val care nu e plin; în el, întâi potrivirea pe domenii, apoi regula de echilibru
+    let pick = 0, matched = false;
+    for (const range of waveRanges(st.k)) {
       const open = openIn(st, range);
-      if (open.length) { pick = chooseBlock(open, st); break; }
+      if (open.length) {
+        const cand = domainCandidates(open, st.size, st.members, person);
+        matched = cand.length > 0;
+        pick = chooseBlock(matched ? cand : open, st);
+        break;
+      }
     }
     if (!pick) return null;
     const slot = firstFree(st, pick);
@@ -199,13 +214,95 @@ async function assignBlitz(env, id) {
         const c2 = await env.DB.prepare("SELECT bloc, slot FROM inscrieri WHERE id=?").bind(id).first();
         return c2 && c2.bloc ? blitzInfo(c2.bloc, c2.slot) : null;
       }
-      try { const moved = await spreadFriends(env, id, pick); if (moved) return moved; } catch (e) { console.warn("spreadFriends", e && e.message); }
+      // Cine a fost așezat după domeniu rămâne acolo; ceilalți pot fi mutați dacă au nimerit lângă cineva sosit în aceeași clipă.
+      if (!matched) { try { const moved = await spreadFriends(env, id, pick); if (moved) return moved; } catch (e) { console.warn("spreadFriends", e && e.message); } }
       return blitzInfo(pick, slot);
     } catch (e) {
       if (!/UNIQUE/i.test(String((e && e.message) || e))) throw e; // doar conflictul de loc se reîncearcă
     }
   }
   return null;
+}
+
+// ---------- Invitații VIP: loc rezervat din timp, pe domenii ----------
+// VIP = bilet plătit prin Stripe (sursa sau tabelul vip) sau persoană cu domenii țintă completate (invitații VIP sunați de echipă).
+async function vipWhere(env) {
+  return "(" + (await paidVipCond(env, EVENT)) + " OR (tinte IS NOT NULL AND tinte <> ''))";
+}
+async function setSetting(env, k, v) {
+  await env.DB.prepare("INSERT INTO setari (cheie, valoare) VALUES (?, ?) ON CONFLICT(cheie) DO UPDATE SET valoare = excluded.valoare").bind(k, String(v)).run();
+}
+// Așază invitații VIP care nu au încă loc în primele K blocuri. opt.k = numărul de blocuri (implicit: recomandarea),
+// opt.reset = eliberează întâi locurile rezervate ale celor care nu au intrat. Cei deja intrați nu sunt mutați niciodată.
+export async function preallocRun(env, opt = {}) {
+  await ensureBlitzCols(env);
+  await syncVipDomenii(env, EVENT);
+  const vw = await vipWhere(env);
+  if (opt.reset) await env.DB.prepare("UPDATE inscrieri SET bloc=NULL, slot=NULL WHERE eveniment=? AND prezent_la IS NULL AND bloc IS NOT NULL").bind(EVENT).run();
+  const all = (await env.DB.prepare(`SELECT id, domeniu, tinte, bloc FROM inscrieri WHERE eveniment=? AND status='confirmat' AND ${vw} ORDER BY id`).bind(EVENT).all()).results || [];
+  const conf = await env.DB.prepare("SELECT COUNT(*) AS n FROM inscrieri WHERE eveniment=? AND status='confirmat'").bind(EVENT).first();
+  const sug = suggestK((conf && conf.n) || 0, all.length, BLOC_SIZE);
+  const K = Math.max(1, Math.min(6, Math.floor(Number(opt.k)) || sug));
+  const P = (r) => ({ id: r.id, bloc: r.bloc, dom: r.domeniu || "", tinte: parseTinte(r.tinte) });
+  const map = preallocVip(all.filter((r) => !r.bloc).map(P), K, all.filter((r) => r.bloc).map(P));
+  const st = await blitzState(env, 0);
+  let placed = 0;
+  for (const [id, bloc] of map) {
+    const slot = firstFree(st, bloc);
+    if (slot >= BLOC_SIZE) continue;
+    try {
+      const r = await env.DB.prepare("UPDATE inscrieri SET bloc=?, slot=? WHERE id=? AND bloc IS NULL").bind(bloc, slot, id).run();
+      if (r.meta && r.meta.changes) { (st.used[bloc] = st.used[bloc] || new Set()).add(slot); placed++; }
+    } catch (e) { console.warn("prealloc", e && e.message); }
+  }
+  await setSetting(env, "blitz_vip_blocuri", K);
+  await setSetting(env, "blitz_vip_prealoc", new Date().toISOString());
+  return { k: K, placed, total: all.length, sugerat: sug };
+}
+// Dacă nimeni nu a apăsat butonul până în ziua dinaintea evenimentului, împărțirea se face singură la prima scanare.
+const PREALLOC_FROM = Date.UTC(2026, 10, 24, 22, 0, 0); // 25 noiembrie 2026, 00:00 ora României
+let preallocChecked = false;
+async function maybePrealloc(env) {
+  if (preallocChecked || Date.now() < PREALLOC_FROM) return;
+  if (!(await setting(env, "blitz_vip_prealoc"))) {
+    const r = await env.DB.prepare("INSERT OR IGNORE INTO setari (cheie, valoare) VALUES ('blitz_vip_prealoc', datetime('now'))").run();
+    if (r.meta && r.meta.changes) await preallocRun(env, {});
+  }
+  preallocChecked = true;
+}
+async function blitzPage(env, s, ok) {
+  await ensureBlitzCols(env);
+  await syncVipDomenii(env, EVENT);
+  const vw = await vipWhere(env);
+  const t = await env.DB.prepare(
+    "SELECT COUNT(*) AS n, SUM(CASE WHEN domeniu IS NOT NULL AND domeniu <> '' THEN 1 ELSE 0 END) AS d FROM inscrieri WHERE eveniment=? AND status='confirmat'"
+  ).bind(EVENT).first();
+  const vips = (await env.DB.prepare(`SELECT nume, domeniu, tinte, bloc, prezent_la FROM inscrieri WHERE eveniment=? AND status='confirmat' AND ${vw} ORDER BY bloc, nume`).bind(EVENT).all()).results || [];
+  const k = Number(await setting(env, "blitz_vip_blocuri")) || 0;
+  const sug = suggestK((t && t.n) || 0, vips.length, BLOC_SIZE);
+  const cuTinte = vips.filter((v) => parseTinte(v.tinte).length).length;
+  const line = (v) => `<p class="muted mt"><b style="color:#fff">${esc(v.nume)}</b>${v.domeniu ? ", " + esc(domLabel(v.domeniu)) : ", domeniu necompletat"}${
+    parseTinte(v.tinte).length ? ". Caută: " + parseTinte(v.tinte).map((c) => esc(domLabel(c))).join(", ") : ". Domenii țintă necompletate"}</p>`;
+  let lista = "";
+  for (let b = 1; b <= Math.max(k, 0); b++) {
+    const inB = vips.filter((v) => v.bloc === b);
+    lista += `<div class="card mt"><p class="lab">BLOCUL ${esc(BLOC_NAMES[b - 1] || "")} (${BLOC_LETTERS[b - 1]}), ${inB.length} VIP</p>${inB.map(line).join("") || '<p class="muted mt">Niciun invitat VIP.</p>'}</div>`;
+  }
+  const fara = vips.filter((v) => !v.bloc);
+  if (fara.length) lista += `<div class="card mt"><p class="lab">FĂRĂ LOC REZERVAT, ${fara.length} VIP</p>${fara.map(line).join("")}</div>`;
+  const opts = [1, 2, 3, 4, 5, 6].map((n) => `<option value="${n}"${n === (k || sug) ? " selected" : ""}>${n} ${n === 1 ? "bloc" : "blocuri"}${n === sug ? " (recomandat)" : ""}</option>`).join("");
+  return html(shell("Blitz Networking pe domenii", `<p class="k">Panoul echipei</p><h1>Blitz Networking pe domenii</h1>
+${ok ? '<div class="card" style="border-color:#57BCBC"><p class="val" style="color:#fff">Împărțirea a fost salvată.</p></div>' : ""}
+<div class="card${ok ? " mt" : ""}"><div class="row"><div><p class="lab">ÎNSCRIȘI CU DOMENIU</p><p class="big">${(t && t.d) || 0}<span style="font-size:18px;color:#B9BBD6"> din ${(t && t.n) || 0}</span></p></div>
+<div><p class="lab">VIP CU DOMENII ȚINTĂ</p><p class="big">${cuTinte}<span style="font-size:18px;color:#B9BBD6"> din ${vips.length}</span></p></div></div>
+<p class="muted mt">${k ? `Invitații VIP sunt așezați în ${k} ${k === 1 ? "bloc" : "blocuri"}.` : "Invitații VIP nu au fost încă așezați în blocuri."} Dacă nu apeși butonul, împărțirea se face singură la prima scanare din 25 noiembrie încolo.</p></div>
+<form method="POST" action="/api/echipa/blitz-vip" class="card mt">
+<label class="lab" for="k">ÎN CÂTE BLOCURI AȘEZĂM INVITAȚII VIP</label><select id="k" name="k" class="mt">${opts}</select>
+<p class="muted mt">Alege doar atâtea blocuri câte se umplu sigur (25 de persoane fiecare). Recomandarea pornește de la presupunerea că vin aproximativ 70% dintre înscriși.</p>
+<label class="chk mt" style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" name="reset" value="1" style="width:auto;margin-top:4px"><span>Refă împărțirea de la zero. Cei care au intrat deja își păstrează locul.</span></label>
+<button class="btn b-blue mt" type="submit">Așază invitații VIP în blocuri</button></form>
+${lista}
+<a class="btn b-ghost mt" href="/checkin">Înapoi la check-in</a>`, ""));
 }
 
 // ---------- sesiunea echipei ----------
@@ -259,6 +356,11 @@ export async function handleCheckin(request, env, url, overLimit) {
     return s ? handleApeluri(request, env, url, s, H) : Response.redirect(`${url.origin}/checkin`, 302);
   }
 
+  if (p === "/checkin/blitz" || p === "/checkin/blitz/") {
+    const s = await staffSession(request, env);
+    return s ? blitzPage(env, s, url.searchParams.get("ok") === "1") : Response.redirect(`${url.origin}/checkin`, 302);
+  }
+
   if (p === "/checkin" || p === "/checkin/") {
     const s = await staffSession(request, env);
     return s ? dashboardPage(s) : loginPage(url.searchParams.get("e") === "1", url.searchParams.get("n"));
@@ -289,6 +391,12 @@ export async function handleCheckin(request, env, url, overLimit) {
       if (request.method !== "POST" || !sameOrigin(request)) return json({ error: "method" }, 405);
       const b = await request.json().catch(() => ({}));
       return doCheckin(env, String(b.token || ""), b.undo === true, s);
+    }
+    if (p === "/api/echipa/blitz-vip") {
+      if (request.method !== "POST" || !sameOrigin(request)) return json({ error: "method" }, 405);
+      const f = await request.formData().catch(() => null);
+      await preallocRun(env, { k: Number(f && f.get("k")) || 0, reset: !!(f && f.get("reset")) });
+      return Response.redirect(`${url.origin}/checkin/blitz?ok=1`, 303);
     }
     if (p === "/api/echipa/stats") return stats(env);
     if (p === "/api/echipa/cauta") return search(env, url.searchParams.get("q") || "");
@@ -333,7 +441,7 @@ async function stats(env) {
   const last = await env.DB.prepare(
     "SELECT nume, companie, prezent_la, prezent_de, token, bloc, slot FROM inscrieri WHERE eveniment=? AND prezent_la IS NOT NULL ORDER BY prezent_la DESC LIMIT 12"
   ).bind(EVENT).all();
-  const blk = await env.DB.prepare("SELECT bloc, COUNT(*) AS n FROM inscrieri WHERE eveniment=? AND bloc IS NOT NULL GROUP BY bloc ORDER BY bloc").bind(EVENT).all();
+  const blk = await env.DB.prepare("SELECT bloc, COUNT(*) AS n FROM inscrieri WHERE eveniment=? AND bloc IS NOT NULL AND prezent_la IS NOT NULL GROUP BY bloc ORDER BY bloc").bind(EVENT).all();
   const locTxt = (r) => { const l = blitzInfo(r.bloc, r.slot); return l ? l.bloc + l.nr : ""; };
   return json({
     inscrisi: (t && t.inscrisi) || 0, confirmari: (t && t.confirmari) || 0, trimise: (t && t.trimise) || 0, prezenti: (t && t.prezenti) || 0, asteptare: (t && t.asteptare) || 0,
@@ -602,6 +710,7 @@ function dashboardPage(s) {
 <div class="card mt"><p class="lab">CAUTĂ DUPĂ NUME, EMAIL SAU TELEFON</p><input id="q" class="mt" placeholder="ex. Popescu" autocomplete="off" enterkeyhint="search"><div id="rez"></div></div>
 <div class="card mt"><p class="lab">ULTIMELE INTRĂRI</p><div id="ult"><p class="muted mt">Nimeni încă.</p></div></div>
 <a class="btn b-blue mt" href="/checkin/apeluri">Apeluri și contacte</a>
+<a class="btn b-ghost mt" href="/checkin/blitz">Blitz Networking pe domenii</a>
 <a class="btn b-ghost mt" href="/api/echipa/export.csv">Descarcă lista de prezență (Excel)</a>
 <form method="POST" action="/api/echipa/logout"><button class="btn b-ghost mt" type="submit">Deconectare (${esc(s.who)})</button></form>`,
     `<script src="/assets/js/echipa.js"></script>`));

@@ -1,9 +1,11 @@
 // Apeluri către contacte, în panoul echipei: /checkin/apeluri.
 // O persoană = un rând în `contacte`, indiferent din câte surse vine. Dacă e înscrisă, contactul e legat de rândul din `inscrieri`.
-// Tabelul `inscrieri` nu se modifică aici, în afară de înscrierile noi făcute prin apel (aceeași logică ca formularul public).
+// Tabelul `inscrieri` nu se modifică aici, în afară de înscrierile noi făcute prin apel (aceeași logică ca formularul public)
+// și de domeniul de activitate și domeniile țintă aflate la telefon (coloanele domeniu și tinte).
 // Numerele de telefon NU se pun în cod: depozitul e public. Contactele din afara site-ului se încarcă direct în D1.
 
 import { EVENT, DEADLINE, EMAIL_RE, registerPerson } from "./inscriere-core.js";
+import { ensureDomCols, paidVipCond, domClean, parseTinte, MAX_TINTE } from "./domenii.js";
 
 const SURSE_IMPLICIT = ["Site", "WhatsApp", "Meta Ads", "Partener", "Contact personal", "Telefon", "Altă sursă"];
 const RASPUNS = ["da", "nu", "mai_tarziu"];
@@ -22,7 +24,19 @@ const ready = new WeakSet();
 async function ensure(env) {
   if (ready.has(env.DB)) return;
   await env.DB.batch(DDL.map((s) => env.DB.prepare(s)));
+  // Domeniul de activitate și domeniile țintă (potrivirea de la Blitz Networking), adăugate pe 13 nov 2026.
+  for (const col of ["domeniu TEXT", "tinte TEXT"]) {
+    try { await env.DB.prepare(`ALTER TABLE call_logs ADD COLUMN ${col}`).run(); } catch (e) { /* există deja */ }
+  }
+  await ensureDomCols(env);
   ready.add(env.DB);
+}
+// Domeniile deja cunoscute ale unei înscrieri și dacă are bilet VIP plătit (atunci domeniile sunt obligatorii la apel).
+async function domInfo(env, inscriereId) {
+  if (!inscriereId) return { domeniu: "", tinte: [], vip: false };
+  const paid = await paidVipCond(env, EVENT);
+  const r = await env.DB.prepare(`SELECT domeniu, tinte, CASE WHEN ${paid} THEN 1 ELSE 0 END AS vip FROM inscrieri WHERE id=?`).bind(inscriereId).first();
+  return { domeniu: (r && r.domeniu) || "", tinte: parseTinte(r && r.tinte), vip: !!(r && r.vip) };
 }
 
 // ---------- utilitare ----------
@@ -175,7 +189,7 @@ async function contactDetail(env, h, id) {
   const r = await env.DB.prepare(LIST_SQL.replace("ORDER BY c.nume IS NULL, lower(c.nume), c.telefon", "") + " WHERE c.id=?").bind(id).first();
   if (!r) return h.json({ error: "Contact negăsit" }, 404);
   const calls = (await env.DB.prepare("SELECT * FROM call_logs WHERE contact_id=? ORDER BY id DESC").bind(id).all()).results || [];
-  return h.json({ contact: shape(r), calls: calls.map((x) => ({ ...x, creat: dataRo(x.creat) })) });
+  return h.json({ contact: shape(r), calls: calls.map((x) => ({ ...x, creat: dataRo(x.creat) })), dom: await domInfo(env, r.inscriere_id) });
 }
 
 async function duplicatesList(env, h) {
@@ -256,6 +270,17 @@ async function saveCall(env, h, s, b) {
   if (email && !emailOk) return err(h, "Adresa de email nu este validă.");
   const acordDate = b.acord_date === true, acordViitor = b.acord_viitor === true, acordBcr = b.acord_bcr === true;
 
+  // Domeniul propriu și domeniile țintă. Pentru cine are bilet VIP plătit sunt obligatorii, dacă nu le avem deja.
+  const domeniu = domClean(b.domeniu);
+  const tinte = parseTinte(b.tinte);
+  if (Array.isArray(b.tinte) && b.tinte.length > MAX_TINTE) return err(h, "Alege cel mult 3 domenii țintă.");
+  if (da && statusFinal !== "nu_participa" && contact.inscriere_id) {
+    const di = await domInfo(env, contact.inscriere_id);
+    if (di.vip && (!(domeniu || di.domeniu) || !(tinte.length || di.tinte.length))) {
+      return err(h, "Pentru invitații VIP sunt obligatorii domeniul de activitate și cel puțin un domeniu țintă.");
+    }
+  }
+
   // Înscriere prin telefon: doar pentru contact neînscris, cu status „Confirmat”.
   let rezultat = "";
   let inscriereId = contact.inscriere_id || null;
@@ -269,7 +294,7 @@ async function saveCall(env, h, s, b) {
     }
     const reg = await registerPerson(env, {
       nume: numeSunat, email, telefon: contact.telefon || telefon, companie: "", functie: "", profil: "",
-      intrebare: noFormula(t("intrebare_invitati", 1500)), sursa: "Telefon (" + apelant + ")",
+      intrebare: noFormula(t("intrebare_invitati", 1500)), sursa: "Telefon (" + apelant + ")", domeniu, tinte,
     }, { limba: "ro", acord_marketing: acordViitor ? 1 : 0, acord_bcr: acordBcr ? 1 : 0, tara: "RO" });
     if (reg.inserted) {
       inscriereId = reg.id;
@@ -289,14 +314,18 @@ async function saveCall(env, h, s, b) {
 
   const era = clean(b.era_inscris, 10);
   await env.DB.prepare(
-    "INSERT INTO call_logs (contact_id, inscriere_id, apelant, nume_sunat, telefon, email, sursa, raspuns, revenire_la, era_inscris, ocupatie, provocare, sfat, interes, ia_acasa, oameni, intrebare_invitati, ramane_activ, status_final, vip, revine_la, motiv, acord_date, acord_viitor, acord_bcr, invitatie_trimisa, observatii, rezultat_inscriere) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+    "INSERT INTO call_logs (contact_id, inscriere_id, apelant, nume_sunat, telefon, email, sursa, raspuns, revenire_la, era_inscris, ocupatie, provocare, sfat, interes, ia_acasa, oameni, intrebare_invitati, ramane_activ, status_final, vip, revine_la, motiv, acord_date, acord_viitor, acord_bcr, invitatie_trimisa, observatii, rezultat_inscriere, domeniu, tinte) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
   ).bind(contact.id, inscriereId, apelant, numeSunat, contact.telefon || telefon, email, sursaFolosita, raspuns, clean(b.revenire_la, 20),
     ["da", "nu", "nu_stie"].includes(era) ? era : "",
     g("ocupatie", 200), noFormula(t("provocare", 1500)), noFormula(t("sfat", 1500)), noFormula(t("interes", 1500)),
     g("ia_acasa", 300), g("oameni", 300), noFormula(t("intrebare_invitati", 1500)), noFormula(t("ramane_activ", 1500)),
     statusFinal, TRI.includes(clean(b.vip, 10)) ? clean(b.vip, 10) : "", clean(b.revine_la, 20), g("motiv", 300),
     acordDate ? 1 : 0, acordViitor ? 1 : 0, acordBcr ? 1 : 0, ["da", "nu"].includes(clean(b.invitatie_trimisa, 5)) ? clean(b.invitatie_trimisa, 5) : "",
-    noFormula(t("observatii", 2000)), rezultat).run();
+    noFormula(t("observatii", 2000)), rezultat, domeniu, tinte.join(",")).run();
+  // Răspunsurile noi se trec și pe înscriere (de acolo le citește alocarea în blocuri); câmpurile lăsate goale nu șterg nimic.
+  if (inscriereId && (domeniu || tinte.length)) {
+    await env.DB.prepare("UPDATE inscrieri SET domeniu=COALESCE(NULLIF(?,''), domeniu), tinte=COALESCE(NULLIF(?,''), tinte) WHERE id=?").bind(domeniu, tinte.join(","), inscriereId).run();
+  }
 
   // Starea contactului: „contactat” se bifează când s-a vorbit; reveniri apar în listă după dată.
   let revenire = null;
@@ -314,7 +343,7 @@ async function saveCall(env, h, s, b) {
 
 // ---------- rutare ----------
 // Se schimbă la fiecare modificare a public/assets/js/apeluri.js, ca telefoanele să nu rămână cu versiunea veche din cache.
-const JS_VERSION = "20261112d";
+const JS_VERSION = "20261113a";
 export function apeluriPage(h, s) {
   return h.html(h.shell("Apeluri Beyond the Initiative", `<p class="k">Panoul echipei</p><h1>Apeluri</h1>
 <div id="ap" data-who="${h.esc(s.who)}"><div class="card"><p class="muted">Se încarcă...</p></div></div>

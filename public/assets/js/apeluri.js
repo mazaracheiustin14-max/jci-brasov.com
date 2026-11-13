@@ -101,6 +101,13 @@
     });
   }
 
+  // Domeniile pentru potrivirea de la Blitz Networking: aceeași listă ca în worker/domenii.js (verificat de src/tests/blitz.test.mjs).
+  var DOMENII = [["it", "IT și tehnologie"], ["marketing", "Marketing, comunicare și media"], ["vanzari", "Vânzări și dezvoltare de afaceri"],
+    ["financiar", "Financiar, contabilitate și asigurări"], ["juridic", "Juridic și consultanță"], ["horeca", "HoReCa și turism"],
+    ["imobiliare", "Imobiliare și construcții"], ["productie", "Producție și industrie"], ["comert", "Comerț și comerț online"],
+    ["transport", "Transport și logistică"], ["sanatate", "Sănătate și wellness"], ["educatie", "Educație, training și resurse umane"],
+    ["ong", "ONG și sector public"], ["alt", "Alt domeniu"]];
+
   // ----- chestionar -----
   function sel(id, opts, val) {
     return '<select id="' + id + '">' + opts.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === val ? " selected" : "") + ">" + esc(o[1]) + "</option>"; }).join("") + "</select>";
@@ -116,9 +123,9 @@
     if (id) c = D.contacte.filter(function (x) { return x.id === id; })[0];
     root.innerHTML = '<div class="card"><p class="muted">Se încarcă...</p></div>';
     var hist = id ? api("/api/echipa/contact?id=" + id) : Promise.resolve({ calls: [] });
-    hist.then(function (j) { renderForm(c, j.calls || []); });
+    hist.then(function (j) { renderForm(c, j.calls || [], j.dom || { domeniu: "", tinte: [], vip: false }); });
   }
-  function renderForm(c, calls) {
+  function renderForm(c, calls, dom) {
     var nou = !c;
     var era = nou ? "nu" : (c.inscris ? "da" : "nu");
     var RASP = { da: "Au vorbit", nu: "Nu a răspuns", mai_tarziu: "Mă suni mai târziu" };
@@ -141,6 +148,8 @@
       fld("f_era", "8. Ați reușit să vă înscrieți la eveniment?", sel("f_era", [["da", "Da"], ["nu", "Nu"], ["nu_stie", "Nu știe"]], era).replace("<select", '<select class="mt"')) +
       '</div><div class="card mt" id="sec2"><p class="lab">SECȚIUNEA 2 – RĂSPUNSURI</p>' +
       tx("f_ocupatie", "9. Cu ce vă ocupați în prezent?", "", 200) +
+      fld("f_dom", "9a. În ce domeniu activați? Ne ajută să vă așezăm la Blitz Networking lângă oamenii potriviți." + (dom.vip ? " (obligatoriu pentru invitații VIP)" : ""),
+        sel("f_dom", [["", "Alege"]].concat(DOMENII), dom.domeniu || "").replace("<select", '<select class="mt"')) +
       ta("f_provocare", "10. Care este cea mai mare provocare cu care vă confruntați acum la locul de muncă sau în business?") +
       ta("f_sfat", "11. Dacă ați putea cere sfatul cuiva care a trecut deja prin asta, ce l-ați întreba?") +
       ta("f_interes", "12. Ce v-a făcut să vă interesați de eveniment?") +
@@ -151,6 +160,8 @@
       '</div><div class="card mt"><p class="lab">SECȚIUNEA 3 – REZULTAT</p>' +
       fld("f_status", "17. Pot să vă trec pe listă ca participant confirmat? (obligatoriu)", sel("f_status", [["", "Alege"], ["confirmat", "Confirmat"], ["revine", "Revine cu răspuns"], ["nu_participa", "Nu participă"]], "").replace("<select", '<select class="mt"')) +
       fld("f_vip", "18. V-ar interesa și biletul VIP, cu locuri în primul rând, întâlniri directe cu invitații și degustare de vin?", sel("f_vip", [["", "Nespecificat"], ["da", "Da"], ["nu", "Nu"], ["poate", "Poate"]], "").replace("<select", '<select class="mt"')) +
+      '<p class="lab fl">18a. DOAR PENTRU INVITAȚII VIP: DIN CE DOMENII AȚI DORI SĂ CUNOAȘTEȚI OAMENI LA BLITZ NETWORKING? (CEL MULT 3' + (dom.vip ? ", OBLIGATORIU" : "") + ")</p>" +
+      DOMENII.filter(function (d) { return d[0] !== "alt"; }).map(function (d) { return chk("f_t_" + d[0], d[1]); }).join("") +
       fld("f_revine", "19. Când credeți că îmi puteți da un răspuns?", '<input id="f_revine" class="mt" type="datetime-local">') +
       tx("f_motiv", "20. Îmi puteți spune ce vă împiedică să participați?", "", 300) +
       '<p class="lab fl">21. ACORDURI (TREI BIFE SEPARATE)</p>' +
@@ -163,15 +174,19 @@
     var g = function (id) { return document.getElementById(id); };
     var val = function (id) { var e = g(id); return e ? e.value : ""; };
     var on = function (id) { var e = g(id); return !!(e && e.checked); };
+    (dom.tinte || []).forEach(function (t) { var e = g("f_t_" + t); if (e) e.checked = true; });
     root.onchange = null;
     root.__save = function () {
+      var tinte = DOMENII.filter(function (d) { return on("f_t_" + d[0]); }).map(function (d) { return d[0]; });
+      if (tinte.length > 3) { g("ferr").innerHTML = '<div class="err">Alege cel mult 3 domenii țintă.</div>'; window.scrollTo(0, 0); return; }
       var b = {
         contact_id: c ? c.id : 0, apelant: val("f_apelant"), nume_sunat: val("f_nume"), telefon: val("f_tel"), email: val("f_email"),
         sursa: nou ? val("f_sursa") : "", raspuns: val("f_raspuns"), revenire_la: val("f_rev"), era_inscris: val("f_era"),
         ocupatie: val("f_ocupatie"), provocare: val("f_provocare"), sfat: val("f_sfat"), interes: val("f_interes"), ia_acasa: val("f_ia"),
         oameni: val("f_oameni"), intrebare_invitati: val("f_intrebare"), ramane_activ: val("f_activ"),
         status_final: val("f_status"), vip: val("f_vip"), revine_la: val("f_revine"), motiv: val("f_motiv"),
-        acord_date: on("f_acord"), acord_viitor: on("f_viitor"), acord_bcr: on("f_bcr"), invitatie_trimisa: val("f_inv"), observatii: val("f_obs")
+        acord_date: on("f_acord"), acord_viitor: on("f_viitor"), acord_bcr: on("f_bcr"), invitatie_trimisa: val("f_inv"), observatii: val("f_obs"),
+        domeniu: val("f_dom"), tinte: tinte
       };
       var btn = g("f_save");
       function send(extra) {

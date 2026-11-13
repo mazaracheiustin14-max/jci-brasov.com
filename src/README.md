@@ -148,3 +148,24 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - Setări opționale în `setari`: `colegi` (nume separate prin virgulă, pentru „Cine a sunat”) și `surse_contact` (lista surselor, implicit Site, WhatsApp, Meta Ads, Partener, Contact personal, Telefon, Altă sursă).
 - Chestionarul urmează formularul echipei (12 nov 2026): 23 de întrebări în 3 secțiuni, toate vizibile mereu, cu formulări către persoana sunată; obligatorii doar 1 (cine a sunat), 2 (nume), 6 (ați reușit să vorbiți) și 17 (status final). „Confirmat” se poate alege doar dacă s-a vorbit. Întrebarea 21 are trei bife separate (date eveniment, invitații viitoare, BCR). Coloana `call_logs.invitatie_trimisa` păstrează răspunsul la întrebarea 22 („I s-a trimis linkul de înscriere / invitația?”, da/nu). Întrebările 1, 2, 5, 6, 22 și 23 sunt pentru apelant, nu se citesc cu voce tare.
 - Teste: `node --no-warnings src/tests/apeluri.test.mjs` (backend) și `src/tests/apeluri-ui.test.mjs` (interfață, cere jsdom).
+
+## Blitz Networking pe domenii și „Networking curatoriat” pentru VIP (13 nov 2026)
+- Lista de domenii (14, inclusiv „Alt domeniu”, care nu intră în potrivire): `worker/domenii.js`. Copii în `public/assets/js/apeluri.js`,
+  `src/domenii.py` (formularele publice); `src/tests/blitz.test.mjs` verifică faptul că listele coincid.
+- D1: `inscrieri.domeniu` (cod), `inscrieri.tinte` (cel mult 3 coduri, cu virgulă), `call_logs.domeniu`, `call_logs.tinte`, tabelul `vip_domenii` (email, domeniu, tinte).
+- De unde vin datele: câmp obligatoriu „Domeniul tău de activitate” în formularul de înscriere (`/api/inscriere`); formularul „Networking curatoriat”
+  de pe `vip-confirmat` (`assets/js/vip-domenii.js`, `/api/vip-domenii`, legat de înscriere doar pentru bilete VIP plătite); întrebările 9a și 18a
+  din chestionarul de apeluri (obligatorii la apel pentru cine are bilet VIP plătit și nu le are deja).
+- `src/domenii.py` (după pixel.py; fără scripturi inline, deci nu cere security.py): pune câmpul în formularul de înscriere și formularul pe vip-confirmat, RO/EN.
+- VIP pentru potrivire = bilet plătit (sursa „Bilet VIP (Stripe)” sau emailul în tabelul `vip`) sau orice înscriere cu domenii țintă completate
+  (invitații VIP cu loc rezervat, completați de echipă la apel).
+- Alocarea (`worker/blitz-match.js`, funcții pure; folosite de `worker/checkin.js`):
+  1. Cu o zi înainte: pagina `/checkin/blitz` (buton în panoul echipei) așază VIP-ii în primele K blocuri, cei care se caută reciproc împreună.
+     K se alege din pagină; recomandarea presupune că vin 70% dintre înscriși (`SHOW_RATE`, presupunere nemăsurată) și cel mult 12 VIP pe bloc.
+     Dacă nu apasă nimeni, împărțirea se face singură la prima scanare de după 25 noiembrie, ora 00:00. Setări: `blitz_vip_blocuri`, `blitz_vip_prealoc`.
+  2. La scanare: participantul merge în blocul deschis unde domeniul lui e cel mai cerut de cei de acolo (împărțit la câți din același domeniu sunt deja),
+     dacă blocul nu depășește cu mai mult de 3 oameni cel mai liber bloc din val. Fără domeniu sau fără cerere: regula veche.
+  3. Dacă VIP-ii stau în mai mult de 3 blocuri, primul val cuprinde toate blocurile lor. Cine e așezat după domeniu nu mai e mutat de `spreadFriends`.
+  4. Anularea unui check-in eliberează locul, inclusiv pe cel rezervat al unui VIP; la rescanare primește loc după domeniu.
+- Panoul /checkin: „Blocuri, câți au primit ecuson” numără doar persoanele intrate (locurile rezervate VIP nu se văd acolo, ci pe /checkin/blitz).
+- Teste: `node --no-warnings src/tests/blitz.test.mjs`. Simulare cu date inventate: `node src/tests/blitz-sim.mjs`.

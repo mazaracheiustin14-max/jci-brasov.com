@@ -1,6 +1,8 @@
 // Înscrierea la eveniment: logica comună formularului public (/api/inscriere) și apelurilor echipei (worker/apeluri.js).
 // O singură sursă pentru eveniment, capacitate, termen și salvare, ca cele două căi să nu se abată una de alta.
 
+import { ensureDomCols, domClean, parseTinte } from "./domenii.js";
+
 export const EVENT = "beyond-2026";
 export const CAPACITY = 150;
 export const DEADLINE = Date.UTC(2026, 10, 24, 21, 59, 59); // 24 noiembrie 2026, 23:59 ora României
@@ -11,18 +13,19 @@ export async function countRegistrations(env) {
   return (r && r.n) || 0;
 }
 
-// f: nume, email, telefon, companie, functie, profil, intrebare, sursa (deja curățate)
+// f: nume, email, telefon, companie, functie, profil, intrebare, sursa (deja curățate); opțional domeniu (cod) și tinte (coduri)
 // o: limba ("ro" | "en"), acord_marketing (0/1), acord_bcr (0/1), tara
 // Întoarce { inserted, status, token, id, existingStatus, existingId }. Aruncă eroare dacă baza de date nu răspunde.
 export async function registerPerson(env, f, o) {
   let status = "confirmat";
   let token = null;
+  await ensureDomCols(env);
   const n = await countRegistrations(env);
   if (n >= CAPACITY) status = "asteptare";
   const res = await env.DB.prepare(
-    "INSERT OR IGNORE INTO inscrieri (eveniment,nume,email,telefon,companie,functie,profil,intrebare,sursa,limba,acord_marketing,acord_bcr,status,tara) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+    "INSERT OR IGNORE INTO inscrieri (eveniment,nume,email,telefon,companie,functie,profil,intrebare,sursa,limba,acord_marketing,acord_bcr,status,tara,domeniu,tinte) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
   ).bind(EVENT, f.nume, f.email, f.telefon, f.companie || "", f.functie || "", f.profil || "", f.intrebare || "", f.sursa, o.limba || "ro",
-    o.acord_marketing ? 1 : 0, o.acord_bcr ? 1 : 0, status, o.tara || null).run();
+    o.acord_marketing ? 1 : 0, o.acord_bcr ? 1 : 0, status, o.tara || null, domClean(f.domeniu) || null, parseTinte(f.tinte).join(",") || null).run();
   const inserted = !!(res.meta && res.meta.changes > 0);
   if (inserted && status === "confirmat") {
     // Cod unic pentru biletul nominal cu QR (vezi worker/checkin.js)
