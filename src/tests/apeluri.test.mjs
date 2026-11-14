@@ -74,18 +74,22 @@ await call("/api/echipa/contactat", { id: cn.id, contactat: false });
 // validări
 let r = await call("/api/echipa/apel", { contact_id: cn.id, nume_sunat: "X", raspuns: "da" });
 assert.equal(r.status, 400, "lipsește apelantul");
-r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_sunat: "X", raspuns: "da" });
-assert.equal(r.status, 400, "lipsește statusul final");
+r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_sunat: "X" });
+assert.equal(r.status, 400, "lipsește răspunsul de la întrebarea 6");
 
 // nu a răspuns: apel salvat, fără înscriere
 r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_sunat: "Cineva Nou", raspuns: "nu", status_final: "revine" });
 assert.ok(r.j.ok);
 
-// „Confirmat” fără să fi vorbit: refuz; fără status final: refuz
+// „Confirmat” fără să fi vorbit: refuz; statusul final nu este obligatoriu (14 nov 2026)
 r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_sunat: "Cineva Nou", raspuns: "nu", status_final: "confirmat" });
 assert.equal(r.status, 400); assert.match(r.j.error, /vorbi/);
 r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_sunat: "Cineva Nou", raspuns: "nu" });
-assert.equal(r.status, 400); assert.match(r.j.error, /statusul final/);
+assert.ok(r.j.ok, "nu a răspuns, fără status final");
+r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_sunat: "Cineva Nou", raspuns: "mai_tarziu", status_final: "" });
+assert.ok(r.j.ok, "sună mai târziu, fără status final");
+r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_sunat: "Cineva Nou", raspuns: "da", status_final: "" });
+assert.ok(r.j.ok && r.j.rezultat === "", "a vorbit, fără status final: apel salvat, fără înscriere");
 
 // confirmă, dar fără email: refuz
 r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_sunat: "Cineva Nou", raspuns: "da", status_final: "confirmat", acord_date: true });
@@ -114,7 +118,7 @@ assert.ok(cn2.inscris && cn2.contactat && cn2.status_apel === "confirmat" && /Te
 r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_sunat: "Cineva Nou", raspuns: "da", status_final: "confirmat", email: "alt@example.com", acord_date: true });
 assert.ok(r.j.ok && r.j.rezultat === "");
 assert.equal((DB._db.prepare("SELECT COUNT(*) n FROM inscrieri WHERE nume='Cineva Nou'").get()).n, 1, "fără duplicat de înscriere");
-assert.equal((DB._db.prepare("SELECT COUNT(*) n FROM call_logs WHERE contact_id=?").get(cn.id)).n, 3, "apelurile se țin separat");
+assert.equal((DB._db.prepare("SELECT COUNT(*) n FROM call_logs WHERE contact_id=?").get(cn.id)).n, 6, "apelurile se țin separat");
 
 // email existent la altă persoană: nu se creează, perechea intră la duplicate
 const cx = j.contacte.find((c) => c.telefon === "+40700000050");

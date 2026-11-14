@@ -157,8 +157,8 @@
       tx("f_oameni", "14. Ce fel de oameni v-ar plăcea să cunoașteți acolo?", "", 300) +
       ta("f_intrebare", "15. Avem două paneluri, unul despre puterea comunității și unul despre tehnologia care ne schimbă viața. Ce întrebare le-ați pune invitaților?") +
       ta("f_activ", "16. Ce v-ar face să rămâneți activ în comunitatea JCI Brașov și după eveniment?") +
-      '</div><div class="card mt"><p class="lab">SECȚIUNEA 3 – REZULTAT</p>' +
-      fld("f_status", "17. Pot să vă trec pe listă ca participant confirmat? (obligatoriu)", sel("f_status", [["", "Alege"], ["confirmat", "Confirmat"], ["revine", "Revine cu răspuns"], ["nu_participa", "Nu participă"]], "").replace("<select", '<select class="mt"')) +
+      '</div><div class="card mt"><p class="lab">SECȚIUNEA 3 – REZULTAT</p><div id="ferr3"></div>' +
+      fld("f_status", "17. Pot să vă trec pe listă ca participant confirmat?", sel("f_status", [["", "Alege"], ["confirmat", "Confirmat"], ["revine", "Revine cu răspuns"], ["nu_participa", "Nu participă"]], "").replace("<select", '<select class="mt"')) +
       fld("f_vip", "18. V-ar interesa și biletul VIP, cu locuri în primul rând, întâlniri directe cu invitații și degustare de vin?", sel("f_vip", [["", "Nespecificat"], ["da", "Da"], ["nu", "Nu"], ["poate", "Poate"]], "").replace("<select", '<select class="mt"')) +
       '<p class="lab fl">18a. DOAR PENTRU INVITAȚII VIP: DIN CE DOMENII AȚI DORI SĂ CUNOAȘTEȚI OAMENI LA BLITZ NETWORKING? (CEL MULT 3' + (dom.vip ? ", OBLIGATORIU" : "") + ")</p>" +
       DOMENII.filter(function (d) { return d[0] !== "alt"; }).map(function (d) { return chk("f_t_" + d[0], d[1]); }).join("") +
@@ -176,7 +176,10 @@
     var on = function (id) { var e = g(id); return !!(e && e.checked); };
     (dom.tinte || []).forEach(function (t) { var e = g("f_t_" + t); if (e) e.checked = true; });
     root.onchange = null;
+    var arata = function (id) { var e = g(id); if (e && e.scrollIntoView) e.scrollIntoView({ block: "center" }); };
     root.__save = function () {
+      g("ferr").innerHTML = ""; g("ferr3").innerHTML = "";
+      if (!val("f_raspuns")) { g("ferr").innerHTML = '<div class="err">Alege la întrebarea 6 dacă ați reușit să vorbiți.</div>'; arata("f_raspuns"); return; }
       var tinte = DOMENII.filter(function (d) { return on("f_t_" + d[0]); }).map(function (d) { return d[0]; });
       if (tinte.length > 3) { g("ferr").innerHTML = '<div class="err">Alege cel mult 3 domenii țintă.</div>'; window.scrollTo(0, 0); return; }
       var b = {
@@ -184,7 +187,7 @@
         sursa: nou ? val("f_sursa") : "", raspuns: val("f_raspuns"), revenire_la: val("f_rev"), era_inscris: val("f_era"),
         ocupatie: val("f_ocupatie"), provocare: val("f_provocare"), sfat: val("f_sfat"), interes: val("f_interes"), ia_acasa: val("f_ia"),
         oameni: val("f_oameni"), intrebare_invitati: val("f_intrebare"), ramane_activ: val("f_activ"),
-        status_final: val("f_status"), vip: val("f_vip"), revine_la: val("f_revine"), motiv: val("f_motiv"),
+        status_final: val("f_raspuns") === "da" ? val("f_status") : "", vip: val("f_vip"), revine_la: val("f_revine"), motiv: val("f_motiv"),
         acord_date: on("f_acord"), acord_viitor: on("f_viitor"), acord_bcr: on("f_bcr"), invitatie_trimisa: val("f_inv"), observatii: val("f_obs"),
         domeniu: val("f_dom"), tinte: tinte
       };

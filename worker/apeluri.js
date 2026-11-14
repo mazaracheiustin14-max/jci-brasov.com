@@ -240,9 +240,11 @@ async function saveCall(env, h, s, b) {
   if (!numeSunat) return err(h, "Completează numele persoanei sunate.");
   if (!RASPUNS.includes(raspuns)) return err(h, "Alege dacă ați reușit să vorbiți.");
   const da = raspuns === "da";
-  const statusFinal = clean(b.status_final, 20);
-  if (!STATUS_FINAL.includes(statusFinal)) return err(h, "Alege statusul final al discuției.");
+  // Statusul final (întrebarea 17) nu este obligatoriu (14 nov 2026). Fără el apelul se salvează, iar starea contactului
+  // vine din răspunsul de la întrebarea 6; înscrierea prin telefon se face în continuare doar la „Confirmat”.
+  let statusFinal = clean(b.status_final, 20);
   if (!da && statusFinal === "confirmat") return err(h, "„Confirmat” se poate alege doar dacă ați reușit să vorbiți cu persoana.");
+  if (!STATUS_FINAL.includes(statusFinal)) statusFinal = "";
 
   await ensure(env);
   // Contactul: existent (id) sau nou (nume, telefon, sursă), cu verificare după telefon normalizat.
@@ -343,7 +345,7 @@ async function saveCall(env, h, s, b) {
 
 // ---------- rutare ----------
 // Se schimbă la fiecare modificare a public/assets/js/apeluri.js, ca telefoanele să nu rămână cu versiunea veche din cache.
-const JS_VERSION = "20261113a";
+const JS_VERSION = "20261114a";
 export function apeluriPage(h, s) {
   return h.html(h.shell("Apeluri Beyond the Initiative", `<p class="k">Panoul echipei</p><h1>Apeluri</h1>
 <div id="ap" data-who="${h.esc(s.who)}"><div class="card"><p class="muted">Se încarcă...</p></div></div>
