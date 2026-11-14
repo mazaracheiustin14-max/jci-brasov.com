@@ -200,7 +200,7 @@ const VIP_TOTAL = 40;
 const VIP_PRESOLD = 15;
 // Membri JCI Brașov și invitații lor, confirmați în afara formularului (7 nov 2026).
 // Contorul public arată cel puțin acest număr; peste el, numărul real din baza de date.
-const COUNT_BASE = 43;
+const COUNT_BASE = 63; // 43 confirmați în afara formularului, plus 20 de prieteni confirmați pe 14 nov 2026 (numele urmează să fie trecute ca înscrieri)
 const PROFILES = ["Antreprenor", "Manager", "Angajat", "Student", "Freelancer sau consultant", "ONG sau sector public", "Altul",
   "Entrepreneur", "Employee", "Freelancer or consultant", "NGO or public sector", "Other"];
 
