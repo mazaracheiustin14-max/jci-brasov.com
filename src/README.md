@@ -60,7 +60,7 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - Rânduri cu `status = 'test'`: primesc invitația (dacă adresa e în `invit_test`), au bilet valid, dar nu intră în numărul de înscriși.
 
 ## Parteneri confirmați și acordul BCR (8 nov 2026)
-- `toplive.py` (după vip.py și checkin.py): rapoartele în timp real de înscrieri și de bilete VIP, urcate în capul paginii evenimentului (RO/EN), deasupra cronometrului.
+- `toplive.py` (după vip.py și checkin.py): capul paginii evenimentului (RO/EN): titlul, rapoartele în timp real de înscrieri și de bilete VIP ca butoane (duc la #rezerva și #vip) și cronometrul, pe primul ecran al telefonului. Titlul h1 e mutat aici din blocul de prezentare.
 - `parteneri.py` (după deploy.py, vip.py și checkin.py, înainte de security.py): blocul „Partenerii evenimentului” pe pagina evenimentului (RO/EN),
   cu BCR Asigurări (Partenerul Panelului I) și CATTIA Brașov (partener de locație); bifa opțională „Doresc să fiu contactat de BCR Asigurări”
   în formularul de înscriere și întrebarea frecventă despre date actualizată.
