@@ -43,7 +43,7 @@ export default {
       if (r) return r;
     }
     // Bilete nominale cu QR și check-in la intrare (worker/checkin.js)
-    if (/^\/(bilet|c|confirma)\/|^\/checkin(\/apeluri|\/blitz)?\/?$|^\/api\/(echipa\/|checkin$)/.test(url.pathname)) {
+    if (/^\/(bilet|c|confirma|q)\/|^\/checkin(\/apeluri|\/blitz)?\/?$|^\/api\/(echipa\/|checkin$|chestionar$)/.test(url.pathname)) {
       const r = await handleCheckin(request, env, url, overLimit);
       if (r) return r;
     }

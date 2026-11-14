@@ -4,7 +4,7 @@
 //  - pentru oricine altcineva, se deschide biletul (/bilet/<token>), fără să confirme nimic.
 // PIN-ul (hash + sare) și secretul de semnare a sesiunii stau în D1, tabelul setari.
 
-import { handleApeluri } from "./apeluri.js";
+import { handleApeluri, chestionarPage, chestionarSave } from "./apeluri.js";
 import { domLabel, parseTinte, ensureDomCols, syncVipDomenii, paidVipCond } from "./domenii.js";
 import { preallocVip, domainCandidates, suggestK } from "./blitz-match.js";
 
@@ -349,6 +349,18 @@ export async function handleCheckin(request, env, url, overLimit) {
     const s = await staffSession(request, env);
     if (!s) return Response.redirect(`${url.origin}/bilet/${m[1]}`, 302);
     return scanPage(env, m[1], s, url.searchParams.get("ok") === "1");
+  }
+
+  // Chestionarul completat de persoană, cu link personal trimis pe WhatsApp (worker/apeluri.js)
+  m = p.match(/^\/q\/([A-Za-z0-9]{1,20})\/?$/);
+  if (m) {
+    if (overLimit && await overLimit(request, env, "qpage", 40, 120)) return html(shell("Prea multe încercări", `<h1>Prea multe încercări</h1><p class="muted">Încearcă din nou peste o oră.</p>`), 429);
+    return chestionarPage(env, H, m[1]);
+  }
+  if (p === "/api/chestionar") {
+    if (request.method !== "POST" || !sameOrigin(request)) return json({ ok: false, error: "method" }, 405);
+    if (overLimit && await overLimit(request, env, "chestionar", 10, 30)) return json({ ok: false, error: "Prea multe încercări. Încearcă din nou peste o oră." }, 429);
+    return chestionarSave(request, env, H);
   }
 
   if (p === "/checkin/apeluri" || p === "/checkin/apeluri/") {

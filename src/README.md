@@ -147,6 +147,11 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - Înscriere prin telefon: doar pentru contact neînscris, cu „Confirmat”, email valid și acord verbal; după termen cere confirmare; capacitate plină = listă de așteptare. Emailul de invitație pleacă prin scriptul Gmail existent (la 5 minute).
 - Setări opționale în `setari`: `colegi` (nume separate prin virgulă, pentru „Cine a sunat”) și `surse_contact` (lista surselor, implicit Site, WhatsApp, Meta Ads, Partener, Contact personal, Telefon, Altă sursă).
 - Chestionarul urmează formularul echipei (12 nov 2026): 23 de întrebări în 3 secțiuni, toate vizibile mereu, cu formulări către persoana sunată; obligatorii doar 1 (cine a sunat), 2 (nume), 6 (ați reușit să vorbiți) și 17 (status final). „Confirmat” se poate alege doar dacă s-a vorbit. Întrebarea 21 are trei bife separate (date eveniment, invitații viitoare, BCR). Coloana `call_logs.invitatie_trimisa` păstrează răspunsul la întrebarea 22 („I s-a trimis linkul de înscriere / invitația?”, da/nu). Întrebările 1, 2, 5, 6, 22 și 23 sunt pentru apelant, nu se citesc cu voce tare.
+- Chestionarul completat de persoană (14 nov 2026): fiecare contact are un cod (`contacte.cod`, 12 caractere). Butonul „Trimite chestionarul” din panou
+  deschide WhatsApp cu mesajul și linkul personal `/q/<cod>`; pagina publică (`chestionarPage`) arată doar numele, iar `POST /api/chestionar`
+  (`chestionarSave`) salvează prin `saveCall`, cu apelantul „Chestionar online”. Cine răspunde că participă și nu e înscris este înscris cu sursa
+  „WhatsApp”. Domeniile țintă se iau doar de la cine vrea bilet VIP sau are unul plătit. Interfața: `public/assets/js/chestionar.js`.
+- Întrebarea 17 (statusul final) nu este obligatorie în chestionarul de apel (14 nov 2026).
 - Teste: `node --no-warnings src/tests/apeluri.test.mjs` (backend) și `src/tests/apeluri-ui.test.mjs` (interfață, cere jsdom).
 
 ## Blitz Networking pe domenii și „Networking curatoriat” pentru VIP (13 nov 2026)

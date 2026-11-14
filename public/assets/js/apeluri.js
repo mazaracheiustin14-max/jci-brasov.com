@@ -44,6 +44,40 @@
       (digits.length >= 3 && (c.telefon || "").replace(/\D/g, "").indexOf(digits) >= 0);
   }
 
+  // Mesajul de WhatsApp cu linkul personal către chestionarul pe care îl completează singură persoana (/q/<cod>).
+  function waText(c) {
+    var p = String(c.nume || "").trim().split(/\s+/)[0] || "";
+    if (!/^[A-Za-zÀ-ž]{3,20}$/.test(p)) p = "";
+    var cine = who && who !== "echipa" ? "\nprin " + who : "";
+    return [
+      (p ? "Dragă " + p + "," : "Bună,") + " 👋",
+      "",
+      "Mulțumim că faci parte din comunitatea *JCI Brașov – Beyond the Initiative*! 🎉",
+      "",
+      "Evenimentul marchează *lansarea JCI Brașov* și este unul dintre cele mai mari evenimente de networking ale anului în Brașov.",
+      "",
+      "📅 *Joi, 26 noiembrie*",
+      "🕔 *Ora 17:00*",
+      "📍 *CATTIA Brașov*",
+      "",
+      "Ce te așteaptă:",
+      "🤝 *2 sesiuni de Blitz Networking* – peste *24 de contacte de business* într-o singură seară",
+      "🎤 *9 lideri pe scenă*, în două paneluri: unul despre puterea comunității și unul despre tehnologia care ne schimbă viața",
+      "🍽️ Networking la standul de mâncare *Hillden*",
+      "",
+      "✅ *Pentru a-ți confirma locul, completează chestionarul de mai jos:*",
+      "👉 https://jci-brasov.com/q/" + c.cod,
+      "",
+      "Răspunsurile tale ne ajută să te așezăm la Blitz Networking *în funcție de interesele tale*, ca să cunoști oamenii potriviți, sau să le adresăm invitaților de pe scenă *întrebările de interes pentru tine*.",
+      "",
+      "⚠️ Prin completarea chestionarului *îți confirmi locul*. Dacă nu mai poți ajunge, te rugăm să ne anunți *până pe 19 noiembrie* – *locurile sunt limitate* și vrem să le oferim celor de pe lista de așteptare.",
+      "",
+      "Ne vedem pe 26! 🚀",
+      "",
+      "Echipa JCI Brașov" + cine
+    ].join("\n");
+  }
+
   // ----- listă -----
   function card(c) {
     var t = [];
@@ -54,6 +88,8 @@
     } else t.push('<span class="tag">Fără email, fără invitație</span>');
     if (c.status_apel) t.push('<span class="tag info">' + esc(STATUS[c.status_apel] || c.status_apel) + "</span>");
     if (c.revenire) t.push('<span class="tag warn">Revenire ' + esc(fmtWhen(c.revenire)) + "</span>");
+    if (c.q_online) t.push('<span class="tag ok">Chestionar completat online</span>');
+    else if (c.q_trimis) t.push('<span class="tag info">Chestionar trimis pe WhatsApp</span>');
     if (c.apeluri) t.push('<span class="tag">' + c.apeluri + (c.apeluri === 1 ? " apel" : " apeluri") + "</span>");
     var qs = "";
     if (c.intrebare) qs += '<div class="qbox"><span class="lab">ÎNTREBARE PENTRU INVITAȚI</span><br>' + esc(c.intrebare) + "</div>";
@@ -62,6 +98,7 @@
     var acts = c.telefon
       ? '<a class="btn b-green" href="tel:' + esc(c.telefon) + '">Sună</a><a class="btn b-blue" href="https://wa.me/' + digits + '" target="_blank" rel="noopener">WhatsApp</a>'
       : "";
+    if (c.telefon && c.cod) acts += '<a class="btn b-ghost" data-wa="' + c.id + '" href="https://wa.me/' + digits + "?text=" + encodeURIComponent(waText(c)) + '" target="_blank" rel="noopener">Trimite chestionarul</a>';
     return '<div class="card mt"><b style="font-size:18px">' + esc(c.nume || "Fără nume") + "</b><br><small class=\"muted\">" + esc(fmtPhone(c.telefon)) +
       (c.alt ? ", alt număr " + esc(fmtPhone(c.alt)) : "") + (c.email ? ", " + esc(c.email) : "") + (c.companie ? ", " + esc(c.companie) : "") + "</small>" +
       (c.surse ? '<br><small class="muted">Surse: ' + esc(c.surse) + "</small>" : "") +
@@ -247,6 +284,11 @@
         load().then(function () { if (D.duplicate) openDup(); else { view = "list"; renderList(); } });
       });
     }
+  });
+  // Linkul de WhatsApp se deschide normal; aici doar se notează că a fost trimis chestionarul.
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest ? e.target.closest("a[data-wa]") : null;
+    if (a) api("/api/echipa/chestionar-trimis", { id: Number(a.getAttribute("data-wa")) }).then(function () { load(); }).catch(function () {});
   });
   document.addEventListener("change", function (e) {
     var i = e.target;

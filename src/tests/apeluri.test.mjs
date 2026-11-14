@@ -2,7 +2,7 @@
 // Folosește o bază SQLite în memorie, cu date inventate. Numere reale de telefon nu se pun în teste.
 import { DatabaseSync } from "node:sqlite";
 import assert from "node:assert/strict";
-import { handleApeluri, normPhone } from "../../worker/apeluri.js";
+import { handleApeluri, normPhone, chestionarPage, chestionarSave } from "../../worker/apeluri.js";
 
 function makeD1() {
   const db = new DatabaseSync(":memory:");
@@ -166,5 +166,53 @@ const d2 = (await call("/api/echipa/duplicate")).j.duplicate[0];
 await call("/api/echipa/duplicat", { id: d2.id, actiune: "diferiti" });
 ({ j } = await call("/api/echipa/contacte"));
 assert.equal(j.duplicate, 0, "marcat ca diferit, nu mai reapare");
+
+// ---------- chestionarul completat de persoană (link personal) ----------
+DB._db.exec("INSERT INTO contacte (nume, telefon) VALUES ('Online Test','+40700000123'),('Vip Curios','+40700000124')");
+({ j } = await call("/api/echipa/contacte"));
+assert.ok(j.contacte.every((c) => /^[a-z2-9]{12}$/.test(c.cod)), "fiecare contact are cod");
+assert.equal(new Set(j.contacte.map((c) => c.cod)).size, j.contacte.length, "coduri unice");
+const on = j.contacte.find((c) => c.nume === "Online Test"), vc = j.contacte.find((c) => c.nume === "Vip Curios");
+const pub = async (body) => { const rr = await chestionarSave(new Request("https://jci-brasov.com/api/chestionar", { method: "POST", body: JSON.stringify(body) }), env, h); return { status: rr.status, j: await rr.json() }; };
+r = await pub({ cod: "aaaaaaaaaaaa", vine: "da" });
+assert.equal(r.status, 404, "cod necunoscut");
+r = await pub({ cod: on.cod });
+assert.equal(r.status, 400, "fără răspuns la participare");
+r = await pub({ cod: on.cod, vine: "da", nume: "Online Test", acord: true });
+assert.equal(r.status, 400, "vine, dar fără email"); assert.match(r.j.error, /email/);
+r = await pub({ cod: on.cod, vine: "da", nume: "Online Test", email: "online@example.com" });
+assert.equal(r.status, 400, "vine, dar fără acord"); assert.match(r.j.error, /acordul/);
+r = await pub({ cod: on.cod, vine: "nu" });
+assert.equal(r.status, 400, "orice răspuns cere acordul pentru date");
+r = await pub({ cod: on.cod, vine: "da", nume: "Online Test Complet", email: "online@example.com", acord: true, domeniu: "it", tinte: ["marketing"], intrebare: "Cum începem?", vip: "nu" });
+assert.ok(r.j.ok && r.j.rezultat === "inscris_confirmat", "înscriere prin chestionarul online");
+let ir = DB._db.prepare("SELECT nume, sursa, telefon, tinte FROM inscrieri WHERE email='online@example.com'").get();
+assert.equal(ir.sursa, "WhatsApp"); assert.equal(ir.nume, "Online Test Complet"); assert.equal(ir.telefon, "+40700000123");
+assert.ok(!ir.tinte, "domeniile țintă nu se iau de la cine nu vrea VIP");
+let lg = DB._db.prepare("SELECT apelant, status_final, raspuns FROM call_logs WHERE contact_id=? ORDER BY id DESC").get(on.id);
+assert.equal(lg.apelant, "Chestionar online"); assert.equal(lg.status_final, "confirmat");
+assert.equal(DB._db.prepare("SELECT COUNT(*) n FROM contact_surse WHERE contact_id=? AND sursa='Telefon'").get(on.id).n, 0, "fără sursa Telefon");
+// interesat de VIP: domeniile țintă se păstrează; nu participă: fără înscriere
+r = await pub({ cod: vc.cod, vine: "poate", vip: "da", tinte: ["it", "marketing"], acord: true });
+assert.ok(r.j.ok && r.j.status === "revine");
+assert.equal(DB._db.prepare("SELECT tinte FROM call_logs WHERE contact_id=? ORDER BY id DESC").get(vc.id).tinte, "it,marketing");
+r = await pub({ cod: vc.cod, vine: "nu", acord: true });
+assert.ok(r.j.ok && r.j.rezultat === "");
+// nu mai dorește să fie contactat: se salvează fără acord și fără celelalte răspunsuri
+r = await pub({ cod: vc.cod, vine: "stop", ocupatie: "ceva", email: "x@example.com" });
+assert.ok(r.j.ok && r.j.stop);
+lg = DB._db.prepare("SELECT status_final, motiv, ocupatie, email, acord_date FROM call_logs WHERE contact_id=? ORDER BY id DESC").get(vc.id);
+assert.equal(lg.status_final, "nu_participa"); assert.match(lg.motiv, /contactat/); assert.equal(lg.ocupatie, ""); assert.equal(lg.email, ""); assert.equal(lg.acord_date, 0);
+assert.equal(DB._db.prepare("SELECT inscriere_id FROM contacte WHERE id=?").get(vc.id).inscriere_id, null);
+// pagina: arată numele, nu telefonul și nu emailul; pentru cei înscriși nu mai cere emailul
+let pg = await (await chestionarPage(env, h, vc.cod)).text();
+assert.match(pg, /Dragă Vip/); assert.ok(!pg.includes("700000124")); assert.match(pg, /id="q_email"/);
+pg = await (await chestionarPage(env, h, on.cod)).text();
+assert.ok(!/id="q_email"/.test(pg) && !pg.includes("online@example.com"), "înscris: fără câmp de email, fără emailul afișat");
+// panoul: trimis și completat
+r = await call("/api/echipa/chestionar-trimis", { id: vc.id });
+assert.ok(r.j.ok);
+({ j } = await call("/api/echipa/contacte"));
+assert.ok(j.contacte.find((c) => c.id === vc.id).q_trimis && j.contacte.find((c) => c.id === on.id).q_online);
 
 console.log("apeluri: toate testele au trecut");
