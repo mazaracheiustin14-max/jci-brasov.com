@@ -206,12 +206,19 @@ assert.equal(lg.status_final, "nu_participa"); assert.match(lg.motiv, /contactat
 assert.equal(DB._db.prepare("SELECT inscriere_id FROM contacte WHERE id=?").get(vc.id).inscriere_id, null);
 // pagina: arată numele, nu telefonul și nu emailul; pentru cei înscriși nu mai cere emailul
 let pg = await (await chestionarPage(env, h, vc.cod)).text();
-assert.match(pg, /Dragă Vip/); assert.ok(!pg.includes("700000124")); assert.match(pg, /id="q_email"/);
+assert.match(pg, /Bună, mulțumim/, "fără prenume confirmat, salut fără nume"); assert.ok(!pg.includes("700000124")); assert.match(pg, /id="q_email"/);
 pg = await (await chestionarPage(env, h, on.cod)).text();
 assert.ok(!/id="q_email"/.test(pg) && !pg.includes("online@example.com"), "înscris: fără câmp de email, fără emailul afișat");
 // panoul: trimis și completat
-r = await call("/api/echipa/chestionar-trimis", { id: vc.id });
+r = await call("/api/echipa/chestionar-trimis", { id: vc.id, prenume: " Vio❤️rel " });
 assert.ok(r.j.ok);
+pg = await (await chestionarPage(env, h, vc.cod)).text();
+assert.match(pg, /Dragă Vio rel,/, "prenumele confirmat în panou, fără emoticoane");
+DB._db.exec("INSERT INTO contacte (nume, telefon) VALUES ('Bica❤️','+40700000131'),('FARKAS ALEXANDRU','+40700000132'),('AntonelaCoroAMA a…','+40700000133'),('raluca caloian','+40700000134')");
+({ j } = await call("/api/echipa/contacte"));
+const pn = (n) => j.contacte.find((c) => c.nume === n).prenume;
+assert.equal(pn("Bica❤️"), "Bica"); assert.equal(pn("FARKAS ALEXANDRU"), "Farkas"); assert.equal(pn("AntonelaCoroAMA a…"), ""); assert.equal(pn("raluca caloian"), "Raluca");
+assert.equal(j.contacte.find((c) => c.id === on.id).prenume, "Online", "pentru înscriși, prenumele vine din înscriere");
 ({ j } = await call("/api/echipa/contacte"));
 assert.ok(j.contacte.find((c) => c.id === vc.id).q_trimis && j.contacte.find((c) => c.id === on.id).q_online);
 

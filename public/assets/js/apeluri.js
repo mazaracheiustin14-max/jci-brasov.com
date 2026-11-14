@@ -45,9 +45,8 @@
   }
 
   // Mesajul de WhatsApp cu linkul personal către chestionarul pe care îl completează singură persoana (/q/<cod>).
-  function waText(c) {
-    var p = String(c.nume || "").trim().split(/\s+/)[0] || "";
-    if (!/^[A-ZÀ-Ž][a-zà-ž]{2,19}$/.test(p)) p = "";
+  function waText(c, pren) {
+    var p = String(pren == null ? c.prenume || "" : pren).replace(/\s+/g, " ").trim();
     var cine = who && who !== "echipa" ? "\nprin " + who : "";
     return [
       (p ? "Dragă " + p + "," : "Bună,") + " 👋",
@@ -98,12 +97,17 @@
     var acts = c.telefon
       ? '<a class="btn b-green" href="tel:' + esc(c.telefon) + '">Sună</a><a class="btn b-blue" href="https://wa.me/' + digits + '" target="_blank" rel="noopener">WhatsApp</a>'
       : "";
-    if (c.telefon && c.cod) acts += '<a class="btn b-ghost" data-wa="' + c.id + '" href="https://wa.me/' + digits + "?text=" + encodeURIComponent(waText(c)) + '" target="_blank" rel="noopener">Trimite chestionarul</a>';
+    var waq = "";
+    if (c.telefon && c.cod) {
+      waq = '<label class="lab fl" for="wn' + c.id + '">PRENUMELE DIN MESAJUL DE WHATSAPP (VERIFICĂ ÎNAINTE DE TRIMITERE)</label>' +
+        '<input id="wn' + c.id + '" class="mt" maxlength="30" value="' + esc(c.prenume || "") + '" placeholder="Fără prenume, mesajul începe cu Bună">' +
+        '<div class="acts"><a class="btn b-blue" data-wa="' + c.id + '" data-tel="' + digits + '" href="https://wa.me/' + digits + "?text=" + encodeURIComponent(waText(c)) + '" target="_blank" rel="noopener">Trimite chestionarul pe WhatsApp</a></div>';
+    }
     return '<div class="card mt"><b style="font-size:18px">' + esc(c.nume || "Fără nume") + "</b><br><small class=\"muted\">" + esc(fmtPhone(c.telefon)) +
       (c.alt ? ", alt număr " + esc(fmtPhone(c.alt)) : "") + (c.email ? ", " + esc(c.email) : "") + (c.companie ? ", " + esc(c.companie) : "") + "</small>" +
       (c.surse ? '<br><small class="muted">Surse: ' + esc(c.surse) + "</small>" : "") +
       '<div class="tags">' + t.join("") + "</div>" + qs +
-      '<div class="acts">' + acts + '<button class="btn b-ghost" data-form="' + c.id + '">Chestionar</button></div>' +
+      '<div class="acts">' + acts + '<button class="btn b-ghost" data-form="' + c.id + '">Chestionar</button></div>' + waq +
       '<label class="chk"><input type="checkbox" data-cont="' + c.id + '"' + (c.contactat ? " checked" : "") + "><span>Contactat" +
       (c.contactat && (c.contactat_de || c.contactat_la) ? " (" + esc([c.contactat_de, c.contactat_la].filter(Boolean).join(", ")) + ")" : "") + "</span></label></div>";
   }
@@ -288,7 +292,12 @@
   // Linkul de WhatsApp se deschide normal; aici doar se notează că a fost trimis chestionarul.
   document.addEventListener("click", function (e) {
     var a = e.target.closest ? e.target.closest("a[data-wa]") : null;
-    if (a) api("/api/echipa/chestionar-trimis", { id: Number(a.getAttribute("data-wa")) }).then(function () { load(); }).catch(function () {});
+    if (!a) return;
+    // Mesajul se reface cu prenumele din câmp, exact înainte să se deschidă WhatsApp.
+    var id = Number(a.getAttribute("data-wa")), inp = document.getElementById("wn" + id), pren = inp ? inp.value : "";
+    var c = (D && D.contacte || []).filter(function (x) { return x.id === id; })[0];
+    if (c) a.href = "https://wa.me/" + a.getAttribute("data-tel") + "?text=" + encodeURIComponent(waText(c, pren));
+    api("/api/echipa/chestionar-trimis", { id: id, prenume: pren }).then(function () { load(); }).catch(function () {});
   });
   document.addEventListener("change", function (e) {
     var i = e.target;

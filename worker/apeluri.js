@@ -29,7 +29,7 @@ async function ensure(env) {
     try { await env.DB.prepare(`ALTER TABLE call_logs ADD COLUMN ${col}`).run(); } catch (e) { /* există deja */ }
   }
   // Chestionarul completat de persoană (14 nov 2026): cod personal pentru link și momentul trimiterii pe WhatsApp.
-  for (const col of ["cod TEXT", "chestionar_trimis TEXT"]) {
+  for (const col of ["cod TEXT", "chestionar_trimis TEXT", "prenume TEXT"]) {
     try { await env.DB.prepare(`ALTER TABLE contacte ADD COLUMN ${col}`).run(); } catch (e) { /* există deja */ }
   }
   await ensureDomCols(env);
@@ -158,7 +158,7 @@ async function detectDuplicates(env) {
 }
 
 // ---------- citire ----------
-const LIST_SQL = `SELECT c.id, c.nume, c.telefon, c.alt_telefon, c.email, c.inscriere_id, c.contactat, c.contactat_de, c.contactat_la, c.status_apel, c.revenire, c.cod, c.chestionar_trimis,
+const LIST_SQL = `SELECT c.id, c.nume, c.telefon, c.alt_telefon, c.email, c.inscriere_id, c.contactat, c.contactat_de, c.contactat_la, c.status_apel, c.revenire, c.cod, c.chestionar_trimis, c.prenume, i.nume AS i_nume,
   (SELECT COUNT(*) FROM call_logs l WHERE l.contact_id=c.id AND l.apelant='Chestionar online') AS online,
   i.status AS i_status, i.email AS i_email, i.companie, i.intrebare AS i_intrebare, i.invitatie_trimisa, i.primire_confirmata, i.prezent_la,
   (SELECT COUNT(*) FROM call_logs l WHERE l.contact_id=c.id) AS apeluri,
@@ -175,7 +175,7 @@ function shape(r) {
     trimisa: inscris && !!inv && !/^(exclus|eroare)/.test(inv), eroare: /^eroare/.test(inv), confirmat: inscris && !!r.primire_confirmata,
     intrebare: r.i_intrebare || "", intrebare_apel: r.q_apel || "", surse: r.surse || "", apeluri: r.apeluri || 0,
     contactat: !!r.contactat, contactat_de: r.contactat_de || "", contactat_la: dataRo(r.contactat_la), status_apel: r.status_apel || "", revenire: r.revenire || "",
-    cod: r.cod || "", q_trimis: !!r.chestionar_trimis, q_online: !!r.online,
+    cod: r.cod || "", q_trimis: !!r.chestionar_trimis, q_online: !!r.online, prenume: r.prenume || firstName(r.i_nume) || firstName(r.nume),
   };
 }
 
@@ -371,12 +371,19 @@ async function contactByCod(env, cod) {
   if (!COD_RE.test(c)) return null;
   return env.DB.prepare("SELECT * FROM contacte WHERE cod=?").bind(c).first();
 }
+// Prenumele din salut: primul cuvânt al numelui, fără emoticoane și semne, cu majusculă. Numele din agendă pot fi scrise
+// cu numele de familie primul, așa că în panou prenumele se poate corecta înainte de trimitere și se păstrează în `prenume`.
+function firstName(n) {
+  const t = (String(n || "").replace(/[^\p{L}\s-]/gu, " ").trim().split(/\s+/)[0] || "").slice(0, 30);
+  if (t.length < 3 || /[a-zà-ž][A-ZÀ-Ž]/.test(t)) return "";
+  return t.split("-").map((x) => (x ? x[0].toUpperCase() + x.slice(1).toLowerCase() : x)).join("-");
+}
 async function markSent(env, h, b) {
-  const r = await env.DB.prepare("UPDATE contacte SET chestionar_trimis=datetime('now') WHERE id=?").bind(Number(b.id) || 0).run();
+  const pren = String(typeof b.prenume === "string" ? b.prenume : "").replace(/[^\p{L}\s-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 30);
+  const r = await env.DB.prepare("UPDATE contacte SET chestionar_trimis=datetime('now'), prenume=? WHERE id=?").bind(pren, Number(b.id) || 0).run();
   if (!r.meta || r.meta.changes === 0) return h.json({ ok: false, error: "Contact negăsit" }, 404);
   return h.json({ ok: true });
 }
-const firstName = (n) => { const t = String(n || "").trim().split(/\s+/)[0] || ""; return /^[A-ZÀ-Ž][a-zà-ž]{2,19}$/.test(t) ? t : ""; };
 
 export async function chestionarPage(env, h, cod) {
   await ensure(env);
@@ -388,7 +395,8 @@ export async function chestionarPage(env, h, cod) {
   const ins = c.inscriere_id ? await env.DB.prepare("SELECT status FROM inscrieri WHERE id=?").bind(c.inscriere_id).first() : null;
   const inscris = !!(ins && (ins.status === "confirmat" || ins.status === "asteptare"));
   const di = await domInfo(env, c.inscriere_id);
-  const pren = firstName(c.nume);
+  // Salutul folosește prenumele confirmat de colega care a trimis linkul; fără el, salutul rămâne fără nume.
+  const pren = c.prenume || "";
   const opt = (list, cur) => list.map(([v, t]) => `<option value="${e(v)}"${v === cur ? " selected" : ""}>${e(t)}</option>`).join("");
   const dom = [["", "Alege"]].concat(DOMENII.map((d) => [d[0], d[1]]));
   const tinte = DOMENII.filter((d) => d[0] !== "alt").map((d) =>
@@ -453,7 +461,7 @@ export async function chestionarSave(request, env, h) {
 
 // ---------- rutare ----------
 // Se schimbă la fiecare modificare a public/assets/js/apeluri.js, ca telefoanele să nu rămână cu versiunea veche din cache.
-const JS_VERSION = "20261114e";
+const JS_VERSION = "20261114f";
 export function apeluriPage(h, s) {
   return h.html(h.shell("Apeluri Beyond the Initiative", `<p class="k">Panoul echipei</p><h1>Apeluri</h1>
 <div id="ap" data-who="${h.esc(s.who)}"><div class="card"><p class="muted">Se încarcă...</p></div></div>
