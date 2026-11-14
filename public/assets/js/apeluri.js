@@ -47,7 +47,7 @@
   // Mesajul de WhatsApp cu linkul personal către chestionarul pe care îl completează singură persoana (/q/<cod>).
   function waText(c) {
     var p = String(c.nume || "").trim().split(/\s+/)[0] || "";
-    if (!/^[A-Za-zÀ-ž]{3,20}$/.test(p)) p = "";
+    if (!/^[A-ZÀ-Ž][a-zà-ž]{2,19}$/.test(p)) p = "";
     var cine = who && who !== "echipa" ? "\nprin " + who : "";
     return [
       (p ? "Dragă " + p + "," : "Bună,") + " 👋",

@@ -376,7 +376,7 @@ async function markSent(env, h, b) {
   if (!r.meta || r.meta.changes === 0) return h.json({ ok: false, error: "Contact negăsit" }, 404);
   return h.json({ ok: true });
 }
-const firstName = (n) => { const t = String(n || "").trim().split(/\s+/)[0] || ""; return /^[A-Za-zÀ-ž]{3,20}$/.test(t) ? t : ""; };
+const firstName = (n) => { const t = String(n || "").trim().split(/\s+/)[0] || ""; return /^[A-ZÀ-Ž][a-zà-ž]{2,19}$/.test(t) ? t : ""; };
 
 export async function chestionarPage(env, h, cod) {
   await ensure(env);
@@ -453,7 +453,7 @@ export async function chestionarSave(request, env, h) {
 
 // ---------- rutare ----------
 // Se schimbă la fiecare modificare a public/assets/js/apeluri.js, ca telefoanele să nu rămână cu versiunea veche din cache.
-const JS_VERSION = "20261114d";
+const JS_VERSION = "20261114e";
 export function apeluriPage(h, s) {
   return h.html(h.shell("Apeluri Beyond the Initiative", `<p class="k">Panoul echipei</p><h1>Apeluri</h1>
 <div id="ap" data-who="${h.esc(s.who)}"><div class="card"><p class="muted">Se încarcă...</p></div></div>
