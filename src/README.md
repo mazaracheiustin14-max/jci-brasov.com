@@ -89,7 +89,7 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - Conversions API (server): `worker/meta-capi.js`, apelat din `handleEventSignup` (`worker/index.js`) prin `ctx.waitUntil`, doar la înscriere nouă cu token.
   Trimite CompleteRegistration cu același `event_id` (`reg-` + token), deci Meta deduplică față de pixel. Date hashate SHA-256: email, telefon
   (format 40...), prenume, nume, țară; plus IP, user agent, `_fbp`, `_fbc`. Nu face nimic dacă secretul lipsește; erorile se scriu doar în log.
-  - Secret obligatoriu `META_CAPI_TOKEN` (token de acces din Events Manager, pixelul 1646950960458698): `npx wrangler secret put META_CAPI_TOKEN`
+  - Secret obligatoriu `META_CAPI_TOKEN` (sau rândul `meta_capi_token` din tabelul D1 `setari`) (token de acces din Events Manager, pixelul 1646950960458698): `npx wrangler secret put META_CAPI_TOKEN`
     sau Cloudflare dashboard, Worker, Settings, Variables and Secrets.
   - Opțional `META_TEST_CODE` (codul din Events Manager, fila Test events): se adaugă ca `test_event_code`; se șterge după testare.
   - Înscrierile făcute de echipă prin apeluri/WhatsApp (`worker/apeluri.js`) nu trimit conversii (nu provin din reclame).

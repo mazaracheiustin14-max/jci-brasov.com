@@ -1,6 +1,7 @@
 // Meta Conversions API (server): trimite CompleteRegistration pentru înscrierile noi de pe formularul public.
 // Același event_id ("reg-" + token) ca în pixelul din browser, deci Meta deduplică și păstrează un singur eveniment.
-// Activ doar dacă secretul META_CAPI_TOKEN e setat. Nu aruncă niciodată erori.
+// Cheia de acces: secretul META_CAPI_TOKEN din Cloudflare sau, dacă lipsește, rândul meta_capi_token din tabelul D1 setari
+// (depozitul e public, deci cheia nu se pune niciodată în cod). Fără cheie nu trimite nimic. Nu aruncă niciodată erori.
 
 const PIXEL_ID = "1646950960458698";
 const GRAPH = "https://graph.facebook.com/v21.0/" + PIXEL_ID + "/events";
@@ -26,7 +27,13 @@ function cookie(header, name) {
 
 export async function sendRegistration(env, request, f, token, siteUrl) {
   try {
-    if (!env.META_CAPI_TOKEN || !token) return;
+    if (!token) return;
+    let key = env.META_CAPI_TOKEN || "";
+    if (!key && env.DB) {
+      const row = await env.DB.prepare("SELECT valoare FROM setari WHERE cheie='meta_capi_token'").first().catch(() => null);
+      key = (row && row.valoare) || "";
+    }
+    if (!key) return;
     const h = (k) => request.headers.get(k) || "";
     const hash = async (v) => (v ? [await sha256(v)] : undefined);
     const parts = String(f.nume || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -56,7 +63,7 @@ export async function sendRegistration(env, request, f, token, siteUrl) {
       }],
     };
     if (env.META_TEST_CODE) body.test_event_code = env.META_TEST_CODE;
-    const r = await fetch(GRAPH + "?access_token=" + encodeURIComponent(env.META_CAPI_TOKEN), {
+    const r = await fetch(GRAPH + "?access_token=" + encodeURIComponent(key), {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
     });
     if (!r.ok) console.log("meta capi:", r.status, (await r.text()).slice(0, 300));

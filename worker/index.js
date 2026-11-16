@@ -300,7 +300,7 @@ async function handleEventSignup(request, env, ctx) {
   }
 
   // Conversions API: doar pentru înscrieri noi cu token (aceeași condiție ca pixelul din browser)
-  if (newToken && env.META_CAPI_TOKEN) {
+  if (newToken) {
     const capi = sendRegistration(env, request, f, newToken, SITE);
     if (ctx && ctx.waitUntil) ctx.waitUntil(capi);
   }
