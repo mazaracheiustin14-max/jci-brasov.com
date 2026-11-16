@@ -408,19 +408,19 @@ ${inscris ? '<p class="muted mt">Ești deja pe lista de înscrieri. Biletul a fo
 <div class="card mt"><div id="qerr"></div>
 <label class="lab fl" for="q_vine">1. Participi la eveniment? (obligatoriu)</label>
 <select id="q_vine" class="mt"><option value="">Alege</option><option value="da">Da, particip</option><option value="poate">Încă nu știu</option><option value="nu">Nu pot participa</option><option value="stop">Nu doresc să mai fiu contactat</option></select>
-<label class="lab fl" for="q_nume">2. Numele și prenumele</label>
+<label class="lab fl" for="q_nume">2. Numele și prenumele (obligatoriu)</label>
 <input id="q_nume" class="mt" maxlength="120" autocomplete="name" value="${e(c.nume || "")}">
-${inscris ? "" : `<label class="lab fl" for="q_email">3. Adresa de e-mail pe care îți trimitem biletul</label>
+${inscris ? "" : `<label class="lab fl" for="q_email">3. Adresa de e-mail pe care îți trimitem biletul (obligatoriu)</label>
 <input id="q_email" class="mt" maxlength="160" inputmode="email" autocapitalize="none" autocomplete="email">`}
-<label class="lab fl" for="q_ocupatie">4. Cu ce te ocupi în prezent?</label>
+<label class="lab fl" for="q_ocupatie">4. Cu ce te ocupi în prezent? (obligatoriu)</label>
 <input id="q_ocupatie" class="mt" maxlength="200">
-<label class="lab fl" for="q_dom">5. În ce domeniu activezi?</label>
+<label class="lab fl" for="q_dom">5. În ce domeniu activezi? (obligatoriu)</label>
 <select id="q_dom" class="mt">${opt(dom, di.domeniu)}</select>
-<label class="lab fl" for="q_intrebare">6. Ce întrebare le-ai pune invitaților din cele două paneluri?</label>
+<label class="lab fl" for="q_intrebare">6. Ce întrebare le-ai pune invitaților din cele două paneluri? (opțional)</label>
 <textarea id="q_intrebare" class="mt" maxlength="1500"></textarea>
-<label class="lab fl" for="q_vip">7. Te interesează biletul VIP, cu locuri în primul rând, întâlniri directe cu invitații și degustare de vin?</label>
+<label class="lab fl" for="q_vip">7. Te interesează biletul VIP, cu locuri în primul rând, întâlniri directe cu invitații și degustare de vin? (obligatoriu)</label>
 <select id="q_vip" class="mt"><option value="">Alege</option><option value="da">Da</option><option value="poate">Poate</option><option value="nu">Nu</option></select>
-<div id="q_tinte"${di.vip ? "" : " hidden"}><p class="lab fl">7a. Din ce domenii ai vrea să cunoști oameni la Blitz Networking? (cel mult 3)</p>${tinte}</div>
+<div id="q_tinte"${di.vip ? "" : " hidden"}><p class="lab fl">7a. Din ce domenii ai vrea să cunoști oameni la Blitz Networking? (obligatoriu, cel mult 3)</p>${tinte}</div>
 <p class="lab fl">Acorduri privind datele personale</p>
 <p class="muted mt">Operatorul datelor este JCI Brașov, organizația locală a Federației „Junior Chamber International România”. Folosim răspunsurile doar pentru organizarea evenimentului din 26 noiembrie: biletul nominal, accesul în sală și așezarea la Blitz Networking. Ai primit acest link pentru că faci parte din comunitatea de WhatsApp JCI Brașov sau te-ai înscris la eveniment. Temeiul este consimțământul tău, pe care îl poți retrage oricând. Ai dreptul de acces, de rectificare și de ștergere a datelor, printr-un mesaj la contact@jci-brasov.com, și dreptul de a depune o plângere la Autoritatea Națională de Supraveghere a Prelucrării Datelor cu Caracter Personal.</p>
 <label class="chk"><input type="checkbox" id="q_acord"><span>Sunt de acord ca JCI Brașov să prelucreze datele din acest chestionar pentru organizarea evenimentului și pentru a mă contacta în legătură cu participarea. (obligatoriu)</span></label>
@@ -439,8 +439,28 @@ export async function chestionarSave(request, env, h) {
   const vine = clean(b.vine, 10);
   const stop = vine === "stop"; // nu mai dorește să fie contactat: se notează doar atât, fără alte răspunsuri
   const status = { da: "confirmat", poate: "revine", nu: "nu_participa", stop: "nu_participa" }[vine];
-  if (!status) return err(h, "Alege dacă participi la eveniment.");
-  if (!stop && b.acord !== true) return err(h, "Pentru a trimite răspunsurile este necesar acordul privind prelucrarea datelor.");
+  if (!status) return err(h, "Completează: 1. Participarea la eveniment.", { lipsa: ["q_vine"] });
+  const ins = c.inscriere_id ? await env.DB.prepare("SELECT status FROM inscrieri WHERE id=?").bind(c.inscriere_id).first() : null;
+  const inscris = !!(ins && (ins.status === "confirmat" || ins.status === "asteptare"));
+  const di0 = await domInfo(env, c.inscriere_id);
+  const vip0 = TRI.includes(clean(b.vip, 10)) ? clean(b.vip, 10) : "";
+  const nTinte = Array.isArray(b.tinte) ? b.tinte.filter((t) => DOMENII.some((d) => d[0] === t && t !== "alt")).length : 0;
+  // Aceleași reguli ca în public/assets/js/chestionar.js: se listează toate câmpurile lipsă, nu se salvează nimic parțial.
+  const lipsa = [];
+  const need = (id, nume) => lipsa.push({ id, nume });
+  if (!stop) {
+    if (clean(b.nume, 120).length < 3) need("q_nume", "2. Numele și prenumele");
+    if (vine === "da") {
+      if (!inscris && !EMAIL_RE.test(clean(b.email, 160))) need("q_email", "3. Adresa de e-mail");
+      if (!clean(b.ocupatie, 200)) need("q_ocupatie", "4. Ocupația");
+      if (!clean(b.domeniu, 40)) need("q_dom", "5. Domeniul de activitate");
+      if (!vip0) need("q_vip", "7. Interesul pentru biletul VIP");
+      else if ((vip0 === "da" || di0.vip) && nTinte < 1) need("q_tinte", "7a. Domeniile pentru Blitz Networking");
+    }
+    if (nTinte > 3 || (Array.isArray(b.tinte) && b.tinte.length > 3)) need("q_tinte", "7a. Cel mult 3 domenii pentru Blitz Networking");
+    if (b.acord !== true) need("q_acord", "Acordul privind prelucrarea datelor");
+  }
+  if (lipsa.length) return err(h, "Completează: " + lipsa.map((x) => x.nume).join(", ") + ".", { lipsa: lipsa.map((x) => x.id) });
   if (stop) b = { cod: b.cod };
   const vip = TRI.includes(clean(b.vip, 10)) ? clean(b.vip, 10) : "";
   const di = await domInfo(env, c.inscriere_id);
@@ -461,7 +481,7 @@ export async function chestionarSave(request, env, h) {
 
 // ---------- rutare ----------
 // Se schimbă la fiecare modificare a public/assets/js/apeluri.js, ca telefoanele să nu rămână cu versiunea veche din cache.
-const JS_VERSION = "20261114f";
+const JS_VERSION = "20261116a";
 export function apeluriPage(h, s) {
   return h.html(h.shell("Apeluri Beyond the Initiative", `<p class="k">Panoul echipei</p><h1>Apeluri</h1>
 <div id="ap" data-who="${h.esc(s.who)}"><div class="card"><p class="muted">Se încarcă...</p></div></div>

@@ -545,6 +545,8 @@ input:focus{outline:2px solid #0097D7;border-color:transparent}
 .state{border-radius:22px;padding:26px;text-align:center}
 .s-ok{background:#123D2B;border:2px solid #1FA463}.s-warn{background:#47181C;border:2px solid #D64545}.s-wait{background:#1B1745;border:2px solid #0097D7}
 .err{background:#47181C;border:1px solid #D64545;border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:14px}
+.bad{border-color:#D64545!important;box-shadow:0 0 0 2px rgba(214,69,69,.45)}
+.chk.bad,#q_tinte.bad{border:1.5px solid #D64545;border-radius:12px;padding:8px}
 body.vipb{background-color:#0B0920;background-image:radial-gradient(600px 420px at 85% 0,rgba(239,196,15,.18),transparent 60%),radial-gradient(500px 400px at 0 100%,rgba(0,151,215,.18),transparent 60%),linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:auto,auto,44px 44px,44px 44px}
 .vipb .pill{color:#0B0920;border:0;background:linear-gradient(100deg,#B8860B,#EFC40F 40%,#FFF1A8 50%,#EFC40F 60%,#B8860B)}
 .vipb .k{color:#EFC40F}

@@ -27,6 +27,13 @@ Nu se publică: cursa de bărcuțe (2028), proiectul de depozitare bagaje, acți
 
 security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune în CSP din public/_headers. Orice script inline nou sau modificat cere rularea lui după deploy.py.
 
+## Validarea formularelor (16 nov 2026)
+- `src/formular.py` (după deploy.py, vip.py, checkin.py, parteneri.py, pixel.py și domenii.py, înainte de security.py; idempotent, fără scripturi inline, deci nu cere security.py):
+  pune `assets/js/formular.js` (versiune din hash) pe eveniment și inscriere, RO/EN, și stilurile de eroare în style.css. Scriptul verifică la trimitere toate câmpurile obligatorii
+  ale formularelor către /api/inscriere și /api/form (inclusiv cele cu novalidate), listează câmpurile lipsă în `.form-msg`, marchează câmpurile (aria-invalid, clasa `bad`) și blochează trimiterea.
+- Worker: `formErrorPage` din `worker/index.js` întoarce o pagină HTML mică, cu link „Înapoi la formular”, în loc de text simplu.
+- Chestionarul /q/<cod>: regulile sunt în `public/assets/js/chestionar.js` și oglindite în `chestionarSave` (worker/apeluri.js). Test: `node --no-warnings src/tests/formulare.test.mjs` (cere jsdom).
+
 ## Bilet VIP prin Stripe (7 nov 2026)
 - `vip.py` (după deploy.py, înainte de security.py): biletul VIP e separat de sponsorizări (scos din pachete și din formularul de sponsori);
   secțiunea #vip pe pagina evenimentului (Gratuit / VIP, contor în timp real, buton Stripe), butoane VIP lângă înscriere și pe prima pagină,

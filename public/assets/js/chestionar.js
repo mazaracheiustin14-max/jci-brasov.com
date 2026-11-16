@@ -7,23 +7,60 @@
   var on = function (id) { var e = g(id); return !!(e && e.checked); };
   var paid = root.getAttribute("data-vip") === "1";
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
-  function fail(msg, id) {
-    g("qerr").innerHTML = '<div class="err">' + esc(msg) + "</div>";
-    var e = g(id || "qerr");
-    if (e && e.scrollIntoView) e.scrollIntoView({ block: "center" });
+  function mark(id, bad) {
+    var e = g(id);
+    if (!e) return;
+    if (bad) { e.classList.add("bad"); e.setAttribute("aria-invalid", "true"); }
+    else { e.classList.remove("bad"); e.removeAttribute("aria-invalid"); }
+    var l = e.closest ? e.closest(".chk") : null;
+    if (l) { if (bad) l.classList.add("bad"); else l.classList.remove("bad"); }
+  }
+  function clearErr(id) {
+    mark(id, false);
+    if (!root.querySelector(".bad")) g("qerr").innerHTML = "";
+  }
+  function fail(msg, ids) {
+    g("qerr").innerHTML = '<div class="err" role="alert">' + esc(msg) + "</div>";
+    (ids || []).forEach(function (id) { mark(id, true); });
+    var first = ids && ids.length ? g(ids[0]) : g("qerr");
+    if (first && first.scrollIntoView) first.scrollIntoView({ block: "center" });
+    if (first && first.focus && ids && ids.length) first.focus({ preventScroll: true });
   }
   // Domeniile țintă apar doar pentru cine vrea bilet VIP sau are deja unul.
   g("q_vip").addEventListener("change", function () { g("q_tinte").hidden = !(paid || val("q_vip") === "da"); });
+  // Starea de eroare dispare de pe câmpul modificat.
+  ["q_vine", "q_nume", "q_email", "q_ocupatie", "q_dom", "q_vip", "q_acord"].forEach(function (id) {
+    var e = g(id);
+    if (e) { e.addEventListener("input", function () { clearErr(id); }); e.addEventListener("change", function () { clearErr(id); }); }
+  });
+  root.querySelectorAll("[data-tinta]").forEach(function (c) { c.addEventListener("change", function () { clearErr("q_tinte"); }); });
+  // Câmpurile lipsă, în ordinea din formular, după aceleași reguli ca pe server (chestionarSave).
+  function missing() {
+    var m = [], v = val("q_vine"), tinte = [];
+    var add = function (id, name) { m.push({ id: id, name: name }); };
+    if (!v) return [{ id: "q_vine", name: "1. Participarea la eveniment" }];
+    if (v === "stop") return m;
+    if (val("q_nume").length < 3) add("q_nume", "2. Numele și prenumele");
+    if (v === "da") {
+      if (g("q_email") && !/^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,24}$/.test(val("q_email"))) add("q_email", "3. Adresa de e-mail");
+      if (!val("q_ocupatie")) add("q_ocupatie", "4. Ocupația");
+      if (!val("q_dom")) add("q_dom", "5. Domeniul de activitate");
+      if (!val("q_vip")) add("q_vip", "7. Interesul pentru biletul VIP");
+    }
+    if (!g("q_tinte").hidden) root.querySelectorAll("[data-tinta]").forEach(function (c) { if (c.checked) tinte.push(c.getAttribute("data-tinta")); });
+    if (v === "da" && !g("q_tinte").hidden && val("q_vip") && tinte.length < 1) add("q_tinte", "7a. Domeniile pentru Blitz Networking");
+    if (tinte.length > 3) add("q_tinte", "7a. Cel mult 3 domenii pentru Blitz Networking");
+    if (!on("q_acord")) add("q_acord", "Acordul privind prelucrarea datelor");
+    return m;
+  }
   g("q_save").addEventListener("click", function () {
     var btn = g("q_save");
     g("qerr").innerHTML = "";
-    if (!val("q_vine")) return fail("Alege dacă participi la eveniment.", "q_vine");
-    var vine = val("q_vine") === "da", stop = val("q_vine") === "stop", nou = !!g("q_email");
-    if (vine && nou && !/^\S+@\S+\.\S+$/.test(val("q_email"))) return fail("Pentru bilet avem nevoie de o adresă de e-mail validă.", "q_email");
-    if (!stop && !on("q_acord")) return fail("Pentru a trimite răspunsurile este necesar acordul privind prelucrarea datelor.", "q_acord");
+    root.querySelectorAll(".bad").forEach(function (e) { e.classList.remove("bad"); e.removeAttribute("aria-invalid"); });
+    var miss = missing();
+    if (miss.length) return fail("Completează: " + miss.map(function (x) { return x.name; }).join(", ") + ".", miss.map(function (x) { return x.id; }));
     var tinte = [];
     if (!g("q_tinte").hidden) root.querySelectorAll("[data-tinta]").forEach(function (c) { if (c.checked) tinte.push(c.getAttribute("data-tinta")); });
-    if (tinte.length > 3) return fail("Alege cel mult 3 domenii.", "q_tinte");
     btn.disabled = true; btn.textContent = "Se trimite...";
     fetch("/api/chestionar", {
       method: "POST", headers: { "Content-Type": "application/json" }, cache: "no-store",
@@ -33,7 +70,7 @@
         acord: on("q_acord"), viitor: on("q_viitor"), bcr: on("q_bcr")
       })
     }).then(function (r) { return r.json(); }).then(function (j) {
-      if (!j.ok) { btn.disabled = false; btn.textContent = "Trimite răspunsurile"; return fail(j.error || "Nu s-a putut trimite. Încearcă din nou."); }
+      if (!j.ok) { btn.disabled = false; btn.textContent = "Trimite răspunsurile"; return fail(j.error || "Nu s-a putut trimite. Încearcă din nou.", (j.lipsa || []).filter(function (id) { return g(id); })); }
       var msg = "Am primit răspunsurile tale.", val2 = val("q_vip");
       if (j.rezultat === "inscris_confirmat") msg = "Locul tău este confirmat. Biletul ajunge pe e-mail în câteva minute.";
       else if (j.rezultat === "inscris_asteptare") msg = "Locurile din sală sunt ocupate, așa că te-am trecut pe lista de așteptare. Te anunțăm imediat ce se eliberează un loc.";

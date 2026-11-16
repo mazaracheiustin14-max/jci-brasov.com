@@ -123,6 +123,29 @@ function b64(str) {
   return btoa(bin).replace(/.{1,76}/g, "$&\r\n").trim();
 }
 
+// Pagină mică de eroare pentru formulare (în loc de text simplu), cu link normal înapoi: history.back nu e permis de CSP.
+const escHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function formErrorPage(msgs, en, back, status = 400) {
+  const list = (Array.isArray(msgs) ? msgs : [msgs]).filter(Boolean);
+  const title = en ? "The form was not sent" : "Formularul nu a fost trimis";
+  const lead = en ? "Please correct the following and try again:" : "Corectați următoarele și încercați din nou:";
+  const link = en ? "Back to the form" : "Înapoi la formular";
+  const html = `<!doctype html><html lang="${en ? "en" : "ro"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${escHtml(title)} | JCI Brașov</title>
+<style>body{margin:0;background:#130F2D;color:#fff;font:17px/1.5 "Plus Jakarta Sans",system-ui,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:20px}
+main{max-width:520px;width:100%;background:#1F4789;border-radius:18px;padding:28px}h1{font-size:24px;margin:0 0 10px}ul{margin:10px 0 22px;padding-left:20px}
+a{display:inline-block;background:#0097D7;color:#fff;text-decoration:none;font-weight:700;border-radius:12px;padding:13px 20px}</style></head>
+<body><main><h1>${escHtml(title)}</h1><p>${escHtml(lead)}</p><ul>${list.map((m) => `<li>${escHtml(m)}</li>`).join("")}</ul><a href="${escHtml(back)}">${escHtml(link)}</a></main></body></html>`;
+  return new Response(html, { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
+}
+// Înapoi la pagina de unde a plecat formularul: doar Referer de pe același site, altfel pagina de contact.
+function backFromReferer(request, en) {
+  try {
+    const u = new URL(request.headers.get("Referer") || "");
+    if (u.origin === SITE || u.origin === "https://www.jci-brasov.com") return (u.pathname || "/") + u.search;
+  } catch { /* fără Referer valid */ }
+  return en ? "/en/contact" : "/contact";
+}
+
 async function handleForm(request, env) {
   const origin = request.headers.get("Origin");
   if (origin && !/^https:\/\/(www\.)?jci-brasov\.com$/.test(origin)) return new Response("Forbidden", { status: 403 });
@@ -136,7 +159,10 @@ async function handleForm(request, env) {
   if ((data.get("_honey") || "").toString().trim() !== "") return redirect(); // robot
 
   const email = (data.get("email") || "").toString().trim();
-  if (!EMAIL_RE.test(email)) return new Response("Adresa de email nu este validă.", { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  if (!EMAIL_RE.test(email)) {
+    const enF = next.startsWith("/en/");
+    return formErrorPage(enF ? "The email address is not valid." : "Adresa de email nu este validă.", enF, backFromReferer(request, enF));
+  }
 
   const subject = (data.get("_subject") || "Mesaj nou de pe jci-brasov.com").toString().slice(0, 150);
   const fields = [];
@@ -243,15 +269,17 @@ async function handleEventSignup(request, env, ctx) {
     intrebare: clean(data.get("intrebare"), 1500), sursa: clean(data.get("sursa"), 80),
     domeniu: domClean(data.get("domeniu")),
   };
-  const fail = (msg) => new Response(msg, { status: 400, headers: { "Content-Type": "text/plain; charset=utf-8" } });
-  if (f.nume.length < 3) return fail(en ? "Please enter your full name." : "Vă rugăm să completați numele complet.");
-  if (!EMAIL_RE.test(f.email)) return fail(en ? "Please enter a valid email address." : "Adresa de email nu este validă.");
-  if (f.telefon.replace(/\D/g, "").length < 9) return fail(en ? "Please enter a valid phone number." : "Numărul de telefon nu este valid.");
+  // Se adună toate problemele, nu doar prima, ca persoana să le corecteze dintr-o dată.
+  const errs = [];
+  if (f.nume.length < 3) errs.push(en ? "Please enter your full name." : "Vă rugăm să completați numele complet.");
+  if (!EMAIL_RE.test(f.email)) errs.push(en ? "Please enter a valid email address." : "Adresa de email nu este validă.");
+  if (f.telefon.replace(/\D/g, "").length < 9) errs.push(en ? "Please enter a valid phone number." : "Numărul de telefon nu este valid.");
   if (f.profil && !PROFILES.includes(f.profil)) f.profil = "";
-  if (!f.sursa) return fail(en ? "Please tell us how you heard about the event." : "Vă rugăm să alegeți de unde ați aflat de eveniment.");
-  if (!f.domeniu) return fail(en ? "Please choose your field of activity." : "Vă rugăm să alegeți domeniul de activitate.");
+  if (!f.sursa) errs.push(en ? "Please tell us how you heard about the event." : "Vă rugăm să alegeți de unde ați aflat de eveniment.");
+  if (!f.domeniu) errs.push(en ? "Please choose your field of activity." : "Vă rugăm să alegeți domeniul de activitate.");
+  if (!data.get("acord")) errs.push(en ? "Please accept the data processing terms." : "Este necesar acordul pentru prelucrarea datelor.");
+  if (errs.length) return formErrorPage(errs, en, (en ? "/en" : "") + "/eveniment#rezerva");
   for (const k of ["nume", "companie", "functie", "intrebare", "sursa"]) f[k] = noFormula(f[k]);
-  if (!data.get("acord")) return fail(en ? "Please accept the data processing terms." : "Este necesar acordul pentru prelucrarea datelor.");
   if (Date.now() > DEADLINE) return Response.redirect(`${base}/inscriere-confirmata?s=inchis`, 303);
 
   let status = "confirmat";

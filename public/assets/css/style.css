@@ -453,3 +453,9 @@ form.signup .closed{background:#3A3200;color:#FFF3B8;border-radius:12px;padding:
 .conf{max-width:760px;margin:0 auto;text-align:center}
 .conf .res-links{justify-content:center}
 .conf .lead{margin-inline:auto}
+
+/* formulare: eroare la câmpuri lipsă */
+.form-msg.err{background:#47181C;color:#FFD9D2;border:1px solid #D64545}
+.field.bad input,.field.bad select,.field.bad textarea{border-color:#D64545!important;box-shadow:0 0 0 2px rgba(214,69,69,.35)}
+.field.bad label{color:#FFB4A8}
+.check.bad{outline:1.5px solid #D64545;outline-offset:4px;border-radius:10px}
