@@ -20,11 +20,40 @@
   function set(v) { try { localStorage.setItem(K, JSON.stringify({ v: v, t: Date.now() })); } catch (e) {} }
 
   // Codul de bază Meta e inline în <head>, blocat cu fbq('consent','revoke'). Aici doar îl deblocăm.
+  // Evenimentele de conversie se trimit o singură dată pe identificator, ca reîncărcările, trimiterile duplicate și roboții să nu le dubleze.
+  function param(n) {
+    var m = location.search.match(new RegExp('[?&]' + n + '=([^&#]*)'));
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  // Întoarce true dacă identificatorul nu a fost încă folosit în cheia dată și îl memorează (listă de maximum 50).
+  function firstTime(key, id) {
+    try {
+      var l = JSON.parse(localStorage.getItem(key) || '[]');
+      if (!Array.isArray(l)) l = [];
+      if (l.indexOf(id) !== -1) return false;
+      l.push(id);
+      localStorage.setItem(key, JSON.stringify(l.slice(-50)));
+    } catch (e) {}
+    return true;
+  }
+  function onceSession(key) {
+    try { if (sessionStorage.getItem(key)) return false; sessionStorage.setItem(key, '1'); } catch (e) {}
+    return true;
+  }
   function conversions() {
     var p = location.pathname.replace(/\.html$/, '').replace(/\/$/, '');
-    if (/(^|\/)inscriere-confirmata$/.test(p)) fbq('track', 'CompleteRegistration', { content_name: 'Inscriere eveniment' });
-    else if (/(^|\/)vip-confirmat$/.test(p)) fbq('track', 'CompleteRegistration', { content_name: 'Bilet VIP' });
-    else if (/(^|\/)multumim$/.test(p)) fbq('track', 'Lead');
+    if (/(^|\/)inscriere-confirmata$/.test(p)) {
+      // Doar înscrierile noi au token în adresă (t); duplicatele, roboții și s=inchis nu au.
+      var s = param('s'), t = param('t');
+      if (t && /^[A-Za-z0-9_-]{8,64}$/.test(t) && (s === 'confirmat' || s === 'asteptare') && firstTime('jci_reg_sent', t))
+        fbq('track', 'CompleteRegistration', { content_name: 'Inscriere eveniment' }, { eventID: 'reg-' + t });
+    } else if (/(^|\/)vip-confirmat$/.test(p)) {
+      // Pagina vine din redirecționarea Stripe, fără identificator propriu: o singură dată pe adresă (cu tot cu parametri) în acest browser.
+      if (firstTime('jci_vip_sent', location.search || '-'))
+        fbq('track', 'CompleteRegistration', { content_name: 'Bilet VIP' });
+    } else if (/(^|\/)multumim$/.test(p)) {
+      if (onceSession('jci_lead_sent')) fbq('track', 'Lead');
+    }
   }
   function grantNow() {
     if (!window.fbq) return;

@@ -72,6 +72,20 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
   până la „Accept”; `public/assets/js/meta-pixel.js` face bannerul și fbq('consent','grant'). Alegerea se ține
   (6 luni în localStorage, cheia `jci_consent`; „Refuz” șterge _fbp/_fbc). Fără `<noscript>` (ar urmări fără acord).
   Evenimente: PageView; CompleteRegistration pe inscriere-confirmata și vip-confirmat; Lead pe multumim.
+- 16 nov 2026, conversii fără dubluri (Meta arăta 75 de înscrieri față de 48 reale):
+  - `inscriere-confirmata`: CompleteRegistration pleacă DOAR dacă adresa are `t` (token, existent doar la înscrieri noi confirmate) și `s` este
+    `confirmat` sau `asteptare`, iar tokenul nu e în lista din localStorage `jci_reg_sent`. Primește `eventID: 'reg-' + token`.
+    Reîncărcările, emailurile duplicate, roboții (honeypot) și `s=inchis` nu mai trimit nimic. Pe lista de așteptare nu se generează token, deci nu se trimite.
+  - `vip-confirmat`: o singură dată pe adresă (cu parametri) în browser (localStorage `jci_vip_sent`); linkul Stripe nu aduce un identificator propriu.
+  - `multumim`: Lead o dată pe sesiune (sessionStorage `jci_lead_sent`).
+  - Versiunea `?v=` a `meta-pixel.js` e hash de conținut: după orice modificare rulează `python3 src/pixel.py` (apoi `security.py` doar dacă s-au atins scripturi inline).
+- Conversions API (server): `worker/meta-capi.js`, apelat din `handleEventSignup` (`worker/index.js`) prin `ctx.waitUntil`, doar la înscriere nouă cu token.
+  Trimite CompleteRegistration cu același `event_id` (`reg-` + token), deci Meta deduplică față de pixel. Date hashate SHA-256: email, telefon
+  (format 40...), prenume, nume, țară; plus IP, user agent, `_fbp`, `_fbc`. Nu face nimic dacă secretul lipsește; erorile se scriu doar în log.
+  - Secret obligatoriu `META_CAPI_TOKEN` (token de acces din Events Manager, pixelul 1646950960458698): `npx wrangler secret put META_CAPI_TOKEN`
+    sau Cloudflare dashboard, Worker, Settings, Variables and Secrets.
+  - Opțional `META_TEST_CODE` (codul din Events Manager, fila Test events): se adaugă ca `test_event_code`; se șterge după testare.
+  - Înscrierile făcute de echipă prin apeluri/WhatsApp (`worker/apeluri.js`) nu trimit conversii (nu provin din reclame).
 - `public/assets/css/consent.css`: bannerul (stânga jos, butoane egale) și stilul paginii de politică.
 - `src/confidentialitate-ro.html` / `-en.html`: conținutul politicii. `pixel.py` generează /confidentialitate și /en/confidentialitate
   pe scheletul paginii multumim, adaugă în subsol „Politica de confidențialitate” și „Setări cookie-uri” (redeschide bannerul),

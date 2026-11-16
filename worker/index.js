@@ -7,6 +7,7 @@ import { handleCheckin } from "./checkin.js";
 import { handleInvitatii } from "./invitatii.js";
 import { handleApp } from "./app.js";
 import { EVENT, CAPACITY, DEADLINE, EMAIL_RE, countRegistrations, registerPerson } from "./inscriere-core.js";
+import { sendRegistration } from "./meta-capi.js";
 import { domClean, domLabel, parseTinte, ensureDomCols, syncVipDomenii, paidVipCond } from "./domenii.js";
 
 const SITE = "https://jci-brasov.com";
@@ -268,6 +269,12 @@ async function handleEventSignup(request, env, ctx) {
   } catch (e) {
     console.log("d1 insert failed:", e && e.message);
     // dacă baza de date nu răspunde, nu pierdem înscrierea: ajunge oricum pe email
+  }
+
+  // Conversions API: doar pentru înscrieri noi cu token (aceeași condiție ca pixelul din browser)
+  if (newToken && env.META_CAPI_TOKEN) {
+    const capi = sendRegistration(env, request, f, newToken, SITE);
+    if (ctx && ctx.waitUntil) ctx.waitUntil(capi);
   }
 
   const lines = [
