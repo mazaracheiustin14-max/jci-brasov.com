@@ -196,3 +196,7 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
   4. Anularea unui check-in eliberează locul, inclusiv pe cel rezervat al unui VIP; la rescanare primește loc după domeniu.
 - Panoul /checkin: „Blocuri, câți au primit ecuson” numără doar persoanele intrate (locurile rezervate VIP nu se văd acolo, ci pe /checkin/blitz).
 - Teste: `node --no-warnings src/tests/blitz.test.mjs`. Simulare cu date inventate: `node src/tests/blitz-sim.mjs`.
+
+## Parteneri noi: OFA și Adorjan Balazs Fotograf (18 nov 2026)
+
+- `parteneri2.py` (după parteneri.py, înainte de security.py; idempotent): cardurile Organizația Femeilor Antreprenor (partener de comunitate) și Adorjan Balazs Fotograf (partener foto), cu logo, în blocul „Partenerii evenimentului” (RO/EN), plus mențiunea în worker/kb.js. Logourile: public/assets/img/partener-ofa.webp și partener-adorjan-balazs.webp.
