@@ -5,6 +5,7 @@
 // /bilet/<cod>/qr.png servește codul QR ca imagine PNG (Gmail nu afișează SVG).
 // Setări în D1 (tabelul setari): invit_key (cheia scriptului), invit_mod („test” sau „live”), invit_test (adrese permise în modul test).
 import qrcode from "./qrcode.mjs";
+import { paidVipCond } from "./domenii.js";
 
 const EVENT = "beyond-2026";
 const SITE = "https://jci-brasov.com";
@@ -97,6 +98,20 @@ export function buildEmail(row, cid = false) {
     sign: "Vă așteptăm cu drag,", role: "Președinte, JCI Brașov",
     foot: "Primiți acest email pentru că v-ați înscris la Beyond the Initiative pe jci-brasov.com.",
   };
+  const vip = !!row.vip;
+  if (vip) Object.assign(L, en ? {
+    subject: "Your VIP ticket to Beyond the Initiative, 26 November",
+    pre: "Your VIP access is confirmed. Your personal QR code for check-in is inside.",
+    p1: "Thank you for choosing VIP access to <b>Beyond the Initiative</b>, the evening on which JCI Brașov becomes a full member organisation of JCI Romania. Your payment has been registered and your personal ticket is now a VIP ticket.",
+    btn: "Open your VIP ticket", vk: "YOUR VIP ACCESS INCLUDES",
+    perks: ["Reserved seats in the front rows", "A direct meeting with the panel guests", "Priority access to networking and curated Blitz Networking, based on the profile of the participants present", "Wine and food tasting"],
+  } : {
+    subject: "Biletul dumneavoastră VIP la Beyond the Initiative, joi 26 noiembrie",
+    pre: "Accesul dumneavoastră VIP este confirmat. În email găsiți codul QR personal pentru check-in.",
+    p1: "Vă mulțumim că ați ales accesul VIP la <b>Beyond the Initiative</b>, seara în care JCI Brașov devine organizație cu drepturi depline în JCI România. Plata a fost înregistrată, iar biletul dumneavoastră nominal este acum bilet VIP.",
+    btn: "Deschideți biletul VIP", vk: "ACCESUL VIP INCLUDE",
+    perks: ["Locuri rezervate în primele rânduri", "Întâlnire directă cu invitații din paneluri", "Acces prioritar la networking și Networking curatoriat la Blitz Networking, în funcție de profilul participanților prezenți", "Degustare de vin și mâncare"],
+  });
   const F = "font-family:'Plus Jakarta Sans',Segoe UI,Helvetica,Arial,sans-serif";
   const lab = (s) => `<div style="${F};font-size:11px;font-weight:800;letter-spacing:2px;color:#0097D7">${s}</div>`;
   const val = (s) => `<div style="${F};font-size:18px;font-weight:800;color:#130F2D;margin-top:3px">${s}</div>`;
@@ -108,7 +123,7 @@ ${cid ? "" : `<div style="display:none;max-height:0;overflow:hidden;opacity:0">$
 <tr><td style="background:#130F2D;padding:28px 32px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
 <td><img src="${cid ? "cid:logo" : SITE + "/assets/img/logo-jci-brasov-invers.png"}" width="120" alt="JCI Brașov" style="display:block;border:0;height:auto"></td>
-<td align="right" style="${F};font-size:11px;font-weight:800;letter-spacing:3px;color:#EFC40F">${en ? "INVITATION" : "INVITAȚIE"}</td></tr></table>
+<td align="right" style="${F};font-size:11px;font-weight:800;letter-spacing:3px;color:#EFC40F">${vip ? (en ? "VIP INVITATION" : "INVITAȚIE VIP") : (en ? "INVITATION" : "INVITAȚIE")}</td></tr></table>
 <div style="${F};font-size:12px;font-weight:800;letter-spacing:3px;color:#57BCBC;margin-top:30px">${en ? "JCI BRAȘOV LAUNCH EVENT" : "EVENIMENTUL DE LANSARE JCI BRAȘOV"}</div>
 <div style="${F};font-size:38px;line-height:1.05;font-weight:800;color:#FFFFFF;margin-top:10px">BEYOND<br>THE INITIATIVE</div>
 </td></tr>
@@ -119,11 +134,17 @@ ${cid ? "" : `<div style="display:none;max-height:0;overflow:hidden;opacity:0">$
 <a href="${SITE}/confirma/${t}" style="display:inline-block;padding:15px 30px;${F};font-size:16px;font-weight:800;color:#FFFFFF;text-decoration:none">${L.cbtn}</a></td></tr></table>
 <div style="${F};font-size:13px;color:#4A5068;margin-top:8px">${L.cnote}</div></td></tr>
 <tr><td style="padding:18px 32px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F7FB;border-radius:14px;border-left:5px solid #1F4789"><tr><td style="padding:20px 22px">
-${lab(en ? "PERSONAL TICKET" : "BILET NOMINAL")}<div style="${F};font-size:22px;font-weight:800;color:#1F4789;margin:4px 0 16px">${nume}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F7FB;border-radius:14px;border-left:5px solid ${vip ? "#EFC40F" : "#1F4789"}"><tr><td style="padding:20px 22px">
+${lab(vip ? (en ? "VIP TICKET" : "BILET VIP") : (en ? "PERSONAL TICKET" : "BILET NOMINAL"))}<div style="${F};font-size:22px;font-weight:800;color:#1F4789;margin:4px 0 16px">${nume}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td valign="top" style="padding-bottom:12px">${lab(L.kd)}${val(L.vd)}</td><td valign="top" style="padding-bottom:12px">${lab(L.ko)}${val(L.vo)}</td></tr>
 <tr><td colspan="2">${lab(L.kl)}${val(L.vl)}</td></tr></table>
 </td></tr></table></td></tr>
+${vip ? `<tr><td style="padding:0 32px 18px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#130F2D;border-radius:14px;border:2px solid #EFC40F"><tr><td style="padding:18px 22px">
+<div style="${F};font-size:11px;font-weight:800;letter-spacing:2px;color:#EFC40F;margin-bottom:10px">${L.vk}</div>
+${L.perks.map((x) => `<div style="${F};font-size:15px;line-height:1.5;color:#FFFFFF;margin:0 0 8px"><span style="color:#EFC40F;font-weight:800">✓</span>&nbsp; ${esc(x)}</div>`).join("")}
+<div style="${F};font-size:12px;color:#BFC3D6;margin-top:6px">${en ? "Drinks from the bar are paid separately." : "Consumația de la bar se achită separat."}</div>
+</td></tr></table></td></tr>` : ""}
 <tr><td align="center" style="padding:10px 32px 4px">
 <div style="${F};font-size:13px;font-weight:800;letter-spacing:2px;color:#130F2D">${L.qrt.toUpperCase()}</div>
 <img src="${cid ? "cid:qr" : `${SITE}/bilet/${t}/qr.png`}" width="200" height="200" alt="${esc(L.qrt)}" style="display:block;margin:12px auto;border:0">
@@ -147,7 +168,7 @@ contact@jci-brasov.com | +40 790 827 426 | jci-brasov.com<br>${L.foot}</td></tr>
 </table></td></tr></table></body></html>`;
   const strip = (s) => s.replace(/<[^>]+>/g, "");
   const text = [strip(L.hi), "", strip(L.p1), "", `${L.cbtn}: ${SITE}/confirma/${t}`, "", `${L.kd}: ${L.vd}`, `${L.ko}: ${L.vo}`, `${L.kl}: ${L.vl}`, "",
-    `${L.qrt}: ${bilet}`, strip(L.qrp), "", L.prog, "", `Hillden: ${L.hill}`, L.tip, "", L.sign, "Iustin Mazarache", L.role, "",
+    `${L.qrt}: ${bilet}`, strip(L.qrp), "", ...(vip ? [L.vk + ":", ...L.perks.map((x) => "- " + x), ""] : []), L.prog, "", `Hillden: ${L.hill}`, L.tip, "", L.sign, "Iustin Mazarache", L.role, "",
     "contact@jci-brasov.com | +40 790 827 426 | jci-brasov.com"].join("\n");
   const out = { subject: L.subject, html, text, qr };
   if (cid) out.inline = { logo: `${SITE}/assets/img/logo-jci-brasov-invers.png`, qr: `${SITE}/bilet/${t}/qr.png` };
@@ -180,8 +201,9 @@ export async function handleInvitatii(request, env, url) {
     await env.DB.prepare("UPDATE inscrieri SET token = lower(hex(randomblob(16))) WHERE token IS NULL").run();
     const mod = (await setting(env, "invit_mod")) || "test";
     const allowed = ((await setting(env, "invit_test")) || "").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
+    const vc = await paidVipCond(env, EVENT);
     const r = await env.DB.prepare(
-      "SELECT id, nume, email, limba, token, status FROM inscrieri WHERE eveniment=? AND status IN ('confirmat','test') AND invitatie_trimisa IS NULL ORDER BY id LIMIT 200"
+      "SELECT id, nume, email, limba, token, status, (CASE WHEN " + vc + " THEN 1 ELSE 0 END) AS vip FROM inscrieri WHERE eveniment=? AND status IN ('confirmat','test') AND invitatie_trimisa IS NULL ORDER BY id LIMIT 200"
     ).bind(EVENT).all();
     let rows = r.results || [];
     if (mod !== "live") rows = rows.filter((x) => allowed.includes(String(x.email).toLowerCase()));
