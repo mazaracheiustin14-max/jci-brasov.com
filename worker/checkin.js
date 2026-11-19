@@ -4,6 +4,7 @@
 //  - pentru oricine altcineva, se deschide biletul (/bilet/<token>), fără să confirme nimic.
 // PIN-ul (hash + sare) și secretul de semnare a sesiunii stau în D1, tabelul setari.
 
+import { handleWaInvit } from "./wa-invit.js";
 import { handleApeluri, chestionarPage, chestionarSave } from "./apeluri.js";
 import { domLabel, parseTinte, ensureDomCols, syncVipDomenii, paidVipCond } from "./domenii.js";
 import { preallocVip, domainCandidates, suggestK } from "./blitz-match.js";
@@ -368,6 +369,11 @@ export async function handleCheckin(request, env, url, overLimit) {
     return s ? handleApeluri(request, env, url, s, H) : Response.redirect(`${url.origin}/checkin`, 302);
   }
 
+  if (p === "/checkin/neconfirmate" || p === "/checkin/neconfirmate/") {
+    const s = await staffSession(request, env);
+    return s ? handleWaInvit(request, env, url, s, H) : Response.redirect(`${url.origin}/checkin`, 302);
+  }
+
   if (p === "/checkin/blitz" || p === "/checkin/blitz/") {
     const s = await staffSession(request, env);
     return s ? blitzPage(env, s, url.searchParams.get("ok") === "1") : Response.redirect(`${url.origin}/checkin`, 302);
@@ -413,6 +419,8 @@ export async function handleCheckin(request, env, url, overLimit) {
     if (p === "/api/echipa/stats") return stats(env);
     if (p === "/api/echipa/cauta") return search(env, url.searchParams.get("q") || "");
     if (p === "/api/echipa/export.csv") return exportCsv(env);
+    const wa = await handleWaInvit(request, env, url, s, H);
+    if (wa) return wa;
     const ap = await handleApeluri(request, env, url, s, H);
     if (ap) return ap;
     return json({ error: "not found" }, 404);
@@ -605,9 +613,9 @@ textarea{min-height:96px;resize:vertical}
 .ok-msg{background:#123D2B;border:1px solid #1FA463;border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:14px}
 .bar{height:10px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden;margin-top:14px}.bar i{display:block;height:100%;background:linear-gradient(90deg,#0097D7,#57BCBC)}
 `;
-function shell(title, inner, scripts = "", bodyClass = "") {
+function shell(title, inner, scripts = "", bodyClass = "", head = "") {
   return `<!DOCTYPE html><html lang="ro"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#130F2D"><title>${esc(title)}</title>
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#130F2D"><title>${esc(title)}</title>${head}
 <link rel="icon" href="/assets/img/favicon-32.png"><style>${CSS}</style></head><body${bodyClass ? ` class="${bodyClass}"` : ""}><div class="w">
 <div class="top"><img src="/assets/img/logo-jci-brasov-invers.png" alt="JCI Brașov"><span class="pill">BEYOND THE INITIATIVE</span></div>
 ${inner}</div>${scripts}</body></html>`;
@@ -624,7 +632,11 @@ async function ticketPage(env, token) {
   if (row.status !== "confirmat" && row.status !== "test") {
     return html(shell("Listă de așteptare", `<p class="k">${T.k}</p><h1>${esc(row.nume)}</h1><div class="card"><p class="muted">${T.w}</p></div>`));
   }
-  if (vip) return html(vipTicket(row, token, en, T, await vipNumber(env, row)));
+  // Previzualizarea linkului în WhatsApp: titlul nominal și codul QR al invitației.
+  const og = (page) => page.replace("</title>", `</title><meta property="og:title" content="${esc((en ? (vip ? "VIP invitation: " : "Invitation: ") : (vip ? "Invitație VIP: " : "Invitație: ") ) + row.nume)}">` +
+    `<meta property="og:description" content="${en ? "Beyond the Initiative, Thursday 26 November 2026, 17:00, CATTIA Brașov" : "Beyond the Initiative, joi 26 noiembrie 2026, ora 17:00, CATTIA Brașov"}">` +
+    `<meta property="og:image" content="https://jci-brasov.com/bilet/${token}/qr.png"><meta property="og:type" content="website">`);
+  if (vip) return html(og(vipTicket(row, token, en, T, await vipNumber(env, row))));
   const inner = `<p class="k">${T.k}</p><h1>${T.h}</h1>
 <div class="t"><div class="in"><p class="lab">${T.g}</p><p class="name">${esc(row.nume)}</p>${vip ? '<span class="vip">ACCES VIP</span>' : ""}
 <div class="grid2"><div><p class="lab">${T.d}</p><p class="val">${T.dv}</p></div><div><p class="lab">${T.o}</p><p class="val">17:00</p></div></div>
@@ -632,7 +644,7 @@ async function ticketPage(env, token) {
 <hr class="sep"><div class="qr"><div id="qr" data-url="https://jci-brasov.com/c/${token}" role="img" aria-label="Cod QR de intrare"></div><p>${T.q}</p></div></div>
 <p class="muted mt">${en ? "Everything offered at the Hillden stand is free. Drinks from the bar are paid separately." : "Tot ce se oferă la standul Hillden este gratuit. Consumația de la bar se achită separat."}</p>
 <a class="btn b-ghost mt" href="/assets/beyond-the-initiative.ics">${en ? "Add to calendar" : "Adaugă în calendar"}</a>`;
-  return html(shell(en ? "Your ticket" : "Biletul tău", inner, `<script src="/assets/js/qrcode.js"></script><script src="/assets/js/bilet.js"></script>`));
+  return html(og(shell(en ? "Your ticket" : "Biletul tău", inner, `<script src="/assets/js/qrcode.js"></script><script src="/assets/js/bilet.js"></script>`)));
 }
 
 // Biletul VIP: ramă aurie animată, strat holografic (assets/js/bilet-vip.js), număr de serie, beneficiile incluse.
@@ -724,6 +736,7 @@ function dashboardPage(s) {
 <div class="card mt"><p class="lab">CAUTĂ DUPĂ NUME, EMAIL SAU TELEFON</p><input id="q" class="mt" placeholder="ex. Popescu" autocomplete="off" enterkeyhint="search"><div id="rez"></div></div>
 <div class="card mt"><p class="lab">ULTIMELE INTRĂRI</p><div id="ult"><p class="muted mt">Nimeni încă.</p></div></div>
 <a class="btn b-blue mt" href="/checkin/apeluri">Apeluri și contacte</a>
+<a class="btn b-green mt" href="/checkin/neconfirmate">Invitații neconfirmate pe WhatsApp</a>
 <a class="btn b-ghost mt" href="/checkin/blitz">Blitz Networking pe domenii</a>
 <a class="btn b-ghost mt" href="/api/echipa/export.csv">Descarcă lista de prezență (Excel)</a>
 <form method="POST" action="/api/echipa/logout"><button class="btn b-ghost mt" type="submit">Deconectare (${esc(s.who)})</button></form>`,

@@ -200,3 +200,10 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 ## Parteneri noi: OFA și Adorjan Balazs Fotograf (18 nov 2026)
 
 - `parteneri2.py` (după parteneri.py, înainte de security.py; idempotent): cardurile Organizația Femeilor Antreprenor (partener de comunitate) și Adorjan Balazs Fotograf (partener foto), cu logo, în blocul „Partenerii evenimentului” (RO/EN), plus mențiunea în worker/kb.js. Logourile: public/assets/img/partener-ofa.webp și partener-adorjan-balazs.webp.
+
+## Invitații neconfirmate pe WhatsApp (19 nov 2026)
+- Pagina `/checkin/neconfirmate` (PIN-ul echipei, buton verde în panoul /checkin): înscrișii cu `status='confirmat'` și `primire_confirmata` gol.
+- Fiecare persoană are buton care deschide wa.me cu mesajul nominal („Bună ziua, <nume>, am văzut că nu ați confirmat primirea invitației...”) și linkul biletului `/bilet/<cod>`.
+  Cod: `worker/wa-invit.js`, interfața `public/assets/js/wa-invit.js` (la modificare se schimbă `JS_VERSION`).
+- Coloane noi în `inscrieri`: `wa_invit_trimis`, `wa_invit_de` (cine a trimis), `confirmat_prin` („whatsapp: <nume>” când colega apasă „A confirmat pe WhatsApp”, care completează `primire_confirmata`).
+- Pagina biletului are meta og (titlu nominal, data, QR ca imagine), ca linkul să apară cu previzualizare în WhatsApp.
