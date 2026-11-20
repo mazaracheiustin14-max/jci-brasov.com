@@ -207,3 +207,6 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
   Cod: `worker/wa-invit.js`, interfața `public/assets/js/wa-invit.js` (la modificare se schimbă `JS_VERSION`).
 - Coloane noi în `inscrieri`: `wa_invit_trimis`, `wa_invit_de` (cine a trimis), `confirmat_prin` („whatsapp: <nume>” când colega apasă „A confirmat pe WhatsApp”, care completează `primire_confirmata`).
 - Pagina biletului are meta og (titlu nominal, data, QR ca imagine), ca linkul să apară cu previzualizare în WhatsApp.
+- 20 nov 2026: mesaj nou (textul lui Iustin, cu emoticoane, „invitația să fi ajuns în SPAM”, confirmare până pe 21 noiembrie) și trei liste:
+  Formular (ultimul chestionar, online sau la apel, are `status_final = 'confirmat'`), Gmail (`primire_confirmata`) și Restul (nici una, nici alta), care primesc mesajul.
+  Trimiterile noi se notează în `wa_spam_trimis` / `wa_spam_de` (cele din 19 nov rămân în `wa_invit_trimis`).

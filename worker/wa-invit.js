@@ -5,10 +5,10 @@
 // Interfața: public/assets/js/wa-invit.js (fără script inline, CSP).
 const EVENT = "beyond-2026";
 const SITE = "https://jci-brasov.com";
-const JS_VERSION = "1";
+const JS_VERSION = "2";
 
 async function ensureCols(env) {
-  for (const col of ["wa_invit_trimis TEXT", "wa_invit_de TEXT", "confirmat_prin TEXT"]) {
+  for (const col of ["wa_invit_trimis TEXT", "wa_invit_de TEXT", "confirmat_prin TEXT", "wa_spam_trimis TEXT", "wa_spam_de TEXT"]) {
     try { await env.DB.prepare(`ALTER TABLE inscrieri ADD COLUMN ${col}`).run(); } catch (e) {}
   }
 }
@@ -22,35 +22,30 @@ export function waNumber(tel) {
   return d.length >= 10 ? d : "";
 }
 
+// Mesajul aprobat de Iustin pe 20 nov 2026 (textul și emoticoanele sunt ale lui), cu linkul biletului personal.
 export function waMessage(row) {
   const bilet = `${SITE}/bilet/${row.token}`;
   if (row.limba === "en") {
     return [
-      `Good day, ${row.nume},`,
-      "",
-      "We noticed you have not yet confirmed receiving your invitation to Beyond the Initiative, so here it is on WhatsApp:",
+      `Good day, ${row.nume}! 👋`,
+      "Your invitation to Beyond the Initiative may have ended up in SPAM, so we are attaching it here for check-in. 🎟️",
       bilet,
-      "",
-      "Thursday, 26 November 2026, 17:00, CATTIA Brașov, Strada Institutului 35.",
-      "",
-      "We would be grateful if you could reply with a short confirmation message.",
-      "",
-      "Thank you,",
-      "JCI Brașov",
+      "Only 6 days left until the event and we would be grateful if you could confirm your attendance by tomorrow, 21 November.",
+      "📍 Cattia, Brașov",
+      "📅 Thursday, 26 November",
+      "🕔 17:00",
+      "Let it be inspiring! ✨",
     ].join("\n");
   }
   return [
-    `Bună ziua, ${row.nume},`,
-    "",
-    "Am văzut că nu ați confirmat primirea invitației la Beyond the Initiative, așa că o aveți aici, pe WhatsApp:",
+    `Bună ziua, ${row.nume}! 👋`,
+    "Se poate ca invitația dumneavoastră la Beyond the Initiative să fi ajuns în SPAM. Așa că vă atașăm invitația aici, pentru a o folosi la check-in. 🎟️",
     bilet,
-    "",
-    "Joi, 26 noiembrie 2026, ora 17:00, CATTIA Brașov, Strada Institutului 35.",
-    "",
-    "V-am fi recunoscători dacă ne-ați da un mesaj de confirmare.",
-    "",
-    "Mulțumim,",
-    "Echipa JCI Brașov",
+    "Mai sunt doar 6 zile până la eveniment și v-am fi recunoscători să ne confirmați prezența până mâine, 21 noiembrie.",
+    "📍 Cattia, Brașov",
+    "📅 Joi, 26 noiembrie",
+    "🕔 Ora 17:00",
+    "Să fie inspirație! ✨",
   ].join("\n");
 }
 
@@ -61,28 +56,42 @@ function oraRo(utc) {
   return d.toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
+// Filtre (20 nov 2026): „formular” = ultimul chestionar (online sau completat la apel) are statusul „confirmat”;
+// „gmail” = a confirmat primirea invitației (butonul din email sau, marcat de echipă, răspunsul pe WhatsApp);
+// „rest” = toți ceilalți înscriși, cărora li se trimite mesajul pe WhatsApp.
 async function lista(env) {
   await ensureCols(env);
   await env.DB.prepare("UPDATE inscrieri SET token = lower(hex(randomblob(16))) WHERE token IS NULL").run();
   const r = await env.DB.prepare(
-    "SELECT id, nume, telefon, email, limba, token, sursa, invitatie_trimisa, wa_invit_trimis, wa_invit_de FROM inscrieri " +
-    "WHERE eveniment=? AND status='confirmat' AND primire_confirmata IS NULL ORDER BY wa_invit_trimis IS NOT NULL, nume COLLATE NOCASE"
+    "SELECT i.id, i.nume, i.telefon, i.email, i.limba, i.token, i.sursa, i.invitatie_trimisa, i.primire_confirmata, i.confirmat_prin, i.wa_spam_trimis, i.wa_spam_de, " +
+    "(SELECT l.status_final || '|' || l.apelant FROM call_logs l LEFT JOIN contacte c ON c.id=l.contact_id WHERE l.inscriere_id=i.id OR c.inscriere_id=i.id ORDER BY l.id DESC LIMIT 1) AS ultim " +
+    "FROM inscrieri i WHERE i.eveniment=? AND i.status='confirmat' ORDER BY i.nume COLLATE NOCASE"
   ).bind(EVENT).all();
-  return r.results || [];
+  return (r.results || []).map((x) => {
+    const [st, cine] = String(x.ultim || "").split("|");
+    x.formular = st === "confirmat" ? (cine === "Chestionar online" ? "chestionarul online" : "apel, " + cine) : "";
+    x.gmail = !!x.primire_confirmata;
+    return x;
+  });
 }
 
-function card(x, esc) {
+function card(x, esc, f) {
   const nr = waNumber(x.telefon);
-  const email = x.invitatie_trimisa && !/^(exclus|eroare)/.test(x.invitatie_trimisa) ? "Invitația pe email: trimisă, neconfirmată" : "Invitația pe email: netrimisă";
-  const trimis = x.wa_invit_trimis ? `<p class="muted mt" data-st="${x.id}">Trimis pe WhatsApp: ${esc(oraRo(x.wa_invit_trimis))}${x.wa_invit_de ? ", de " + esc(x.wa_invit_de) : ""}</p>` : `<p class="muted mt" data-st="${x.id}"></p>`;
-  const send = nr
-    ? `<a class="btn ${x.wa_invit_trimis ? "b-ghost" : "b-green"}" data-wa="${x.id}" href="https://wa.me/${nr}?text=${encodeURIComponent(waMessage(x))}" target="_blank" rel="noopener">${x.wa_invit_trimis ? "Retrimite pe WhatsApp" : "Trimite invitația pe WhatsApp"}</a>`
-    : `<p class="muted mt">Număr de telefon lipsă sau incomplet. Folosiți biletul: <a href="/bilet/${x.token}" target="_blank" rel="noopener" style="color:#57BCBC">/bilet/${x.token.slice(0, 8)}</a></p>`;
+  const info = [];
+  if (x.formular) info.push("A confirmat în formular (" + esc(x.formular) + ")");
+  if (x.gmail) info.push(String(x.confirmat_prin || "").startsWith("whatsapp") ? "A confirmat pe WhatsApp" : "A confirmat primirea pe Gmail");
+  if (f === "rest") info.push(x.invitatie_trimisa && !/^(exclus|eroare)/.test(x.invitatie_trimisa) ? "Invitația pe email: trimisă, neconfirmată" : "Invitația pe email: netrimisă");
+  const st = f === "rest" ? `<p class="muted mt" data-st="${x.id}">${x.wa_spam_trimis ? `Trimis pe WhatsApp: ${esc(oraRo(x.wa_spam_trimis))}${x.wa_spam_de ? ", de " + esc(x.wa_spam_de) : ""}` : ""}</p>` : "";
+  let acts = "";
+  if (f === "rest") {
+    acts = nr
+      ? `<div class="acts"><a class="btn ${x.wa_spam_trimis ? "b-ghost" : "b-green"}" data-wa="${x.id}" href="https://wa.me/${nr}?text=${encodeURIComponent(waMessage(x))}" target="_blank" rel="noopener">${x.wa_spam_trimis ? "Retrimite pe WhatsApp" : "Trimite invitația pe WhatsApp"}</a></div>`
+      : `<p class="muted mt">Număr de telefon lipsă sau incomplet.</p>`;
+    acts += `<form method="POST" action="/api/echipa/wa-confirmat" class="acts"><input type="hidden" name="id" value="${x.id}"><button class="btn b-blue" type="submit">A confirmat pe WhatsApp</button></form>`;
+  }
   return `<div class="card mt" id="p${x.id}"><p class="val" style="color:#fff">${esc(x.nume)}${(x.sursa || "").includes("VIP") ? ' <span class="vip">VIP</span>' : ""}</p>
-<p class="muted">${esc(x.telefon || "fără telefon")}${x.email ? ", " + esc(x.email) : ""}</p><p class="muted">${email}</p>${trimis}
-<div class="acts">${send}</div>
-<form method="POST" action="/api/echipa/wa-confirmat" class="acts"><input type="hidden" name="id" value="${x.id}"><button class="btn b-blue" type="submit">A confirmat pe WhatsApp</button></form>
-<a class="btn b-ghost mt" href="/bilet/${x.token}" target="_blank" rel="noopener" style="padding:10px;font-size:14px">Vezi invitația</a></div>`;
+<p class="muted">${esc(x.telefon || "fără telefon")}${x.email ? ", " + esc(x.email) : ""}</p>${info.map((t) => `<p class="muted">${t}</p>`).join("")}${st}
+${acts}<a class="btn b-ghost mt" href="/bilet/${x.token}" target="_blank" rel="noopener" style="padding:10px;font-size:14px">Vezi invitația</a></div>`;
 }
 
 export async function handleWaInvit(request, env, url, s, H) {
@@ -90,22 +99,33 @@ export async function handleWaInvit(request, env, url, s, H) {
   if (p === "/checkin/neconfirmate" || p === "/checkin/neconfirmate/") {
     const rows = await lista(env);
     const ok = url.searchParams.get("ok") === "1";
-    const deTrimis = rows.filter((x) => !x.wa_invit_trimis), trimise = rows.filter((x) => x.wa_invit_trimis);
-    const inner = `<p class="k">Panoul echipei</p><h1>Invitații neconfirmate</h1>
-${ok ? '<div class="ok-msg">Confirmarea a fost salvată. Persoana a ieșit din listă.</div>' : ""}
-<div class="card"><div class="row"><div><p class="lab">DE TRIMIS PE WHATSAPP</p><p class="big">${deTrimis.length}</p></div><div><p class="lab">TRIMISE, FĂRĂ RĂSPUNS</p><p class="big" style="color:#B9BBD6">${trimise.length}</p></div></div>
-<p class="muted mt">Înscriși care nu au apăsat „Confirm primirea invitației” în email. Butonul verde deschide WhatsApp cu mesajul nominal și linkul invitației; apăsați Trimite în WhatsApp. Când persoana răspunde, apăsați „A confirmat pe WhatsApp”.</p></div>
-${deTrimis.length ? `<p class="lab mt" style="margin-top:26px">DE TRIMIS</p>${deTrimis.map((x) => card(x, H.esc)).join("")}` : ""}
-${trimise.length ? `<p class="lab mt" style="margin-top:26px">TRIMISE PE WHATSAPP, AȘTEAPTĂ CONFIRMAREA</p>${trimise.map((x) => card(x, H.esc)).join("")}` : ""}
-${rows.length ? "" : '<div class="card mt"><p class="val" style="color:#fff">Toți înscrișii au confirmat primirea invitației.</p></div>'}
+    const f = ["formular", "gmail"].includes(url.searchParams.get("f")) ? url.searchParams.get("f") : "rest";
+    const G = {
+      formular: rows.filter((x) => x.formular),
+      gmail: rows.filter((x) => x.gmail),
+      rest: rows.filter((x) => !x.formular && !x.gmail),
+    };
+    const sel = f === "rest" ? [...G.rest.filter((x) => !x.wa_spam_trimis), ...G.rest.filter((x) => x.wa_spam_trimis)] : G[f];
+    const tab = (k, t) => `<a class="btn ${f === k ? "b-blue" : "b-ghost"}" href="/checkin/neconfirmate${k === "rest" ? "" : "?f=" + k}">${t} (${G[k].length})</a>`;
+    const head = {
+      rest: `<p class="muted mt">Înscriși care nu au confirmat nici în formular, nici pe Gmail. Butonul verde deschide WhatsApp cu mesajul și linkul invitației; apăsați Trimite în WhatsApp. Când persoana răspunde, apăsați „A confirmat pe WhatsApp”. Netrimise: ${G.rest.filter((x) => !x.wa_spam_trimis).length}.</p>`,
+      formular: '<p class="muted mt">Au spus în chestionar (online sau la apel) că vin. Nu primesc mesajul.</p>',
+      gmail: '<p class="muted mt">Au confirmat primirea invitației din email sau au răspuns pe WhatsApp. Nu primesc mesajul. Unele persoane apar și la Formular.</p>',
+    }[f];
+    const inner = `<p class="k">Panoul echipei</p><h1>Invitații pe WhatsApp</h1>
+${ok ? '<div class="ok-msg">Confirmarea a fost salvată. Persoana a trecut la Gmail.</div>' : ""}
+<div class="acts">${tab("formular", "Formular")}${tab("gmail", "Gmail")}</div>
+<div class="acts">${tab("rest", "Restul, de trimis")}</div>
+<div class="card mt"><p class="lab">${{ rest: "RESTUL, PRIMESC MESAJUL", formular: "AU CONFIRMAT ÎN FORMULAR CĂ VIN", gmail: "AU CONFIRMAT PE GMAIL" }[f]}</p><p class="big">${sel.length}<span style="font-size:18px;color:#B9BBD6"> din ${rows.length} înscriși</span></p>${head}</div>
+${sel.map((x) => card(x, H.esc, f)).join("") || '<div class="card mt"><p class="val" style="color:#fff">Nicio persoană în această listă.</p></div>'}
 <a class="btn b-ghost mt" href="/checkin">Înapoi la panou</a>`;
-    return H.html(H.shell("Invitații neconfirmate", inner, `<script src="/assets/js/wa-invit.js?v=${JS_VERSION}"></script>`));
+    return H.html(H.shell("Invitații pe WhatsApp", inner, `<script src="/assets/js/wa-invit.js?v=${JS_VERSION}"></script>`));
   }
   if (p === "/api/echipa/wa-trimis") {
     if (request.method !== "POST" || !H.sameOrigin(request)) return H.json({ error: "method" }, 405);
     const b = await request.json().catch(() => ({}));
     await ensureCols(env);
-    await env.DB.prepare("UPDATE inscrieri SET wa_invit_trimis=datetime('now'), wa_invit_de=? WHERE id=? AND eveniment=?").bind(String(s.who || "").slice(0, 40), Number(b.id) || 0, EVENT).run();
+    await env.DB.prepare("UPDATE inscrieri SET wa_spam_trimis=datetime('now'), wa_spam_de=? WHERE id=? AND eveniment=?").bind(String(s.who || "").slice(0, 40), Number(b.id) || 0, EVENT).run();
     return H.json({ ok: true });
   }
   if (p === "/api/echipa/wa-confirmat") {

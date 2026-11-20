@@ -736,7 +736,7 @@ function dashboardPage(s) {
 <div class="card mt"><p class="lab">CAUTĂ DUPĂ NUME, EMAIL SAU TELEFON</p><input id="q" class="mt" placeholder="ex. Popescu" autocomplete="off" enterkeyhint="search"><div id="rez"></div></div>
 <div class="card mt"><p class="lab">ULTIMELE INTRĂRI</p><div id="ult"><p class="muted mt">Nimeni încă.</p></div></div>
 <a class="btn b-blue mt" href="/checkin/apeluri">Apeluri și contacte</a>
-<a class="btn b-green mt" href="/checkin/neconfirmate">Invitații neconfirmate pe WhatsApp</a>
+<a class="btn b-green mt" href="/checkin/neconfirmate">Invitații pe WhatsApp</a>
 <a class="btn b-ghost mt" href="/checkin/blitz">Blitz Networking pe domenii</a>
 <a class="btn b-ghost mt" href="/api/echipa/export.csv">Descarcă lista de prezență (Excel)</a>
 <form method="POST" action="/api/echipa/logout"><button class="btn b-ghost mt" type="submit">Deconectare (${esc(s.who)})</button></form>`,
