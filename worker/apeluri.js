@@ -484,6 +484,7 @@ export async function chestionarSave(request, env, h) {
 const JS_VERSION = "20261116a";
 export function apeluriPage(h, s) {
   return h.html(h.shell("Apeluri Beyond the Initiative", `<p class="k">Panoul echipei</p><h1>Apeluri</h1>
+<a class="btn b-green" href="/checkin/neconfirmate" style="margin-bottom:16px">Invitații pe WhatsApp (Formular, Gmail, Restul)</a>
 <div id="ap" data-who="${h.esc(s.who)}"><div class="card"><p class="muted">Se încarcă...</p></div></div>
 <a class="btn b-ghost mt" href="/checkin">Înapoi la check-in</a>`, `<script src="/assets/js/apeluri.js?v=${JS_VERSION}"></script>`));
 }
