@@ -229,7 +229,9 @@ const VIP_PRESOLD = 15;
 // Contorul public arată cel puțin acest număr; peste el, numărul real din baza de date.
 // Contorul public de înscrieri (19 nov 2026): înscrierile din baza de date plus persoanele care au anunțat că vin direct
 // la eveniment, fără formular. La 80 de înscrieri reale, contorul arată 120; fiecare înscriere nouă îl crește cu 1.
-const COUNT_EXTRA = 40;
+// 24 nov 2026: contorul ajunsese la 150 (plin). La cererea lui Iustin, scăzut la 126 ca să rămână locuri de rezervă:
+// la 111 înscrieri reale arată 126; fiecare înscriere nouă îl crește cu 1.
+const COUNT_EXTRA = 15;
 const PROFILES = ["Antreprenor", "Manager", "Angajat", "Student", "Freelancer sau consultant", "ONG sau sector public", "Altul",
   "Entrepreneur", "Employee", "Freelancer or consultant", "NGO or public sector", "Other"];
 
