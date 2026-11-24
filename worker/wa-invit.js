@@ -27,25 +27,25 @@ export function waMessage(row) {
   const bilet = `${SITE}/bilet/${row.token}`;
   if (row.limba === "en") {
     return [
-      `Good day, ${row.nume}! 👋`,
-      "Your invitation to Beyond the Initiative may have ended up in SPAM, so we are attaching it here for check-in. 🎟️",
+      `Good day, ${row.nume}!`,
+      "Your invitation to Beyond the Initiative may have ended up in SPAM, so we are attaching it here for check-in.",
       bilet,
       "Only 6 days left until the event and we would be grateful if you could confirm your attendance by tomorrow, 21 November.",
-      "📍 Cattia, Brașov",
-      "📅 Thursday, 26 November",
-      "🕔 17:00",
-      "Let it be inspiring! ✨",
+      "Venue: Cattia, Brașov",
+      "Date: Thursday, 26 November",
+      "Time: 17:00",
+      "Let it be inspiring!",
     ].join("\n");
   }
   return [
-    `Bună ziua, ${row.nume}! 👋`,
-    "Se poate ca invitația dumneavoastră la Beyond the Initiative să fi ajuns în SPAM. Așa că vă atașăm invitația aici, pentru a o folosi la check-in. 🎟️",
+    `Bună ziua, ${row.nume}!`,
+    "Se poate ca invitația dumneavoastră la Beyond the Initiative să fi ajuns în SPAM. Așa că vă atașăm invitația aici, pentru a o folosi la check-in.",
     bilet,
     "Mai sunt doar 6 zile până la eveniment și v-am fi recunoscători să ne confirmați prezența până mâine, 21 noiembrie.",
-    "📍 Cattia, Brașov",
-    "📅 Joi, 26 noiembrie",
-    "🕔 Ora 17:00",
-    "Să fie inspirație! ✨",
+    "Locație: Cattia, Brașov",
+    "Data: Joi, 26 noiembrie",
+    "Ora: 17:00",
+    "Să fie inspirație!",
   ].join("\n");
 }
 

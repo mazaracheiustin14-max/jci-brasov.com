@@ -53,29 +53,29 @@
     var p = String(pren == null ? c.prenume || "" : pren).replace(/\s+/g, " ").trim();
     var cine = who && who !== "echipa" ? "\nprin " + who : "";
     return [
-      (p ? "Dragă " + p + "," : "Bună,") + " 👋",
+      (p ? "Dragă " + p + "," : "Bună,"),
       "",
-      "Mulțumim că faci parte din comunitatea *JCI Brașov – Beyond the Initiative*! 🎉",
+      "Mulțumim că faci parte din comunitatea *JCI Brașov – Beyond the Initiative*!",
       "",
       "Evenimentul marchează *lansarea JCI Brașov* și este unul dintre cele mai mari evenimente de networking ale anului în Brașov.",
       "",
-      "📅 *Joi, 26 noiembrie*",
-      "🕔 *Ora 17:00*",
-      "📍 *CATTIA Brașov*",
+      "Data: *Joi, 26 noiembrie*",
+      "Ora: *17:00*",
+      "Locație: *CATTIA Brașov*",
       "",
       "Ce te așteaptă:",
-      "🤝 *2 sesiuni de Blitz Networking* – peste *24 de contacte de business* într-o singură seară",
-      "🎤 *9 lideri pe scenă*, în două paneluri: unul despre puterea comunității și unul despre tehnologia care ne schimbă viața",
-      "🍽️ Networking la standul de mâncare *Hillden*",
+      "*2 sesiuni de Blitz Networking* – peste *24 de contacte de business* într-o singură seară",
+      "*9 lideri pe scenă*, în două paneluri: unul despre puterea comunității și unul despre tehnologia care ne schimbă viața",
+      "Networking la standul de mâncare *Hillden*",
       "",
-      "✅ *Pentru a-ți confirma locul, completează chestionarul de mai jos:*",
-      "👉 https://jci-brasov.com/q/" + c.cod,
+      "*Pentru a-ți confirma locul, completează chestionarul de mai jos:*",
+      "https://jci-brasov.com/q/" + c.cod,
       "",
       "Răspunsurile tale ne ajută să te așezăm la Blitz Networking *în funcție de interesele tale*, ca să cunoști oamenii potriviți, sau să le adresăm invitaților de pe scenă *întrebările de interes pentru tine*.",
       "",
-      "⚠️ Prin completarea chestionarului *îți confirmi locul*. Dacă nu mai poți ajunge, te rugăm să ne anunți *până pe 19 noiembrie* – *locurile sunt limitate* și vrem să le oferim celor de pe lista de așteptare.",
+      "Prin completarea chestionarului *îți confirmi locul*. Dacă nu mai poți ajunge, te rugăm să ne anunți *până pe 19 noiembrie* – *locurile sunt limitate* și vrem să le oferim celor de pe lista de așteptare.",
       "",
-      "Ne vedem pe 26! 🚀",
+      "Ne vedem pe 26!",
       "",
       "Echipa JCI Brașov" + cine
     ].join("\n");
@@ -86,14 +86,14 @@
   function invTextInscriere(c) {
     var n = c.prenume || c.nume || "";
     return [
-      "Bună ziua" + (n ? ", " + n : "") + "! 👋",
-      "Vă invităm la *JCI Brașov – Beyond the Initiative*, evenimentul de lansare JCI Brașov: două paneluri cu lideri din business și tehnologie și două sesiuni de Blitz Networking. 🤝",
-      "📍 CATTIA, Brașov",
-      "📅 Joi, 26 noiembrie",
-      "🕔 Ora 17:00",
-      "Accesul este gratuit, pe bază de invitație nominală. Vă puteți rezerva locul aici, iar invitația cu codul QR vă vine pe e-mail: 🎟️",
+      "Bună ziua" + (n ? ", " + n : "") + "!",
+      "Vă invităm la *JCI Brașov – Beyond the Initiative*, evenimentul de lansare JCI Brașov: două paneluri cu lideri din business și tehnologie și două sesiuni de Blitz Networking.",
+      "Locație: CATTIA, Brașov",
+      "Data: Joi, 26 noiembrie",
+      "Ora: 17:00",
+      "Accesul este gratuit, pe bază de invitație nominală. Vă puteți rezerva locul aici, iar invitația cu codul QR vă vine pe e-mail:",
       "https://jci-brasov.com/eveniment#rezerva",
-      "Locurile sunt limitate. Ne-ar bucura să vă avem alături! ✨",
+      "Locurile sunt limitate. Ne-ar bucura să vă avem alături!",
       "",
       "Echipa JCI Brașov" + (who && who !== "echipa" ? "\nprin " + who : "")
     ].join("\n");
@@ -102,24 +102,24 @@
     if (!c.bilet) return invTextInscriere(c);
     var url = "https://jci-brasov.com/bilet/" + c.bilet, n = c.nume_bilet || c.nume || "";
     if (c.limba === "en") return [
-      "Good day" + (n ? ", " + n : "") + "! 👋",
-      "Thank you for registering for *JCI Brașov – Beyond the Initiative*. Here is your personal invitation, with the QR code for check-in: 🎟️",
+      "Good day" + (n ? ", " + n : "") + "!",
+      "Thank you for registering for *JCI Brașov – Beyond the Initiative*. Here is your personal invitation, with the QR code for check-in:",
       url,
-      "📍 CATTIA, Brașov",
-      "📅 Thursday, 26 November",
-      "🕔 17:00",
-      "Please have the QR code ready at the entrance. See you on Thursday! ✨",
+      "Venue: CATTIA, Brașov",
+      "Date: Thursday, 26 November",
+      "Time: 17:00",
+      "Please have the QR code ready at the entrance. See you on Thursday!",
       "",
       "JCI Brașov Team" + (who && who !== "echipa" ? "\nvia " + who : "")
     ].join("\n");
     return [
-      "Bună ziua" + (n ? ", " + n : "") + "! 👋",
-      "Vă mulțumim pentru înscrierea la *JCI Brașov – Beyond the Initiative*. Vă trimitem aici invitația dumneavoastră personală, cu codul QR pentru check-in: 🎟️",
+      "Bună ziua" + (n ? ", " + n : "") + "!",
+      "Vă mulțumim pentru înscrierea la *JCI Brașov – Beyond the Initiative*. Vă trimitem aici invitația dumneavoastră personală, cu codul QR pentru check-in:",
       url,
-      "📍 CATTIA, Brașov",
-      "📅 Joi, 26 noiembrie",
-      "🕔 Ora 17:00",
-      "Vă rugăm să aveți codul QR la îndemână la intrare. Ne vedem joi! ✨",
+      "Locație: CATTIA, Brașov",
+      "Data: Joi, 26 noiembrie",
+      "Ora: 17:00",
+      "Vă rugăm să aveți codul QR la îndemână la intrare. Ne vedem joi!",
       "",
       "Echipa JCI Brașov" + (who && who !== "echipa" ? "\nprin " + who : "")
     ].join("\n");
