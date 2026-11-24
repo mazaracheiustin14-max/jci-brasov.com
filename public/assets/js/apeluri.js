@@ -82,24 +82,7 @@
   }
 
   // Invitația pentru participanți (24 nov 2026): linkul biletului personal, folosit la check-in.
-  // Fără bilet (persoana nu e înscrisă): invitație la înscriere, cu linkul formularului de pe site.
-  function invTextInscriere(c) {
-    var n = c.prenume || c.nume || "";
-    return [
-      "Bună ziua" + (n ? ", " + n : "") + "!",
-      "Vă invităm la *JCI Brașov – Beyond the Initiative*, evenimentul de lansare JCI Brașov: două paneluri cu lideri din business și tehnologie și două sesiuni de Blitz Networking.",
-      "Locație: CATTIA, Brașov",
-      "Data: Joi, 26 noiembrie",
-      "Ora: 17:00",
-      "Accesul este gratuit, pe bază de invitație nominală. Vă puteți rezerva locul aici, iar invitația cu codul QR vă vine pe e-mail:",
-      "https://jci-brasov.com/eveniment#rezerva",
-      "Locurile sunt limitate. Ne-ar bucura să vă avem alături!",
-      "",
-      "Echipa JCI Brașov" + (who && who !== "echipa" ? "\nprin " + who : "")
-    ].join("\n");
-  }
   function invText(c) {
-    if (!c.bilet) return invTextInscriere(c);
     var url = "https://jci-brasov.com/bilet/" + c.bilet, n = c.nume_bilet || c.nume || "";
     if (c.limba === "en") return [
       "Good day" + (n ? ", " + n : "") + "!",
@@ -130,8 +113,9 @@
     var t = [];
     t.push(c.inscris ? '<span class="tag ok">Înscris' + (c.asteptare ? ", listă de așteptare" : "") + "</span>" : '<span class="tag">Neînscris</span>');
     if (c.inscris) {
-      t.push(c.trimisa ? '<span class="tag info">Gmail trimis</span>' : (c.eroare ? '<span class="tag warn">Gmail cu eroare</span>' : '<span class="tag warn">Gmail netrimis încă</span>'));
-      t.push(c.confirmat ? '<span class="tag ok">Gmail confirmat de el</span>' : '<span class="tag warn">Gmail neconfirmat</span>');
+      if (c.doar_wa) t.push('<span class="tag info">Fără e-mail, invitație pe WhatsApp</span>');
+      else t.push(c.trimisa ? '<span class="tag info">Gmail trimis</span>' : (c.eroare ? '<span class="tag warn">Gmail cu eroare</span>' : '<span class="tag warn">Gmail netrimis încă</span>'));
+      if (!c.doar_wa) t.push(c.confirmat ? '<span class="tag ok">Gmail confirmat de el</span>' : '<span class="tag warn">Gmail neconfirmat</span>');
     } else t.push('<span class="tag">Fără email, fără invitație</span>');
     if (c.status_apel) t.push('<span class="tag info">' + esc(STATUS[c.status_apel] || c.status_apel) + "</span>");
     if (c.revenire) t.push('<span class="tag warn">Revenire ' + esc(fmtWhen(c.revenire)) + "</span>");
@@ -147,10 +131,11 @@
       : "";
     var inv = "";
     if (c.telefon) {
-      inv = '<div class="acts"><a class="btn ' + (c.invit_wa ? "b-ghost" : "b-green") + '" data-inv="' + c.id + '" href="https://wa.me/' + digits + "?text=" + encodeURIComponent(invText(c)) + '" target="_blank" rel="noopener">' +
+      inv = '<div class="acts"><a class="btn ' + (c.invit_wa ? "b-ghost" : "b-green") + '" data-inv="' + c.id + '"' + (c.bilet ? "" : ' data-nou="1" data-tel="' + digits + '"') +
+          ' href="' + (c.bilet ? "https://wa.me/" + digits + "?text=" + encodeURIComponent(invText(c)) : "#") + '" target="_blank" rel="noopener">' +
           (c.invit_wa ? "Retrimite invitația pe WhatsApp" : "Trimite invitația pe WhatsApp") + "</a>" +
           (c.bilet ? '<a class="btn b-ghost" href="/bilet/' + esc(c.bilet) + '" target="_blank" rel="noopener">Vezi invitația</a>' : "") + "</div>" +
-          (c.bilet ? "" : '<small class="muted">Neînscris: mesajul conține linkul de înscriere; biletul vine pe e-mail după înscriere.</small><br>') +
+          (c.bilet ? "" : '<small class="muted">Neînscris: la apăsare se creează invitația lui nominală, cu cod QR, și se trimite pe WhatsApp.</small><br>') +
           (c.invit_wa ? '<small class="muted">Invitație trimisă pe WhatsApp: ' + esc([c.invit_wa, c.invit_wa_de].filter(Boolean).join(", de ")) + "</small>" : "");
     }
     var waq = "";
@@ -363,7 +348,24 @@
   document.addEventListener("click", function (e) {
     var a = e.target.closest ? e.target.closest("a[data-inv]") : null;
     if (!a) return;
-    api("/api/echipa/invitatie-wa", { id: Number(a.getAttribute("data-inv")) }).then(function () { load(); }).catch(function () {});
+    var id = Number(a.getAttribute("data-inv"));
+    if (a.hasAttribute("data-nou")) {
+      // Neînscris: se creează întâi invitația (bilet cu QR), apoi se deschide WhatsApp cu linkul ei.
+      e.preventDefault();
+      var win = window.open("", "_blank");
+      a.textContent = "Se creează invitația...";
+      var c = (D && D.contacte || []).filter(function (x) { return x.id === id; })[0] || { id: id };
+      api("/api/echipa/bilet-contact", { id: id }).then(function (j) {
+        if (!j.ok) { if (win) win.close(); alert(j.error || "Nu s-a putut crea invitația."); load(); return; }
+        var cc = {}; for (var k in c) cc[k] = c[k];
+        cc.bilet = j.token; cc.nume_bilet = j.nume; cc.limba = j.limba;
+        var url = "https://wa.me/" + a.getAttribute("data-tel") + "?text=" + encodeURIComponent(invText(cc));
+        if (win) win.location.href = url; else location.href = url;
+        return api("/api/echipa/invitatie-wa", { id: id }).then(function () { load(); });
+      }).catch(function () { if (win) win.close(); alert("Fără conexiune. Încearcă din nou."); });
+      return;
+    }
+    api("/api/echipa/invitatie-wa", { id: id }).then(function () { load(); }).catch(function () {});
   });
   document.addEventListener("change", function (e) {
     var i = e.target;

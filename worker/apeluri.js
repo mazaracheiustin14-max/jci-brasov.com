@@ -183,7 +183,8 @@ function shape(r) {
   const inscris = !!r.inscriere_id && (r.i_status === "confirmat" || r.i_status === "asteptare");
   const inv = r.invitatie_trimisa || "";
   return {
-    id: r.id, nume: r.nume || "", telefon: r.telefon || "", alt: r.alt_telefon || "", email: r.email || r.i_email || "", companie: r.companie || "",
+    id: r.id, nume: r.nume || "", telefon: r.telefon || "", alt: r.alt_telefon || "", email: /@invitatie\.jci-brasov\.com$/.test(r.email || r.i_email || "") ? "" : (r.email || r.i_email || ""),
+    doar_wa: /^exclus: fără e-mail/.test(inv), companie: r.companie || "",
     inscris, asteptare: r.i_status === "asteptare", prezent: !!r.prezent_la,
     trimisa: inscris && !!inv && !/^(exclus|eroare)/.test(inv), eroare: /^eroare/.test(inv), confirmat: inscris && !!r.primire_confirmata,
     intrebare: r.i_intrebare || "", intrebare_apel: r.q_apel || "", surse: r.surse || "", apeluri: r.apeluri || 0,
@@ -250,6 +251,35 @@ async function markInvit(env, h, s, b) {
   const r = await env.DB.prepare("UPDATE contacte SET invit_wa_trimis=datetime('now'), invit_wa_de=? WHERE id=?").bind(String(s.who || "").slice(0, 40), Number(b.id) || 0).run();
   if (!r.meta || r.meta.changes === 0) return h.json({ ok: false, error: "Contact negăsit" }, 404);
   return h.json({ ok: true });
+}
+
+// Invitație cu cod QR pentru un contact neînscris (24 nov 2026, la cererea lui Iustin): se creează direct înscrierea
+// confirmată, fără formular, și se întoarce biletul personal. Fără e-mail valid se folosește o adresă internă
+// (@invitatie.jci-brasov.com), iar invitatie_trimisa = 'exclus...' oprește trimiterea pe e-mail.
+async function biletPentruContact(env, h, s, b) {
+  const c = await env.DB.prepare("SELECT * FROM contacte WHERE id=?").bind(Number(b.id) || 0).first();
+  if (!c) return h.json({ ok: false, error: "Contact negăsit" }, 404);
+  if (c.inscriere_id) {
+    const i = await env.DB.prepare("SELECT id, nume, token, status, limba FROM inscrieri WHERE id=?").bind(c.inscriere_id).first();
+    if (i && i.status === "confirmat") {
+      if (!i.token) { i.token = crypto.randomUUID().replace(/-/g, ""); await env.DB.prepare("UPDATE inscrieri SET token=? WHERE id=?").bind(i.token, i.id).run(); }
+      return h.json({ ok: true, token: i.token, nume: i.nume, limba: i.limba || "ro" });
+    }
+  }
+  const nume = String(c.nume || "").trim().slice(0, 120) || "Invitat JCI Brașov";
+  let email = String(c.email || "").trim().toLowerCase();
+  let exclus = null;
+  if (!EMAIL_RE.test(email) || await env.DB.prepare("SELECT 1 FROM inscrieri WHERE eveniment=? AND email=?").bind(EVENT, email).first()) {
+    email = `wa-${c.id}@invitatie.jci-brasov.com`;
+    exclus = "exclus: fără e-mail, invitație trimisă pe WhatsApp";
+  }
+  const token = crypto.randomUUID().replace(/-/g, "");
+  await env.DB.prepare("INSERT OR IGNORE INTO inscrieri (eveniment,nume,email,telefon,sursa,limba,status,token,invitatie_trimisa) VALUES (?,?,?,?,?,?,?,?,?)")
+    .bind(EVENT, nume, email, c.telefon || "", "Invitație WhatsApp, echipa (" + String(s.who || "").slice(0, 40) + ")", "ro", "confirmat", token, exclus).run();
+  const i = await env.DB.prepare("SELECT id, nume, token, limba FROM inscrieri WHERE eveniment=? AND email=?").bind(EVENT, email).first();
+  if (!i) return h.json({ ok: false, error: "Nu s-a putut crea invitația." }, 500);
+  await env.DB.prepare("UPDATE contacte SET inscriere_id=? WHERE id=? AND inscriere_id IS NULL").bind(i.id, c.id).run();
+  return h.json({ ok: true, token: i.token, nume: i.nume, limba: i.limba || "ro", nou: true });
 }
 
 async function resolveDuplicate(env, h, b) {
@@ -519,7 +549,7 @@ export async function chestionarSave(request, env, h) {
 
 // ---------- rutare ----------
 // Se schimbă la fiecare modificare a public/assets/js/apeluri.js, ca telefoanele să nu rămână cu versiunea veche din cache.
-const JS_VERSION = "20261124d";
+const JS_VERSION = "20261124e";
 export function apeluriPage(h, s) {
   return h.html(h.shell("Apeluri Beyond the Initiative", `<p class="k">Panoul echipei</p><h1>Apeluri</h1>
 <a class="btn b-green" href="/checkin/neconfirmate" style="margin-bottom:16px">Invitații pe WhatsApp (Formular, Gmail, Restul)</a>
@@ -539,6 +569,7 @@ export async function handleApeluri(request, env, url, s, h) {
   if (p === "/api/echipa/contact") return contactDetail(env, h, Number(url.searchParams.get("id")) || 0);
   if (p === "/api/echipa/duplicate") return duplicatesList(env, h);
   if (p === "/api/echipa/contactat" && post) return setContacted(env, h, s, await request.json().catch(() => ({})));
+  if (p === "/api/echipa/bilet-contact" && post) return biletPentruContact(env, h, s, await request.json().catch(() => ({})));
   if (p === "/api/echipa/invitatie-wa" && post) return markInvit(env, h, s, await request.json().catch(() => ({})));
   if (p === "/api/echipa/participa" && post) return setParticipa(env, h, s, await request.json().catch(() => ({})));
   if (p === "/api/echipa/duplicat" && post) return resolveDuplicate(env, h, await request.json().catch(() => ({})));
