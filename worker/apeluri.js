@@ -519,7 +519,7 @@ export async function chestionarSave(request, env, h) {
 
 // ---------- rutare ----------
 // Se schimbă la fiecare modificare a public/assets/js/apeluri.js, ca telefoanele să nu rămână cu versiunea veche din cache.
-const JS_VERSION = "20261124b";
+const JS_VERSION = "20261124c";
 export function apeluriPage(h, s) {
   return h.html(h.shell("Apeluri Beyond the Initiative", `<p class="k">Panoul echipei</p><h1>Apeluri</h1>
 <a class="btn b-green" href="/checkin/neconfirmate" style="margin-bottom:16px">Invitații pe WhatsApp (Formular, Gmail, Restul)</a>
