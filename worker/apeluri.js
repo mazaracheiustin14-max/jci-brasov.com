@@ -32,6 +32,15 @@ async function ensure(env) {
   for (const col of ["cod TEXT", "chestionar_trimis TEXT", "prenume TEXT"]) {
     try { await env.DB.prepare(`ALTER TABLE contacte ADD COLUMN ${col}`).run(); } catch (e) { /* există deja */ }
   }
+  // Bifa „Participă / Nu participă” din listă (24 nov 2026): 'da', 'nu' sau NULL (necunoscut).
+  // La prima rulare se completează din statusul final deja salvat în apeluri și chestionare.
+  let nouPart = false;
+  for (const col of ["participa TEXT", "participa_de TEXT", "participa_la TEXT"]) {
+    try { await env.DB.prepare(`ALTER TABLE contacte ADD COLUMN ${col}`).run(); if (col.startsWith("participa ")) nouPart = true; } catch (e) { /* există deja */ }
+  }
+  if (nouPart) {
+    await env.DB.prepare("UPDATE contacte SET participa=CASE status_apel WHEN 'confirmat' THEN 'da' WHEN 'nu_participa' THEN 'nu' END WHERE participa IS NULL AND status_apel IN ('confirmat','nu_participa')").run();
+  }
   await ensureDomCols(env);
   ready.add(env.DB);
 }
@@ -158,7 +167,7 @@ async function detectDuplicates(env) {
 }
 
 // ---------- citire ----------
-const LIST_SQL = `SELECT c.id, c.nume, c.telefon, c.alt_telefon, c.email, c.inscriere_id, c.contactat, c.contactat_de, c.contactat_la, c.status_apel, c.revenire, c.cod, c.chestionar_trimis, c.prenume, i.nume AS i_nume,
+const LIST_SQL = `SELECT c.id, c.nume, c.telefon, c.alt_telefon, c.email, c.inscriere_id, c.contactat, c.contactat_de, c.contactat_la, c.status_apel, c.revenire, c.cod, c.chestionar_trimis, c.prenume, c.participa, c.participa_de, c.participa_la, i.nume AS i_nume,
   (SELECT COUNT(*) FROM call_logs l WHERE l.contact_id=c.id AND l.apelant='Chestionar online') AS online,
   i.status AS i_status, i.email AS i_email, i.companie, i.intrebare AS i_intrebare, i.invitatie_trimisa, i.primire_confirmata, i.prezent_la,
   (SELECT COUNT(*) FROM call_logs l WHERE l.contact_id=c.id) AS apeluri,
@@ -176,6 +185,7 @@ function shape(r) {
     intrebare: r.i_intrebare || "", intrebare_apel: r.q_apel || "", surse: r.surse || "", apeluri: r.apeluri || 0,
     contactat: !!r.contactat, contactat_de: r.contactat_de || "", contactat_la: dataRo(r.contactat_la), status_apel: r.status_apel || "", revenire: r.revenire || "",
     cod: r.cod || "", q_trimis: !!r.chestionar_trimis, q_online: !!r.online, prenume: r.prenume || firstName(r.i_nume) || firstName(r.nume),
+    participa: r.participa || "", participa_de: r.participa_de || "", participa_la: dataRo(r.participa_la),
   };
 }
 
@@ -213,6 +223,17 @@ async function setContacted(env, h, s, b) {
   const r = on
     ? await env.DB.prepare("UPDATE contacte SET contactat=1, contactat_de=?, contactat_la=datetime('now') WHERE id=?").bind(s.who, id).run()
     : await env.DB.prepare("UPDATE contacte SET contactat=0, contactat_de=NULL, contactat_la=NULL WHERE id=?").bind(id).run();
+  if (!r.meta || r.meta.changes === 0) return h.json({ ok: false, error: "Contact negăsit" }, 404);
+  return h.json({ ok: true });
+}
+
+// Bifa „Participă / Nu participă”: valoare 'da', 'nu' sau '' (scoate bifa).
+async function setParticipa(env, h, s, b) {
+  const id = Number(b.id) || 0;
+  const v = b.participa === "da" || b.participa === "nu" ? b.participa : "";
+  const r = v
+    ? await env.DB.prepare("UPDATE contacte SET participa=?, participa_de=?, participa_la=datetime('now') WHERE id=?").bind(v, s.who, id).run()
+    : await env.DB.prepare("UPDATE contacte SET participa=NULL, participa_de=NULL, participa_la=NULL WHERE id=?").bind(id).run();
   if (!r.meta || r.meta.changes === 0) return h.json({ ok: false, error: "Contact negăsit" }, 404);
   return h.json({ ok: true });
 }
@@ -344,6 +365,9 @@ async function saveCall(env, h, s, b) {
   if (da) {
     await env.DB.prepare("UPDATE contacte SET contactat=1, contactat_de=?, contactat_la=datetime('now'), status_apel=?, revenire=?, email=COALESCE(NULLIF(email,''),?) WHERE id=?")
       .bind(apelant, statusApel, revenire, email || null, contact.id).run();
+    // Statusul final din apel sau din chestionar actualizează și bifa „Participă / Nu participă”.
+    const part = statusFinal === "confirmat" ? "da" : (statusFinal === "nu_participa" ? "nu" : "");
+    if (part) await env.DB.prepare("UPDATE contacte SET participa=?, participa_de=?, participa_la=datetime('now') WHERE id=?").bind(part, apelant, contact.id).run();
   } else {
     await env.DB.prepare("UPDATE contacte SET status_apel=?, revenire=? WHERE id=?").bind(statusApel, revenire, contact.id).run();
   }
@@ -481,7 +505,7 @@ export async function chestionarSave(request, env, h) {
 
 // ---------- rutare ----------
 // Se schimbă la fiecare modificare a public/assets/js/apeluri.js, ca telefoanele să nu rămână cu versiunea veche din cache.
-const JS_VERSION = "20261116a";
+const JS_VERSION = "20261124a";
 export function apeluriPage(h, s) {
   return h.html(h.shell("Apeluri Beyond the Initiative", `<p class="k">Panoul echipei</p><h1>Apeluri</h1>
 <a class="btn b-green" href="/checkin/neconfirmate" style="margin-bottom:16px">Invitații pe WhatsApp (Formular, Gmail, Restul)</a>
@@ -501,6 +525,7 @@ export async function handleApeluri(request, env, url, s, h) {
   if (p === "/api/echipa/contact") return contactDetail(env, h, Number(url.searchParams.get("id")) || 0);
   if (p === "/api/echipa/duplicate") return duplicatesList(env, h);
   if (p === "/api/echipa/contactat" && post) return setContacted(env, h, s, await request.json().catch(() => ({})));
+  if (p === "/api/echipa/participa" && post) return setParticipa(env, h, s, await request.json().catch(() => ({})));
   if (p === "/api/echipa/duplicat" && post) return resolveDuplicate(env, h, await request.json().catch(() => ({})));
   if (p === "/api/echipa/chestionar-trimis" && post) return markSent(env, h, await request.json().catch(() => ({})));
   if (p === "/api/echipa/apel" && post) return saveCall(env, h, s, await request.json().catch(() => ({})));

@@ -22,12 +22,15 @@
   function fmtWhen(v) { return String(v || "").replace("T", " "); }
   var STATUS = { confirmat: "Confirmat", revine: "Revine cu răspuns", nu_participa: "Nu participă", nu_a_raspuns: "Nu a răspuns", mai_tarziu: "De sunat mai târziu" };
 
-  var FILTERS = [["toti", "Toți"], ["desunat", "De sunat"], ["contactati", "Contactați"], ["reveniri", "Reveniri"], ["inscrisi", "Înscriși"], ["neinscrisi", "Neînscriși"],
+  var FILTERS = [["toti", "Toți"], ["desunat", "De sunat"], ["contactati", "Contactați"], ["participa", "Participă"], ["nuparticipa", "Nu participă"], ["fararaspuns", "Participare neconfirmată"], ["reveniri", "Reveniri"], ["inscrisi", "Înscriși"], ["neinscrisi", "Neînscriși"],
     ["neconfirmat", "Gmail neconfirmat"], ["confirmat", "Gmail confirmat"], ["intrebare", "Cu întrebare"]];
   function match(c, f) {
     switch (f) {
       case "desunat": return !c.contactat;
       case "contactati": return c.contactat;
+      case "participa": return c.participa === "da";
+      case "nuparticipa": return c.participa === "nu";
+      case "fararaspuns": return !c.participa;
       case "reveniri": return !!c.revenire || c.status_apel === "mai_tarziu" || c.status_apel === "revine";
       case "inscrisi": return c.inscris;
       case "neinscrisi": return !c.inscris;
@@ -109,7 +112,10 @@
       '<div class="tags">' + t.join("") + "</div>" + qs +
       '<div class="acts">' + acts + '<button class="btn b-ghost" data-form="' + c.id + '">Chestionar</button></div>' + waq +
       '<label class="chk"><input type="checkbox" data-cont="' + c.id + '"' + (c.contactat ? " checked" : "") + "><span>Contactat" +
-      (c.contactat && (c.contactat_de || c.contactat_la) ? " (" + esc([c.contactat_de, c.contactat_la].filter(Boolean).join(", ")) + ")" : "") + "</span></label></div>";
+      (c.contactat && (c.contactat_de || c.contactat_la) ? " (" + esc([c.contactat_de, c.contactat_la].filter(Boolean).join(", ")) + ")" : "") + "</span></label>" +
+      '<div style="display:flex;gap:28px;flex-wrap:wrap"><label class="chk"><input type="checkbox" data-part="' + c.id + '" data-v="da"' + (c.participa === "da" ? " checked" : "") + "><span>Participă</span></label>" +
+      '<label class="chk"><input type="checkbox" data-part="' + c.id + '" data-v="nu"' + (c.participa === "nu" ? " checked" : "") + "><span>Nu participă</span></label></div>" +
+      (c.participa && (c.participa_de || c.participa_la) ? '<small class="muted">Participare marcată de ' + esc([c.participa_de, c.participa_la].filter(Boolean).join(", ")) + "</small>" : "") + "</div>";
   }
   function renderList() {
     root.onchange = null;
@@ -121,6 +127,7 @@
     var inscrisi = counts.inscrisi, conf = counts.confirmat;
     root.innerHTML = (flash ? '<div class="ok-msg">' + esc(flash) + "</div>" : "") +
       '<div class="card"><div class="row"><div><p class="lab">CONTACTE</p><p class="big">' + cs.length + '</p></div><div><p class="lab">CONTACTAȚI</p><p class="big" style="color:#4ED39A">' + counts.contactati + "</p></div></div>" +
+      '<div class="row mt"><div><p class="lab">PARTICIPĂ</p><p class="val" style="color:#4ED39A">' + counts.participa + '</p></div><div><p class="lab">NU PARTICIPĂ</p><p class="val" style="color:#fff">' + counts.nuparticipa + "</p></div></div>" +
       '<div class="row mt"><div><p class="lab">ÎNSCRIȘI</p><p class="val" style="color:#fff">' + inscrisi + '</p></div><div><p class="lab">GMAIL CONFIRMAT</p><p class="val" style="color:#fff">' + conf + " din " + inscrisi + "</p></div></div></div>" +
       '<div class="chips">' + FILTERS.map(function (f) { return '<button class="chip' + (filter === f[0] ? " on" : "") + '" data-f="' + f[0] + '">' + esc(f[1]) + " (" + counts[f[0]] + ")</button>"; }).join("") +
       (D.duplicate ? '<button class="chip" data-dup="1">Posibile duplicate (' + D.duplicate + ")</button>" : "") + "</div>" +
@@ -303,6 +310,12 @@
     var i = e.target;
     if (i && i.hasAttribute && i.hasAttribute("data-cont")) {
       api("/api/echipa/contactat", { id: Number(i.getAttribute("data-cont")), contactat: i.checked }).then(function () { load(); });
+    }
+    // Participă / Nu participă: o singură bifă activă; a doua apăsare pe aceeași o scoate.
+    if (i && i.hasAttribute && i.hasAttribute("data-part")) {
+      var pid = i.getAttribute("data-part"), v = i.checked ? i.getAttribute("data-v") : "";
+      root.querySelectorAll('input[data-part="' + pid + '"]').forEach(function (x) { if (x !== i) x.checked = false; });
+      api("/api/echipa/participa", { id: Number(pid), participa: v }).then(function () { load(); });
     }
   });
   load();
