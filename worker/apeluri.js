@@ -35,6 +35,10 @@ async function ensure(env) {
   // Bifa „Participă / Nu participă” din listă (24 nov 2026): 'da', 'nu' sau NULL (necunoscut).
   // La prima rulare se completează din statusul final deja salvat în apeluri și chestionare.
   let nouPart = false;
+  // Invitația trimisă pe WhatsApp participanților, din lista de apeluri (24 nov 2026).
+  for (const col of ["invit_wa_trimis TEXT", "invit_wa_de TEXT"]) {
+    try { await env.DB.prepare(`ALTER TABLE contacte ADD COLUMN ${col}`).run(); } catch (e) { /* există deja */ }
+  }
   for (const col of ["participa TEXT", "participa_de TEXT", "participa_la TEXT"]) {
     try { await env.DB.prepare(`ALTER TABLE contacte ADD COLUMN ${col}`).run(); if (col.startsWith("participa ")) nouPart = true; } catch (e) { /* există deja */ }
   }
@@ -167,7 +171,7 @@ async function detectDuplicates(env) {
 }
 
 // ---------- citire ----------
-const LIST_SQL = `SELECT c.id, c.nume, c.telefon, c.alt_telefon, c.email, c.inscriere_id, c.contactat, c.contactat_de, c.contactat_la, c.status_apel, c.revenire, c.cod, c.chestionar_trimis, c.prenume, c.participa, c.participa_de, c.participa_la, i.nume AS i_nume,
+const LIST_SQL = `SELECT c.id, c.nume, c.telefon, c.alt_telefon, c.email, c.inscriere_id, c.contactat, c.contactat_de, c.contactat_la, c.status_apel, c.revenire, c.cod, c.chestionar_trimis, c.prenume, c.participa, c.participa_de, c.participa_la, c.invit_wa_trimis, c.invit_wa_de, i.token AS i_token, i.limba AS i_limba, i.nume AS i_nume,
   (SELECT COUNT(*) FROM call_logs l WHERE l.contact_id=c.id AND l.apelant='Chestionar online') AS online,
   i.status AS i_status, i.email AS i_email, i.companie, i.intrebare AS i_intrebare, i.invitatie_trimisa, i.primire_confirmata, i.prezent_la,
   (SELECT COUNT(*) FROM call_logs l WHERE l.contact_id=c.id) AS apeluri,
@@ -186,6 +190,8 @@ function shape(r) {
     contactat: !!r.contactat, contactat_de: r.contactat_de || "", contactat_la: dataRo(r.contactat_la), status_apel: r.status_apel || "", revenire: r.revenire || "",
     cod: r.cod || "", q_trimis: !!r.chestionar_trimis, q_online: !!r.online, prenume: r.prenume || firstName(r.i_nume) || firstName(r.nume),
     participa: r.participa || "", participa_de: r.participa_de || "", participa_la: dataRo(r.participa_la),
+    bilet: inscris && r.i_status === "confirmat" ? r.i_token || "" : "", limba: r.i_limba || "ro", nume_bilet: r.i_nume || r.nume || "",
+    invit_wa: dataRo(r.invit_wa_trimis), invit_wa_de: r.invit_wa_de || "",
   };
 }
 
@@ -193,6 +199,7 @@ async function listContacts(env, h) {
   await syncContacts(env);
   await detectDuplicates(env);
   await ensureCodes(env);
+  await env.DB.prepare("UPDATE inscrieri SET token = lower(hex(randomblob(16))) WHERE token IS NULL").run();
   const rows = (await env.DB.prepare(LIST_SQL).all()).results || [];
   const dup = await env.DB.prepare("SELECT COUNT(*) AS n FROM posibile_duplicate WHERE status='nou'").first();
   return h.json({
@@ -234,6 +241,13 @@ async function setParticipa(env, h, s, b) {
   const r = v
     ? await env.DB.prepare("UPDATE contacte SET participa=?, participa_de=?, participa_la=datetime('now') WHERE id=?").bind(v, s.who, id).run()
     : await env.DB.prepare("UPDATE contacte SET participa=NULL, participa_de=NULL, participa_la=NULL WHERE id=?").bind(id).run();
+  if (!r.meta || r.meta.changes === 0) return h.json({ ok: false, error: "Contact negăsit" }, 404);
+  return h.json({ ok: true });
+}
+
+// Butonul „Trimite invitația pe WhatsApp” din listă: se notează cine și când a deschis mesajul.
+async function markInvit(env, h, s, b) {
+  const r = await env.DB.prepare("UPDATE contacte SET invit_wa_trimis=datetime('now'), invit_wa_de=? WHERE id=?").bind(String(s.who || "").slice(0, 40), Number(b.id) || 0).run();
   if (!r.meta || r.meta.changes === 0) return h.json({ ok: false, error: "Contact negăsit" }, 404);
   return h.json({ ok: true });
 }
@@ -505,7 +519,7 @@ export async function chestionarSave(request, env, h) {
 
 // ---------- rutare ----------
 // Se schimbă la fiecare modificare a public/assets/js/apeluri.js, ca telefoanele să nu rămână cu versiunea veche din cache.
-const JS_VERSION = "20261124a";
+const JS_VERSION = "20261124b";
 export function apeluriPage(h, s) {
   return h.html(h.shell("Apeluri Beyond the Initiative", `<p class="k">Panoul echipei</p><h1>Apeluri</h1>
 <a class="btn b-green" href="/checkin/neconfirmate" style="margin-bottom:16px">Invitații pe WhatsApp (Formular, Gmail, Restul)</a>
@@ -525,6 +539,7 @@ export async function handleApeluri(request, env, url, s, h) {
   if (p === "/api/echipa/contact") return contactDetail(env, h, Number(url.searchParams.get("id")) || 0);
   if (p === "/api/echipa/duplicate") return duplicatesList(env, h);
   if (p === "/api/echipa/contactat" && post) return setContacted(env, h, s, await request.json().catch(() => ({})));
+  if (p === "/api/echipa/invitatie-wa" && post) return markInvit(env, h, s, await request.json().catch(() => ({})));
   if (p === "/api/echipa/participa" && post) return setParticipa(env, h, s, await request.json().catch(() => ({})));
   if (p === "/api/echipa/duplicat" && post) return resolveDuplicate(env, h, await request.json().catch(() => ({})));
   if (p === "/api/echipa/chestionar-trimis" && post) return markSent(env, h, await request.json().catch(() => ({})));

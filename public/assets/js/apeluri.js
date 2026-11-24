@@ -22,7 +22,7 @@
   function fmtWhen(v) { return String(v || "").replace("T", " "); }
   var STATUS = { confirmat: "Confirmat", revine: "Revine cu răspuns", nu_participa: "Nu participă", nu_a_raspuns: "Nu a răspuns", mai_tarziu: "De sunat mai târziu" };
 
-  var FILTERS = [["toti", "Toți"], ["desunat", "De sunat"], ["contactati", "Contactați"], ["participa", "Participă"], ["nuparticipa", "Nu participă"], ["fararaspuns", "Participare neconfirmată"], ["reveniri", "Reveniri"], ["inscrisi", "Înscriși"], ["neinscrisi", "Neînscriși"],
+  var FILTERS = [["toti", "Toți"], ["desunat", "De sunat"], ["contactati", "Contactați"], ["participa", "Participă"], ["nuparticipa", "Nu participă"], ["fararaspuns", "Participare neconfirmată"], ["invnetrimisa", "Participanți, invitație netrimisă"], ["reveniri", "Reveniri"], ["inscrisi", "Înscriși"], ["neinscrisi", "Neînscriși"],
     ["neconfirmat", "Gmail neconfirmat"], ["confirmat", "Gmail confirmat"], ["intrebare", "Cu întrebare"]];
   function match(c, f) {
     switch (f) {
@@ -31,6 +31,7 @@
       case "participa": return c.participa === "da";
       case "nuparticipa": return c.participa === "nu";
       case "fararaspuns": return !c.participa;
+      case "invnetrimisa": return c.participa === "da" && !!c.bilet && !c.invit_wa;
       case "reveniri": return !!c.revenire || c.status_apel === "mai_tarziu" || c.status_apel === "revine";
       case "inscrisi": return c.inscris;
       case "neinscrisi": return !c.inscris;
@@ -80,6 +81,33 @@
     ].join("\n");
   }
 
+  // Invitația pentru participanți (24 nov 2026): linkul biletului personal, folosit la check-in.
+  function invText(c) {
+    var url = "https://jci-brasov.com/bilet/" + c.bilet, n = c.nume_bilet || c.nume || "";
+    if (c.limba === "en") return [
+      "Good day" + (n ? ", " + n : "") + "! 👋",
+      "Thank you for confirming your attendance at *JCI Brașov – Beyond the Initiative*. Here is your personal invitation, with the QR code for check-in: 🎟️",
+      url,
+      "📍 CATTIA, Brașov",
+      "📅 Thursday, 26 November",
+      "🕔 17:00",
+      "Please have the QR code ready at the entrance. See you on Thursday! ✨",
+      "",
+      "JCI Brașov Team" + (who && who !== "echipa" ? "\nvia " + who : "")
+    ].join("\n");
+    return [
+      "Bună ziua" + (n ? ", " + n : "") + "! 👋",
+      "Vă mulțumim că v-ați confirmat participarea la *JCI Brașov – Beyond the Initiative*. Vă trimitem aici invitația dumneavoastră personală, cu codul QR pentru check-in: 🎟️",
+      url,
+      "📍 CATTIA, Brașov",
+      "📅 Joi, 26 noiembrie",
+      "🕔 Ora 17:00",
+      "Vă rugăm să aveți codul QR la îndemână la intrare. Ne vedem joi! ✨",
+      "",
+      "Echipa JCI Brașov" + (who && who !== "echipa" ? "\nprin " + who : "")
+    ].join("\n");
+  }
+
   // ----- listă -----
   function card(c) {
     var t = [];
@@ -100,6 +128,14 @@
     var acts = c.telefon
       ? '<a class="btn b-green" href="tel:' + esc(c.telefon) + '">Sună</a><a class="btn b-blue" href="https://wa.me/' + digits + '" target="_blank" rel="noopener">WhatsApp</a>'
       : "";
+    var inv = "";
+    if (c.participa === "da") {
+      inv = c.bilet && c.telefon
+        ? '<div class="acts"><a class="btn ' + (c.invit_wa ? "b-ghost" : "b-green") + '" data-inv="' + c.id + '" href="https://wa.me/' + digits + "?text=" + encodeURIComponent(invText(c)) + '" target="_blank" rel="noopener">' +
+          (c.invit_wa ? "Retrimite invitația pe WhatsApp" : "Trimite invitația pe WhatsApp") + '</a><a class="btn b-ghost" href="/bilet/' + esc(c.bilet) + '" target="_blank" rel="noopener">Vezi invitația</a></div>' +
+          (c.invit_wa ? '<small class="muted">Invitație trimisă pe WhatsApp: ' + esc([c.invit_wa, c.invit_wa_de].filter(Boolean).join(", de ")) + "</small>" : "")
+        : '<p class="muted mt">Fără invitație: persoana nu este înscrisă. Înscrie-o din Chestionar, cu e-mail, ca să primească bilet.</p>';
+    }
     var waq = "";
     if (c.telefon && c.cod) {
       waq = '<label class="lab fl" for="wn' + c.id + '">PRENUMELE DIN MESAJUL DE WHATSAPP (VERIFICĂ ÎNAINTE DE TRIMITERE)</label>' +
@@ -110,7 +146,7 @@
       (c.alt ? ", alt număr " + esc(fmtPhone(c.alt)) : "") + (c.email ? ", " + esc(c.email) : "") + (c.companie ? ", " + esc(c.companie) : "") + "</small>" +
       (c.surse ? '<br><small class="muted">Surse: ' + esc(c.surse) + "</small>" : "") +
       '<div class="tags">' + t.join("") + "</div>" + qs +
-      '<div class="acts">' + acts + '<button class="btn b-ghost" data-form="' + c.id + '">Chestionar</button></div>' + waq +
+      '<div class="acts">' + acts + '<button class="btn b-ghost" data-form="' + c.id + '">Chestionar</button></div>' + inv + waq +
       '<label class="chk"><input type="checkbox" data-cont="' + c.id + '"' + (c.contactat ? " checked" : "") + "><span>Contactat" +
       (c.contactat && (c.contactat_de || c.contactat_la) ? " (" + esc([c.contactat_de, c.contactat_la].filter(Boolean).join(", ")) + ")" : "") + "</span></label>" +
       '<div style="display:flex;gap:28px;flex-wrap:wrap"><label class="chk"><input type="checkbox" data-part="' + c.id + '" data-v="da"' + (c.participa === "da" ? " checked" : "") + "><span>Participă</span></label>" +
@@ -305,6 +341,12 @@
     var c = (D && D.contacte || []).filter(function (x) { return x.id === id; })[0];
     if (c) a.href = "https://wa.me/" + a.getAttribute("data-tel") + "?text=" + encodeURIComponent(waText(c, pren));
     api("/api/echipa/chestionar-trimis", { id: id, prenume: pren }).then(function () { load(); }).catch(function () {});
+  });
+  // Invitația pentru participanți: se deschide WhatsApp și se notează trimiterea.
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest ? e.target.closest("a[data-inv]") : null;
+    if (!a) return;
+    api("/api/echipa/invitatie-wa", { id: Number(a.getAttribute("data-inv")) }).then(function () { load(); }).catch(function () {});
   });
   document.addEventListener("change", function (e) {
     var i = e.target;
