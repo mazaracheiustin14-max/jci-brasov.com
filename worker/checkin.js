@@ -379,6 +379,11 @@ export async function handleCheckin(request, env, url, overLimit) {
     return s ? blitzPage(env, s, url.searchParams.get("ok") === "1") : Response.redirect(`${url.origin}/checkin`, 302);
   }
 
+  if (p === "/checkin/plecari" || p === "/checkin/plecari/") {
+    const s = await staffSession(request, env);
+    return s ? plecariPage(s) : Response.redirect(`${url.origin}/checkin`, 302);
+  }
+
   if (p === "/checkin/print" || p === "/checkin/print/") {
     const s = await staffSession(request, env);
     return s ? printPage(s) : Response.redirect(`${url.origin}/checkin`, 302);
@@ -425,6 +430,12 @@ export async function handleCheckin(request, env, url, overLimit) {
       if (request.method !== "POST" || !sameOrigin(request)) return json({ error: "method" }, 405);
       return printApi(request, env, p);
     }
+    if (p === "/api/echipa/plecari") return plecariList(env, url.searchParams.get("q") || "");
+    if (p === "/api/echipa/plecare" || p === "/api/echipa/muta") {
+      if (request.method !== "POST" || !sameOrigin(request)) return json({ error: "method" }, 405);
+      const b = await request.json().catch(() => ({}));
+      return p === "/api/echipa/plecare" ? plecareSet(env, String(b.token || ""), b.undo === true, s) : mutaPersoana(env, String(b.token || ""), Number(b.from) || 1, s);
+    }
     if (p === "/api/echipa/stats") return stats(env);
     if (p === "/api/echipa/cauta") return search(env, url.searchParams.get("q") || "");
     if (p === "/api/echipa/export.csv") return exportCsv(env);
@@ -443,9 +454,10 @@ async function doCheckin(env, token, undo, s) {
   if (!row) return json({ ok: false, error: "Cod necunoscut" }, 404);
   if (row.status !== "confirmat" && row.status !== "test") return json({ ok: false, error: "Persoana nu are loc confirmat" }, 409);
   try { await ensureBlitzCols(env); } catch (e) { console.warn("ensureBlitzCols", e && e.message); }
+  await ensureLeaveCols(env);
   if (undo) {
     // Anularea eliberează și locul din bloc, ca următoarea persoană să îl primească.
-    await env.DB.prepare("UPDATE inscrieri SET prezent_la=NULL, prezent_de=NULL, bloc=NULL, slot=NULL WHERE id=?").bind(row.id).run();
+    await env.DB.prepare("UPDATE inscrieri SET prezent_la=NULL, prezent_de=NULL, bloc=NULL, slot=NULL, mese=NULL, plecat_la=NULL, plecat_de=NULL WHERE id=?").bind(row.id).run();
     await env.DB.prepare("INSERT INTO checkin_log (inscriere_id,actiune,de) VALUES (?,?,?)").bind(row.id, "anulare", s.who).run();
     return json({ ok: true, undone: true });
   }
@@ -744,6 +756,7 @@ function dashboardPage(s) {
 <div class="card mt"><p class="lab">BLOCURI, CÂȚI AU PRIMIT ECUSON</p><p class="val" style="color:#fff" id="blk">Nimeni încă.</p></div>
 <div class="card mt"><p class="lab">CAUTĂ DUPĂ NUME, EMAIL SAU TELEFON</p><input id="q" class="mt" placeholder="ex. Popescu" autocomplete="off" enterkeyhint="search"><div id="rez"></div></div>
 <div class="card mt"><p class="lab">ULTIMELE INTRĂRI</p><div id="ult"><p class="muted mt">Nimeni încă.</p></div></div>
+<a class="btn b-red mt" href="/checkin/plecari">Plecări și mutări la Blitz Networking</a>
 <a class="btn b-blue mt" href="/checkin/print">Stația de printare ecusoane (laptop)</a>
 <a class="btn b-blue mt" href="/checkin/apeluri">Apeluri și contacte</a>
 <a class="btn b-green mt" href="/checkin/neconfirmate">Invitații pe WhatsApp</a>
@@ -784,7 +797,7 @@ async function confirmReceipt(request, env, token) {
 // printare: pagina cere următorul ecuson la 2 secunde și îl tipărește. Coloana inscrieri.ecuson_la = momentul în care
 // ecusonul a fost preluat de stație; NULL = în coadă. Retipărirea pune persoana din nou în coadă.
 // Interfața: public/assets/js/print-station.js (fără script inline, CSP). Chrome pornit cu --kiosk-printing tipărește fără dialog.
-const PRINT_JS = "2";
+const PRINT_JS = "3";
 async function ensurePrintCol(env) {
   try { await env.DB.prepare("ALTER TABLE inscrieri ADD COLUMN ecuson_la TEXT").run(); } catch (e) { /* există deja */ }
 }
@@ -793,12 +806,13 @@ async function badgeData(env, r) {
   return {
     id: r.id, token: r.token, nume: r.nume || "", companie: r.companie || "",
     domeniu: domLabel(r.domeniu || "", false), vip: await isVip(env, r),
-    bloc: l ? l.bloc : "", blocNume: l ? l.nume : "", nr: l ? l.nr : "", mese: l ? l.grupe.map((g) => (l ? l.bloc : "") + g) : [],
+    bloc: l ? l.bloc : "", blocNume: l ? l.nume : "", nr: l ? l.nr : "", mese: l ? meseOf(r).map((g) => l.bloc + g) : [],
   };
 }
 async function printApi(request, env, p) {
   await ensurePrintCol(env);
-  const PENDING = "eveniment=? AND prezent_la IS NOT NULL AND bloc IS NOT NULL AND ecuson_la IS NULL";
+  await ensureLeaveCols(env);
+  const PENDING = "eveniment=? AND prezent_la IS NOT NULL AND bloc IS NOT NULL AND ecuson_la IS NULL AND plecat_la IS NULL";
   if (p === "/api/echipa/print-again") {
     const b = await request.json().catch(() => ({}));
     const t = String(b.token || "");
@@ -812,7 +826,7 @@ async function printApi(request, env, p) {
   }
   // print-next: preia atomic cel mai vechi ecuson din coadă, ca două stații deschise să nu tipărească aceeași persoană.
   const row = await env.DB.prepare(
-    `UPDATE inscrieri SET ecuson_la=datetime('now') WHERE id=(SELECT id FROM inscrieri WHERE ${PENDING} ORDER BY prezent_la, id LIMIT 1) AND ecuson_la IS NULL RETURNING id, token, nume, companie, domeniu, sursa, email, bloc, slot`
+    `UPDATE inscrieri SET ecuson_la=datetime('now') WHERE id=(SELECT id FROM inscrieri WHERE ${PENDING} ORDER BY prezent_la, id LIMIT 1) AND ecuson_la IS NULL RETURNING id, token, nume, companie, domeniu, sursa, email, bloc, slot, mese`
   ).bind(EVENT).first();
   const left = await env.DB.prepare(`SELECT COUNT(*) AS n FROM inscrieri WHERE ${PENDING}`).bind(EVENT).first();
   const fara = await env.DB.prepare("SELECT COUNT(*) AS n FROM inscrieri WHERE eveniment=? AND prezent_la IS NOT NULL AND bloc IS NULL").bind(EVENT).first();
@@ -838,3 +852,103 @@ function printPage(s) {
 <script src="/assets/js/print-station.js?v=${PRINT_JS}"></script></body></html>`;
   return html(body);
 }
+
+// ---------- Plecări și mutări la Blitz Networking (25 nov 2026) ----------
+// Pagina /checkin/plecari (telefon, PIN-ul echipei): căutare după nume sau telefon printre cei intrați.
+// „A plecat” (inscrieri.plecat_la, plecat_de): persoana nu mai e numărată la mese; locul din bloc rămâne al ei, ca plecarea să poată fi anulată.
+// „Mută și retipărește”: pentru fiecare rundă (de la cea aleasă) în care persoana ar rămâne într-o grupă de 1–2 oameni, primește altă masă
+// din același bloc (cea mai mică grupă cu cel puțin 3 oameni, cel mult 6 la masă). Mesele noi se țin în inscrieri.mese („2,2,3,4,5,1”),
+// iar ecusonul intră din nou în coada stației de printare.
+const MIN_GRUPA = 3, MAX_GRUPA = 6;
+let leaveCols = false;
+async function ensureLeaveCols(env) {
+  if (leaveCols) return;
+  await ensurePrintCol(env);
+  for (const col of ["plecat_la TEXT", "plecat_de TEXT", "mese TEXT"]) {
+    try { await env.DB.prepare(`ALTER TABLE inscrieri ADD COLUMN ${col}`).run(); } catch (e) { /* există deja */ }
+  }
+  leaveCols = true;
+}
+function meseOf(r) {
+  const m = String(r.mese || "").split(",").map(Number);
+  if (m.length === 6 && m.every((x) => x >= 1 && x <= 5)) return m;
+  const l = blitzInfo(r.bloc, r.slot);
+  return l ? l.grupe : [];
+}
+const codOf = (r) => { const l = blitzInfo(r.bloc, r.slot); return l ? l.bloc + l.nr : ""; };
+async function prezenti(env) {
+  const r = await env.DB.prepare("SELECT id, token, nume, telefon, bloc, slot, mese, plecat_la FROM inscrieri WHERE eveniment=? AND prezent_la IS NOT NULL AND bloc IS NOT NULL ORDER BY bloc, slot").bind(EVENT).all();
+  return r.results || [];
+}
+// counts[rundă][masă] pentru persoanele active dintr-un bloc, fără persoana cu id-ul `fara`.
+function numara(rows, bloc, fara) {
+  const c = Array.from({ length: 6 }, () => [0, 0, 0, 0, 0, 0]);
+  for (const r of rows) {
+    if (r.bloc !== bloc || r.plecat_la || r.id === fara) continue;
+    meseOf(r).forEach((t, k) => { c[k][t]++; });
+  }
+  return c;
+}
+async function plecariList(env, q) {
+  await ensureLeaveCols(env);
+  const rows = await prezenti(env);
+  const item = (r, extra = {}) => ({ token: r.token, nume: r.nume, cod: codOf(r), plecat: !!r.plecat_la, mese: meseOf(r).map((t) => BLOC_LETTERS[r.bloc - 1] + t), ...extra });
+  q = String(q).trim().toLowerCase();
+  const digits = q.replace(/\D/g, "");
+  const rezultate = q.length < 2 ? [] : rows.filter((r) => String(r.nume || "").toLowerCase().includes(q) ||
+    (digits.length >= 4 && String(r.telefon || "").replace(/\D/g, "").includes(digits))).slice(0, 15).map((r) => item(r));
+  const mici = [];
+  const cache = {};
+  for (const r of rows) {
+    if (r.plecat_la) continue;
+    const c = cache[r.bloc] || (cache[r.bloc] = numara(rows, r.bloc, null));
+    const runde = meseOf(r).map((t, k) => (c[k][t] < MIN_GRUPA ? k + 1 : 0)).filter(Boolean);
+    if (runde.length) mici.push(item(r, { runde }));
+  }
+  return json({ rezultate, mici: mici.slice(0, 60), plecati: rows.filter((r) => r.plecat_la).map((r) => item(r)), activi: rows.filter((r) => !r.plecat_la).length });
+}
+async function plecareSet(env, token, undo, s) {
+  await ensureLeaveCols(env);
+  const row = await findByToken(env, token);
+  if (!row || !row.prezent_la) return json({ ok: false, error: "Persoana nu a făcut check-in" }, 404);
+  if (undo) await env.DB.prepare("UPDATE inscrieri SET plecat_la=NULL, plecat_de=NULL WHERE id=?").bind(row.id).run();
+  else await env.DB.prepare("UPDATE inscrieri SET plecat_la=datetime('now'), plecat_de=? WHERE id=? AND plecat_la IS NULL").bind(s.who, row.id).run();
+  await env.DB.prepare("INSERT INTO checkin_log (inscriere_id,actiune,de) VALUES (?,?,?)").bind(row.id, undo ? "revenire" : "plecare", s.who).run();
+  return json({ ok: true });
+}
+async function mutaPersoana(env, token, from, s) {
+  await ensureLeaveCols(env);
+  const row = await findByToken(env, token);
+  if (!row || !row.prezent_la || !row.bloc) return json({ ok: false, error: "Persoana nu are loc în bloc" }, 404);
+  if (row.plecat_la) return json({ ok: false, error: "Persoana e marcată ca plecată" }, 409);
+  const c = numara(await prezenti(env), row.bloc, row.id);
+  const m = meseOf(row).slice();
+  const mutate = [];
+  for (let k = Math.max(0, Math.min(5, from - 1)); k < 6; k++) {
+    if (c[k][m[k]] + 1 >= MIN_GRUPA) continue;
+    let best = 0;
+    for (let t = 1; t <= 5; t++) {
+      if (t === m[k] || c[k][t] < 1 || c[k][t] >= MAX_GRUPA) continue;
+      const ok = c[k][t] >= MIN_GRUPA - 1, bok = best && c[k][best] >= MIN_GRUPA - 1;
+      if (!best || (ok && !bok) || (ok === bok && (ok ? c[k][t] < c[k][best] : c[k][t] > c[k][best]))) best = t;
+    }
+    if (best) { m[k] = best; mutate.push(k + 1); }
+  }
+  const L = BLOC_LETTERS[row.bloc - 1];
+  if (!mutate.length) return json({ ok: true, mutat: false, mese: m.map((t) => L + t) });
+  await env.DB.prepare("UPDATE inscrieri SET mese=?, ecuson_la=NULL WHERE id=?").bind(m.join(","), row.id).run();
+  await env.DB.prepare("INSERT INTO checkin_log (inscriere_id,actiune,de) VALUES (?,?,?)").bind(row.id, "mutare", s.who).run();
+  return json({ ok: true, mutat: true, runde: mutate, mese: m.map((t) => L + t) });
+}
+function plecariPage(s) {
+  return html(shell("Plecări și mutări", `<p class="k">Blitz Networking</p><h1>Plecări și mutări</h1>
+<div class="card"><p class="lab">CAUTĂ DUPĂ NUME SAU TELEFON</p><input id="q" class="mt" placeholder="ex. Popescu sau 0722" autocomplete="off" enterkeyhint="search"><div id="rez"></div>
+<p class="muted mt">„A plecat” scoate persoana din calcul. „Mută” îi schimbă mesele la rundele în care ar rămâne în grupă de 1–2 oameni și îi retipărește ecusonul la laptop.</p></div>
+<div class="card mt"><p class="lab">MUTĂ ÎNCEPÂND CU RUNDA</p><select id="from" class="mt" style="width:100%;font:inherit;font-size:18px;padding:14px;border-radius:12px;background:#0F0C26;color:#fff;border:1.5px solid rgba(255,255,255,.2)">
+<option value="1">Runda 1 (toate rundele)</option><option value="2">Runda 2</option><option value="3">Runda 3</option><option value="4">Runda 4 (Sesiunea 2)</option><option value="5">Runda 5</option><option value="6">Runda 6</option></select></div>
+<div class="card mt"><p class="lab">RĂMAȘI ÎN GRUPE PREA MICI</p><div id="mici"><p class="muted mt">Se încarcă.</p></div></div>
+<div class="card mt"><p class="lab">AU PLECAT</p><div id="plecati"><p class="muted mt">Nimeni.</p></div></div>
+<a class="btn b-ghost mt" href="/checkin">Înapoi la check-in (${esc(s.who)})</a>`,
+    `<script src="/assets/js/plecari.js?v=${PRINT_JS}"></script>`));
+}
+export const _test = { plecariList, plecareSet, mutaPersoana, printApi };

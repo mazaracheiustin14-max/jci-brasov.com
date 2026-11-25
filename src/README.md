@@ -217,3 +217,10 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - `/api/echipa/print-again` (căutare după nume, „Pune în coadă”) retipărește; `/api/echipa/print-skip` golește coada fără tipărire (de folosit înainte de deschiderea porților, după testele de check-in).
 - Fără fereastra de confirmare: Chrome pornit cu `--kiosk-printing`, imprimanta de etichete setată ca implicită în Windows, cu hârtia 100 x 70 mm în preferințele driverului. Pagina are `@page { size: 100mm 70mm; margin: 0 }`.
 - Interfața: `public/assets/js/print-station.js` și `public/assets/css/print-station.css` (fără script inline; la modificare se schimbă `PRINT_JS` din worker/checkin.js).
+
+## Plecări și mutări la Blitz Networking (25 nov 2026)
+- Pagina `/checkin/plecari` (telefon, PIN-ul echipei, buton roșu în panoul /checkin): căutare după nume sau telefon printre cei intrați.
+- „A plecat” (`inscrieri.plecat_la`, `plecat_de`; „A revenit” anulează): persoana nu mai e numărată la mese și nu i se mai tipărește ecuson.
+- „Mută”: la rundele (de la cea aleasă) în care persoana ar rămâne în grupă de 1–2 oameni primește altă masă din același bloc (cea mai mică grupă cu cel puțin 3, cel mult 6 la masă).
+  Mesele noi stau în `inscrieri.mese` („2,2,3,4,5,1”), iar ecusonul reintră în coada stației de printare. Lista „Rămași în grupe prea mici” arată cine trebuie mutat.
+- Cod: sfârșitul lui `worker/checkin.js`, interfața `public/assets/js/plecari.js`. Test: `node --no-warnings src/tests/plecari.test.mjs`.
