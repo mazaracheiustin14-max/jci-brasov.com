@@ -5,7 +5,7 @@ import { ensureDomCols, domClean, parseTinte } from "./domenii.js";
 
 export const EVENT = "beyond-2026";
 export const CAPACITY = 150;
-export const DEADLINE = Date.UTC(2026, 10, 24, 21, 59, 59); // 24 noiembrie 2026, 23:59 ora României
+export const DEADLINE = Date.UTC(2026, 10, 26, 21, 59, 59); // 26 noiembrie 2026, 23:59 ora României (prelungit de la 24 noiembrie, la cererea proprietarului)
 export const EMAIL_RE = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,24}$/;
 
 export async function countRegistrations(env) {

@@ -364,7 +364,7 @@ async function saveCall(env, h, s, b) {
     if (!acordDate) return err(h, "Pentru înscriere este obligatoriu acordul verbal pentru prelucrarea datelor.");
     if (!phoneOk(contact.telefon || telefon)) return err(h, "Numărul de telefon nu este valid.");
     if (Date.now() > DEADLINE && b.depasit_termen !== true) {
-      return h.json({ ok: false, needsConfirm: true, error: "Termenul de înscriere (24 noiembrie, 23:59) a trecut. Adaugi totuși persoana?" }, 409);
+      return h.json({ ok: false, needsConfirm: true, error: "Termenul de înscriere (26 noiembrie, 23:59) a trecut. Adaugi totuși persoana?" }, 409);
     }
     const reg = await registerPerson(env, {
       nume: numeSunat, email, telefon: contact.telefon || telefon, companie: "", functie: "", profil: "",
@@ -542,7 +542,7 @@ export async function chestionarSave(request, env, h) {
     observatii: "Completat de persoană, prin linkul trimis pe WhatsApp.",
   });
   const j = await r.json();
-  if (j.needsConfirm) return h.json({ ok: false, error: "Înscrierile s-au închis pe 24 noiembrie. Scrie-ne la contact@jci-brasov.com și verificăm dacă mai sunt locuri." }, 409);
+  if (j.needsConfirm) return h.json({ ok: false, error: "Înscrierile s-au închis pe 26 noiembrie. Scrie-ne la contact@jci-brasov.com și verificăm dacă mai sunt locuri." }, 409);
   if (!j.ok) return h.json({ ok: false, error: j.error || "Nu s-a putut salva." }, r.status);
   return h.json({ ok: true, status, stop, rezultat: j.rezultat || "", deja: !!c.inscriere_id });
 }

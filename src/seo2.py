@@ -38,7 +38,7 @@ def event_page(p, en):
                               "email": "contact@jci-brasov.com", "logo": SITE + "assets/img/icon-512.png"}
             j['performer'] = [{"@type": "Person", "name": n, "jobTitle": t, "worksFor": {"@type": "Organization", "name": o}} for n, t, o in PERF]
             j['offers'] = {"@type": "Offer", "price": "0", "priceCurrency": "RON", "availability": "https://schema.org/InStock",
-                           "url": url + "#rezerva", "validFrom": "2026-11-01T00:00:00+02:00", "validThrough": "2026-11-24T23:59:00+02:00"}
+                           "url": url + "#rezerva", "validFrom": "2026-11-01T00:00:00+02:00", "validThrough": "2026-11-26T23:59:00+02:00"}
             j['location']['address'].update({"addressRegion": "Brașov", "streetAddress": "Strada Institutului 35"})
             j['audience'] = {"@type": "Audience", "audienceType": "Entrepreneurs, managers and young professionals" if en else "Antreprenori, manageri și tineri profesioniști"}
             s = s.replace(m.group(0), '<script type="application/ld+json">' + json.dumps(j, ensure_ascii=False) + '</script>', 1)
@@ -101,7 +101,7 @@ LLMS = '''# JCI Brașov
 - Joi, 26 noiembrie 2026, 17:00–22:30, CATTIA Brașov, Strada Institutului 35.
 - Marchează trecerea JCI Brașov de la grup de inițiativă la grup cu drepturi depline în JCI România.
 - Două paneluri („Puterea comunității” și „Tehnologia care ne schimbă viața”), opt invitați, două sesiuni de Blitz Networking.
-- Acces gratuit, cu înscriere: https://jci-brasov.com/eveniment#rezerva (aproximativ 150 de locuri, înscrieri până pe 24 noiembrie 2026, ora 23:59).
+- Acces gratuit, cu înscriere: https://jci-brasov.com/eveniment#rezerva (aproximativ 150 de locuri, înscrieri până pe 26 noiembrie 2026, ora 23:59).
 - Pachete de sponsorizare: Sponsor 1.000 lei, Sponsor Premium 2.000 lei; parteneriate și în regim de barter.
 - Bilet VIP, 200 lei: primele rânduri, întâlnire cu invitații, networking prioritar, degustare de vin și preparate; /eveniment#vip.
 

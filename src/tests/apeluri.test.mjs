@@ -99,9 +99,9 @@ r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_
 assert.equal(r.status, 400); assert.match(r.j.error, /acord/i);
 assert.equal((DB._db.prepare("SELECT COUNT(*) n FROM inscrieri WHERE email='nou@example.com'").get()).n, 0, "nimic creat la refuz");
 
-// termenul a trecut? Testul rulează înainte de 24 nov 2026; simulăm cu Date.now
+// termenul a trecut? Termenul e 26 nov 2026, 23:59 (RO); simulăm cu Date.now o zi după
 const realNow = Date.now;
-Date.now = () => Date.UTC(2026, 10, 25, 12, 0, 0);
+Date.now = () => Date.UTC(2026, 10, 27, 12, 0, 0);
 r = await call("/api/echipa/apel", { contact_id: cn.id, apelant: "Colega", nume_sunat: "Cineva Nou", raspuns: "da", status_final: "confirmat", email: "nou@example.com", acord_date: true });
 assert.equal(r.status, 409); assert.ok(r.j.needsConfirm, "după termen cere confirmare");
 assert.equal((DB._db.prepare("SELECT COUNT(*) n FROM inscrieri WHERE email='nou@example.com'").get()).n, 0);
