@@ -784,7 +784,7 @@ async function confirmReceipt(request, env, token) {
 // printare: pagina cere următorul ecuson la 2 secunde și îl tipărește. Coloana inscrieri.ecuson_la = momentul în care
 // ecusonul a fost preluat de stație; NULL = în coadă. Retipărirea pune persoana din nou în coadă.
 // Interfața: public/assets/js/print-station.js (fără script inline, CSP). Chrome pornit cu --kiosk-printing tipărește fără dialog.
-const PRINT_JS = "1";
+const PRINT_JS = "2";
 async function ensurePrintCol(env) {
   try { await env.DB.prepare("ALTER TABLE inscrieri ADD COLUMN ecuson_la TEXT").run(); } catch (e) { /* există deja */ }
 }

@@ -13,22 +13,22 @@
   var on = false, busy = false, done = 0, log = [];
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function labelHtml(j) {
-    var sym = SYM[j.bloc] || SYM.A, cells = "";
-    for (var i = 0; i < 6; i++) cells += '<span' + (i === 3 ? ' class="s2"' : "") + '>R' + (i + 1) + "</span>";
-    var mese = "";
-    for (i = 0; i < 6; i++) mese += "<b" + (i === 3 ? ' class="s2"' : "") + ">" + esc(j.mese[i] || "") + "</b>";
+    var sym = SYM[j.bloc] || SYM.A;
+    function grup(titlu, from) {
+      var h = '<div class="sg"><div class="sh">' + titlu + '</div><div class="cs">';
+      for (var i = from; i < from + 3; i++) h += "<div><span>Runda " + (i + 1) + "</span><b>" + esc(j.mese[i] || "") + "</b></div>";
+      return h + "</div></div>";
+    }
     var dm = [j.domeniu, j.companie].filter(Boolean).join(" | ");
     return '<div class="eb' + (j.vip ? " vip" : "") + '"><div class="band"><div class="sym"><svg viewBox="0 0 100 100" fill="#fff">' + sym + "</svg></div>" +
       '<div class="code">' + esc(j.bloc + j.nr) + '</div><div class="bn">' + (j.vip ? '<span class="vipt">VIP</span>' : "") + "<span>" + esc(j.blocNume) + "</span></div></div>" +
       '<div class="nm">' + esc(j.nume) + "</div>" + (dm ? '<div class="dm">' + esc(dm) + "</div>" : "") +
-      '<div class="rt"><span class="h">Runda</span>' + cells + '<span class="h">Masa</span>' + mese + "</div>" +
-      '<div class="ss"><span>Sesiunea 1: Cunoaștere</span><span>Sesiunea 2: Colaborare</span></div>' +
-      '<div class="ft">JCI Brașov | Beyond the Initiative</div></div>';
+      '<div class="rt">' + grup("SESIUNEA 1", 0) + grup("SESIUNEA 2", 3) + "</div></div>";
   }
   function fit(root) {
     var n = root.querySelector(".nm"); if (!n) return;
-    var size = 17; n.style.fontSize = size + "pt";
-    while (n.scrollWidth > n.clientWidth && size > 9) { size -= 0.5; n.style.fontSize = size + "pt"; }
+    var size = 25; n.style.fontSize = size + "pt";
+    while (n.scrollWidth > n.clientWidth && size > 12) { size -= 0.5; n.style.fontSize = size + "pt"; }
   }
   function render(j) {
     $("label").innerHTML = labelHtml(j); $("lab-host").innerHTML = labelHtml(j);
