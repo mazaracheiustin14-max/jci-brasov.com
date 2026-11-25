@@ -210,3 +210,10 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - 20 nov 2026: mesaj nou (textul lui Iustin, cu emoticoane, „invitația să fi ajuns în SPAM”, confirmare până pe 21 noiembrie) și trei liste:
   Formular (ultimul chestionar, online sau la apel, are `status_final = 'confirmat'`), Gmail (`primire_confirmata`) și Restul (nici una, nici alta), care primesc mesajul.
   Trimiterile noi se notează în `wa_spam_trimis` / `wa_spam_de` (cele din 19 nov rămân în `wa_invit_trimis`).
+
+## Stația de printare a ecusoanelor (25 nov 2026)
+- Pagina `/checkin/print` (PIN-ul echipei, buton în panoul /checkin), deschisă pe laptopul de la intrare, legat prin USB la imprimanta termică de etichete Printex X500 (100 x 70 mm).
+- Fiecare check-in cu loc în bloc intră în coadă (`inscrieri.ecuson_la` NULL). Pagina cere la 2 secunde `/api/echipa/print-next` (preluare atomică, `UPDATE ... RETURNING`), desenează ecusonul (cod, simbolul blocului, nume, domeniu și companie, mesele celor 6 runde, VIP cu chenar dublu) și apelează `window.print()`.
+- `/api/echipa/print-again` (căutare după nume, „Pune în coadă”) retipărește; `/api/echipa/print-skip` golește coada fără tipărire (de folosit înainte de deschiderea porților, după testele de check-in).
+- Fără fereastra de confirmare: Chrome pornit cu `--kiosk-printing`, imprimanta de etichete setată ca implicită în Windows, cu hârtia 100 x 70 mm în preferințele driverului. Pagina are `@page { size: 100mm 70mm; margin: 0 }`.
+- Interfața: `public/assets/js/print-station.js` și `public/assets/css/print-station.css` (fără script inline; la modificare se schimbă `PRINT_JS` din worker/checkin.js).

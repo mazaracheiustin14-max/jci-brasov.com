@@ -379,6 +379,11 @@ export async function handleCheckin(request, env, url, overLimit) {
     return s ? blitzPage(env, s, url.searchParams.get("ok") === "1") : Response.redirect(`${url.origin}/checkin`, 302);
   }
 
+  if (p === "/checkin/print" || p === "/checkin/print/") {
+    const s = await staffSession(request, env);
+    return s ? printPage(s) : Response.redirect(`${url.origin}/checkin`, 302);
+  }
+
   if (p === "/checkin" || p === "/checkin/") {
     const s = await staffSession(request, env);
     return s ? dashboardPage(s) : loginPage(url.searchParams.get("e") === "1", url.searchParams.get("n"));
@@ -415,6 +420,10 @@ export async function handleCheckin(request, env, url, overLimit) {
       const f = await request.formData().catch(() => null);
       await preallocRun(env, { k: Number(f && f.get("k")) || 0, reset: !!(f && f.get("reset")) });
       return Response.redirect(`${url.origin}/checkin/blitz?ok=1`, 303);
+    }
+    if (p === "/api/echipa/print-next" || p === "/api/echipa/print-again" || p === "/api/echipa/print-skip") {
+      if (request.method !== "POST" || !sameOrigin(request)) return json({ error: "method" }, 405);
+      return printApi(request, env, p);
     }
     if (p === "/api/echipa/stats") return stats(env);
     if (p === "/api/echipa/cauta") return search(env, url.searchParams.get("q") || "");
@@ -735,6 +744,7 @@ function dashboardPage(s) {
 <div class="card mt"><p class="lab">BLOCURI, CÂȚI AU PRIMIT ECUSON</p><p class="val" style="color:#fff" id="blk">Nimeni încă.</p></div>
 <div class="card mt"><p class="lab">CAUTĂ DUPĂ NUME, EMAIL SAU TELEFON</p><input id="q" class="mt" placeholder="ex. Popescu" autocomplete="off" enterkeyhint="search"><div id="rez"></div></div>
 <div class="card mt"><p class="lab">ULTIMELE INTRĂRI</p><div id="ult"><p class="muted mt">Nimeni încă.</p></div></div>
+<a class="btn b-blue mt" href="/checkin/print">Stația de printare ecusoane (laptop)</a>
 <a class="btn b-blue mt" href="/checkin/apeluri">Apeluri și contacte</a>
 <a class="btn b-green mt" href="/checkin/neconfirmate">Invitații pe WhatsApp</a>
 <a class="btn b-ghost mt" href="/checkin/blitz">Blitz Networking pe domenii</a>
@@ -766,4 +776,65 @@ async function confirmReceipt(request, env, token) {
 <form method="POST" action="/confirma/${token}" id="cf-form"><button class="btn b-green mt" type="submit">${T.b}</button></form>
 <a class="btn b-ghost mt" href="/bilet/${token}">${T.t}</a>`;
   return html(shell(en ? "Confirm receipt" : "Confirmare invitație", inner, done ? "" : `<script src="/assets/js/confirma.js"></script>`));
+}
+
+// ---------- Stația de printare a ecusoanelor (25 nov 2026) ----------
+// Laptopul de la intrare ține deschisă pagina /checkin/print, conectat la imprimanta termică de etichete (100 x 70 mm).
+// Fiecare check-in confirmat (scanare /c/<cod> sau confirmare din panou) primește bloc și loc, apoi intră în coada de
+// printare: pagina cere următorul ecuson la 2 secunde și îl tipărește. Coloana inscrieri.ecuson_la = momentul în care
+// ecusonul a fost preluat de stație; NULL = în coadă. Retipărirea pune persoana din nou în coadă.
+// Interfața: public/assets/js/print-station.js (fără script inline, CSP). Chrome pornit cu --kiosk-printing tipărește fără dialog.
+const PRINT_JS = "1";
+async function ensurePrintCol(env) {
+  try { await env.DB.prepare("ALTER TABLE inscrieri ADD COLUMN ecuson_la TEXT").run(); } catch (e) { /* există deja */ }
+}
+async function badgeData(env, r) {
+  const l = blitzInfo(r.bloc, r.slot);
+  return {
+    id: r.id, token: r.token, nume: r.nume || "", companie: r.companie || "",
+    domeniu: domLabel(r.domeniu || "", false), vip: await isVip(env, r),
+    bloc: l ? l.bloc : "", blocNume: l ? l.nume : "", nr: l ? l.nr : "", mese: l ? l.grupe.map((g) => (l ? l.bloc : "") + g) : [],
+  };
+}
+async function printApi(request, env, p) {
+  await ensurePrintCol(env);
+  const PENDING = "eveniment=? AND prezent_la IS NOT NULL AND bloc IS NOT NULL AND ecuson_la IS NULL";
+  if (p === "/api/echipa/print-again") {
+    const b = await request.json().catch(() => ({}));
+    const t = String(b.token || "");
+    if (!TOKEN_RE.test(t)) return json({ ok: false, error: "Cod necunoscut" }, 400);
+    const r = await env.DB.prepare("UPDATE inscrieri SET ecuson_la=NULL WHERE token=? AND eveniment=? AND prezent_la IS NOT NULL AND bloc IS NOT NULL").bind(t, EVENT).run();
+    return json({ ok: !!(r.meta && r.meta.changes), error: r.meta && r.meta.changes ? "" : "Persoana nu a făcut încă check-in" });
+  }
+  if (p === "/api/echipa/print-skip") {
+    const r = await env.DB.prepare(`UPDATE inscrieri SET ecuson_la=datetime('now') WHERE ${PENDING}`).bind(EVENT).run();
+    return json({ ok: true, n: (r.meta && r.meta.changes) || 0 });
+  }
+  // print-next: preia atomic cel mai vechi ecuson din coadă, ca două stații deschise să nu tipărească aceeași persoană.
+  const row = await env.DB.prepare(
+    `UPDATE inscrieri SET ecuson_la=datetime('now') WHERE id=(SELECT id FROM inscrieri WHERE ${PENDING} ORDER BY prezent_la, id LIMIT 1) AND ecuson_la IS NULL RETURNING id, token, nume, companie, domeniu, sursa, email, bloc, slot`
+  ).bind(EVENT).first();
+  const left = await env.DB.prepare(`SELECT COUNT(*) AS n FROM inscrieri WHERE ${PENDING}`).bind(EVENT).first();
+  const fara = await env.DB.prepare("SELECT COUNT(*) AS n FROM inscrieri WHERE eveniment=? AND prezent_la IS NOT NULL AND bloc IS NULL").bind(EVENT).first();
+  return json({ ok: true, job: row ? await badgeData(env, row) : null, left: (left && left.n) || 0, faraLoc: (fara && fara.n) || 0 });
+}
+function printPage(s) {
+  const body = `<!DOCTYPE html><html lang="ro"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Stația de printare ecusoane</title><link rel="icon" href="/assets/img/favicon-32.png">
+<link rel="stylesheet" href="/assets/css/print-station.css?v=${PRINT_JS}"></head><body>
+<div class="ui">
+<p class="k">Beyond the Initiative</p><h1>Stația de printare ecusoane</h1>
+<div class="card"><div class="row"><div><p class="lab">STARE</p><p class="val" id="st">Oprită</p></div><div><p class="lab">ÎN COADĂ</p><p class="val" id="left">0</p></div><div><p class="lab">TIPĂRITE AICI</p><p class="val" id="done">0</p></div></div>
+<p class="muted" id="warn"></p>
+<button class="btn b-green" id="go" type="button">Pornește printarea automată</button>
+<button class="btn b-ghost" id="test" type="button">Tipărește o etichetă de test</button></div>
+<div class="card"><p class="lab">RETIPĂREȘTE UN ECUSON</p><input id="q" placeholder="Caută după nume" autocomplete="off"><div id="rez"></div></div>
+<div class="card"><p class="lab">ULTIMELE ECUSOANE</p><div id="log"><p class="muted">Niciunul încă.</p></div></div>
+<div class="card"><p class="lab">PREVIZUALIZARE</p><div class="prev"><div id="lab-host"></div></div></div>
+<button class="btn b-ghost" id="skip" type="button">Golește coada (marchează ca tipărite)</button>
+<p class="muted">Conectat ca ${esc(s.who)}. Pentru printare fără fereastra de confirmare, Chrome trebuie pornit cu opțiunea --kiosk-printing, cu imprimanta de etichete setată ca implicită (100 x 70 mm).</p>
+</div>
+<div id="label"></div>
+<script src="/assets/js/print-station.js?v=${PRINT_JS}"></script></body></html>`;
+  return html(body);
 }
