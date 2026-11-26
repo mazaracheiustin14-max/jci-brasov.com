@@ -6,7 +6,7 @@
 
 import { handleWaInvit } from "./wa-invit.js";
 import { handleApeluri, chestionarPage, chestionarSave } from "./apeluri.js";
-import { domLabel, parseTinte, ensureDomCols, syncVipDomenii, paidVipCond } from "./domenii.js";
+import { DOMENII, domClean, domLabel, parseTinte, ensureDomCols, syncVipDomenii, paidVipCond } from "./domenii.js";
 import { preallocVip, domainCandidates, suggestK } from "./blitz-match.js";
 
 const EVENT = "beyond-2026";
@@ -430,6 +430,10 @@ export async function handleCheckin(request, env, url, overLimit) {
       if (request.method !== "POST" || !sameOrigin(request)) return json({ error: "method" }, 405);
       return printApi(request, env, p);
     }
+    if (p === "/api/echipa/walkin") {
+      if (request.method !== "POST" || !sameOrigin(request)) return json({ error: "method" }, 405);
+      return walkIn(request, env, s);
+    }
     if (p === "/api/echipa/plecari") return plecariList(env, url.searchParams.get("q") || "");
     if (p === "/api/echipa/plecare" || p === "/api/echipa/muta") {
       if (request.method !== "POST" || !sameOrigin(request)) return json({ error: "method" }, 405);
@@ -797,7 +801,7 @@ async function confirmReceipt(request, env, token) {
 // printare: pagina cere următorul ecuson la 2 secunde și îl tipărește. Coloana inscrieri.ecuson_la = momentul în care
 // ecusonul a fost preluat de stație; NULL = în coadă. Retipărirea pune persoana din nou în coadă.
 // Interfața: public/assets/js/print-station.js (fără script inline, CSP). Chrome pornit cu --kiosk-printing tipărește fără dialog.
-const PRINT_JS = "3";
+const PRINT_JS = "5";
 async function ensurePrintCol(env) {
   try { await env.DB.prepare("ALTER TABLE inscrieri ADD COLUMN ecuson_la TEXT").run(); } catch (e) { /* există deja */ }
 }
@@ -832,6 +836,58 @@ async function printApi(request, env, p) {
   const fara = await env.DB.prepare("SELECT COUNT(*) AS n FROM inscrieri WHERE eveniment=? AND prezent_la IS NOT NULL AND bloc IS NULL").bind(EVENT).first();
   return json({ ok: true, job: row ? await badgeData(env, row) : null, left: (left && left.n) || 0, faraLoc: (fara && fara.n) || 0 });
 }
+
+// ---------- Participanți fără invitație (26 nov 2026) ----------
+// Din stația de printare: nume, telefon, domeniu (obligatorii), firmă și e-mail (opționale). Persoana se salvează în
+// inscrieri (status confirmat, sursa „Fără invitație, înscris la intrare”), primește check-in, loc în bloc după domeniu
+// și intră în coada de printare. Dacă telefonul sau e-mailul există deja la o înscriere, se face check-in pe aceea.
+async function walkIn(request, env, s) {
+  const b = await request.json().catch(() => ({}));
+  const cl = (v, n) => String(v == null ? "" : v).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, n);
+  const nume = cl(b.nume, 120), tel = cl(b.telefon, 40), companie = cl(b.companie, 160), dom = domClean(b.domeniu);
+  let email = cl(b.email, 160).toLowerCase();
+  const digits = tel.replace(/\D/g, "");
+  const lipsa = [];
+  if (nume.length < 3) lipsa.push("nume");
+  if (digits.length < 9) lipsa.push("telefon");
+  if (!dom) lipsa.push("domeniu");
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) lipsa.push("email");
+  if (lipsa.length) return json({ ok: false, lipsa, error: "Completează corect câmpurile marcate." }, 400);
+  await ensureDomCols(env);
+  const tail = digits.slice(-9);
+  let row = await env.DB.prepare(
+    "SELECT id, token, nume, status, prezent_la FROM inscrieri WHERE eveniment=? AND status IN ('confirmat','asteptare') AND ((? <> '' AND lower(email)=?) OR replace(replace(replace(replace(telefon,' ',''),'+',''),'-',''),'.','') LIKE ?) ORDER BY status='confirmat' DESC, id LIMIT 1"
+  ).bind(EVENT, email, email, "%" + tail).first();
+  let existent = false;
+  if (row) {
+    existent = true;
+    const upd = ["status='confirmat'"];
+    const vals = [];
+    if (dom) { upd.push("domeniu=COALESCE(NULLIF(domeniu,''),?)"); vals.push(dom); }
+    if (companie) { upd.push("companie=COALESCE(NULLIF(companie,''),?)"); vals.push(companie); }
+    await env.DB.prepare(`UPDATE inscrieri SET ${upd.join(",")} WHERE id=?`).bind(...vals, row.id).run();
+    if (!row.token) {
+      const tk = [...crypto.getRandomValues(new Uint8Array(16))].map((x) => x.toString(16).padStart(2, "0")).join("");
+      await env.DB.prepare("UPDATE inscrieri SET token=? WHERE id=? AND token IS NULL").bind(tk, row.id).run();
+      row.token = tk;
+    }
+  } else {
+    const tk = [...crypto.getRandomValues(new Uint8Array(16))].map((x) => x.toString(16).padStart(2, "0")).join("");
+    if (!email) email = "intrare-" + tk.slice(0, 10) + "@invitatie.jci-brasov.com";
+    const r = await env.DB.prepare(
+      "INSERT INTO inscrieri (eveniment,nume,email,telefon,companie,functie,profil,intrebare,sursa,limba,acord_marketing,acord_bcr,status,token,domeniu,invitatie_trimisa) VALUES (?,?,?,?,?,'','','',?,'ro',0,0,'confirmat',?,?,?)"
+    ).bind(EVENT, nume, email, tel, companie, "Fără invitație, înscris la intrare (" + s.who + ")", tk, dom, "exclus: înscris la intrare").run();
+    row = { id: r.meta.last_row_id, token: tk, nume, prezent_la: null };
+  }
+  const ck = await doCheckin(env, row.token, false, s);
+  const d = await ck.json();
+  if (d.already) {
+    // era deja intrat: retipărește ecusonul
+    await ensurePrintCol(env);
+    await env.DB.prepare("UPDATE inscrieri SET ecuson_la=NULL WHERE id=? AND bloc IS NOT NULL").bind(row.id).run();
+  }
+  return json({ ok: true, existent, already: !!d.already, nume: row.nume, loc: d.loc ? d.loc.bloc + d.loc.nr : "" });
+}
 function printPage(s) {
   const body = `<!DOCTYPE html><html lang="ro"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><title>Stația de printare ecusoane</title><link rel="icon" href="/assets/img/favicon-32.png">
@@ -842,6 +898,15 @@ function printPage(s) {
 <p class="muted" id="warn"></p>
 <button class="btn b-green" id="go" type="button">Pornește printarea automată</button>
 <button class="btn b-ghost" id="test" type="button">Tipărește o etichetă de test</button></div>
+<div class="card"><p class="lab">PARTICIPANT FĂRĂ INVITAȚIE</p>
+<p class="muted">Se salvează în baza de înscrieri, primește check-in și loc în bloc, iar ecusonul intră în coada de printare.</p>
+<input id="w-nume" placeholder="Nume și prenume *" autocomplete="off">
+<input id="w-tel" placeholder="Număr de telefon *" inputmode="tel" autocomplete="off">
+<select id="w-dom"><option value="">Domeniul de activitate *</option>${DOMENII.map((d) => `<option value="${d[0]}">${esc(d[1])}</option>`).join("")}</select>
+<input id="w-comp" placeholder="Firma (opțional, apare pe ecuson)" autocomplete="off">
+<input id="w-email" placeholder="E-mail (opțional)" inputmode="email" autocomplete="off">
+<p class="muted" id="w-msg"></p>
+<button class="btn b-green" id="w-go" type="button">Salvează și tipărește ecusonul</button></div>
 <div class="card"><p class="lab">RETIPĂREȘTE UN ECUSON</p><input id="q" placeholder="Caută după nume" autocomplete="off"><div id="rez"></div></div>
 <div class="card"><p class="lab">ULTIMELE ECUSOANE</p><div id="log"><p class="muted">Niciunul încă.</p></div></div>
 <div class="card"><p class="lab">PREVIZUALIZARE</p><div class="prev"><div id="lab-host"></div></div></div>
@@ -951,4 +1016,4 @@ function plecariPage(s) {
 <a class="btn b-ghost mt" href="/checkin">Înapoi la check-in (${esc(s.who)})</a>`,
     `<script src="/assets/js/plecari.js?v=${PRINT_JS}"></script>`));
 }
-export const _test = { plecariList, plecareSet, mutaPersoana, printApi };
+export const _test = { plecariList, plecareSet, mutaPersoana, printApi, walkIn };

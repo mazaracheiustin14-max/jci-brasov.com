@@ -217,6 +217,10 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - `/api/echipa/print-again` (căutare după nume, „Pune în coadă”) retipărește; `/api/echipa/print-skip` golește coada fără tipărire (de folosit înainte de deschiderea porților, după testele de check-in).
 - Fără fereastra de confirmare: Chrome pornit cu `--kiosk-printing`, imprimanta de etichete setată ca implicită în Windows, cu hârtia 100 x 70 mm în preferințele driverului. Pagina are `@page { size: 100mm 70mm; margin: 0 }`.
 - Interfața: `public/assets/js/print-station.js` și `public/assets/css/print-station.css` (fără script inline; la modificare se schimbă `PRINT_JS` din worker/checkin.js).
+- 26 nov 2026, participanți fără invitație: cardul „Participant fără invitație” din stație (nume, telefon, domeniu obligatorii; firmă și e-mail opționale)
+  trimite la `/api/echipa/walkin`. Persoana se salvează în `inscrieri` (status confirmat, sursa „Fără invitație, înscris la intrare (<cine>)”), primește check-in,
+  loc în bloc și intră în coada de printare. Dacă telefonul (ultimele 9 cifre) sau e-mailul există deja, se face check-in pe înscrierea existentă;
+  dacă era deja intrat, ecusonul se retipărește. Test: `node --no-warnings src/tests/walkin.test.mjs`.
 
 ## Plecări și mutări la Blitz Networking (25 nov 2026)
 - Pagina `/checkin/plecari` (telefon, PIN-ul echipei, buton roșu în panoul /checkin): căutare după nume sau telefon printre cei intrați.

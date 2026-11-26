@@ -106,6 +106,30 @@
       e.target.textContent = d.ok ? "În coadă" : (d.error || "Eroare"); e.target.disabled = true; tick();
     });
   });
+  // Participant fără invitație: salvare în baza de înscrieri, check-in și ecuson în coadă.
+  var wf = { nume: "w-nume", telefon: "w-tel", domeniu: "w-dom", companie: "w-comp", email: "w-email" }, wbusy = false;
+  function wmsg(t, ok) { $("w-msg").textContent = t; $("w-msg").className = "muted " + (ok ? "w-ok" : "w-err"); }
+  function wmark(lipsa) { Object.keys(wf).forEach(function (k) { $(wf[k]).classList.toggle("bad", lipsa.indexOf(k) >= 0); }); }
+  $("w-go").addEventListener("click", function () {
+    if (wbusy) return;
+    var b = {}, lipsa = [];
+    Object.keys(wf).forEach(function (k) { b[k] = $(wf[k]).value.trim(); });
+    if (b.nume.length < 3) lipsa.push("nume");
+    if (b.telefon.replace(/\D/g, "").length < 9) lipsa.push("telefon");
+    if (!b.domeniu) lipsa.push("domeniu");
+    wmark(lipsa);
+    if (lipsa.length) { wmsg("Completează câmpurile marcate cu roșu.", false); return; }
+    wbusy = true; $("w-go").disabled = true; wmsg("Se salvează...", true);
+    post("/api/echipa/walkin", b).then(function (d) {
+      wbusy = false; $("w-go").disabled = false;
+      if (!d.ok) { wmark(d.lipsa || []); wmsg(d.error || "Nu s-a putut salva. Încearcă din nou.", false); return; }
+      Object.keys(wf).forEach(function (k) { $(wf[k]).value = ""; });
+      var t = d.nume + (d.loc ? ", ecuson " + d.loc : ", fără loc în bloc") + ". ";
+      t += d.already ? "Era deja intrat, ecusonul se retipărește." : d.existent ? "Era deja înscris, a primit check-in." : "Salvat în baza de înscrieri.";
+      if (!on) t += " Pornește printarea automată ca să iasă ecusonul.";
+      wmsg(t, true); $("w-nume").focus(); tick();
+    }).catch(function () { wbusy = false; $("w-go").disabled = false; wmsg("Fără legătură cu site-ul. Datele au rămas în formular, apasă din nou.", false); });
+  });
   setInterval(tick, 2000);
   try { if (localStorage.getItem("printOn")) setOn(true); } catch (e) {}
 })();
