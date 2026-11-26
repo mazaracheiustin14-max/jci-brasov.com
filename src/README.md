@@ -218,6 +218,7 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - `/api/echipa/print-again` (căutare după nume, „Pune în coadă”) retipărește; `/api/echipa/print-skip` golește coada fără tipărire (de folosit înainte de deschiderea porților, după testele de check-in).
 - Fără fereastra de confirmare: Chrome pornit cu `--kiosk-printing`, imprimanta de etichete setată ca implicită în Windows, cu hârtia 100 x 70 mm în preferințele driverului. Pagina are `@page { size: 100mm 70mm; margin: 0 }`.
 - Interfața: `public/assets/js/print-station.js` și `public/assets/css/print-station.css` (fără script inline; la modificare se schimbă `PRINT_JS` din worker/checkin.js).
+- 26 nov 2026, „Schimbă numele” în stația de printare: POST /api/echipa/nume {token, nume}; dacă persoana a intrat, ecusonul reintră în coadă.
 - 26 nov 2026, check-in după nume în stația de printare: căutarea arată și înscrișii neintrați, cu „Check-in și tipărește” (POST /api/checkin), pentru cei fără QR.
 - 26 nov 2026, participanți fără invitație: cardul „Participant fără invitație” din stație (nume, telefon, domeniu obligatorii; firmă și e-mail opționale)
   trimite la `/api/echipa/walkin`. Persoana se salvează în `inscrieri` (status confirmat, sursa „Fără invitație, înscris la intrare (<cine>)”), primește check-in,

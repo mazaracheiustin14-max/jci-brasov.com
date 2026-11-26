@@ -394,6 +394,21 @@ export async function handleCheckin(request, env, url, overLimit) {
       if (request.method !== "POST" || !sameOrigin(request)) return json({ error: "method" }, 405);
       return printApi(request, env, p);
     }
+    if (p === "/api/echipa/nume") {
+      // Schimbarea numelui din stația de printare (26 nov 2026): pentru cei trecuți ca „Invitat JCI Brașov” sau cu nume greșit.
+      // Dacă persoana a intrat deja, ecusonul intră din nou în coada de printare, cu numele nou.
+      if (request.method !== "POST" || !sameOrigin(request)) return json({ error: "method" }, 405);
+      const b = await request.json().catch(() => ({}));
+      const t = String(b.token || ""), nume = String(b.nume || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+      if (!TOKEN_RE.test(t)) return json({ ok: false, error: "Cod necunoscut" }, 400);
+      if (nume.length < 3) return json({ ok: false, error: "Numele e prea scurt" }, 400);
+      await ensurePrintCol(env);
+      const r = await env.DB.prepare("UPDATE inscrieri SET nume=? WHERE token=? AND eveniment=?").bind(nume, t, EVENT).run();
+      if (!r.meta || !r.meta.changes) return json({ ok: false, error: "Persoana nu a fost găsită" }, 404);
+      const q = await env.DB.prepare("UPDATE inscrieri SET ecuson_la=NULL WHERE token=? AND eveniment=? AND prezent_la IS NOT NULL AND bloc IS NOT NULL").bind(t, EVENT).run();
+      await env.DB.prepare("INSERT INTO checkin_log (inscriere_id,actiune,de) SELECT id, 'nume: ' || ?, ? FROM inscrieri WHERE token=?").bind(nume, s.who, t).run();
+      return json({ ok: true, nume, retiparit: !!(q.meta && q.meta.changes) });
+    }
     if (p === "/api/echipa/walkin") {
       if (request.method !== "POST" || !sameOrigin(request)) return json({ error: "method" }, 405);
       return walkIn(request, env, s);
@@ -769,7 +784,7 @@ async function confirmReceipt(request, env, token) {
 // printare: pagina cere următorul ecuson la 2 secunde și îl tipărește. Coloana inscrieri.ecuson_la = momentul în care
 // ecusonul a fost preluat de stație; NULL = în coadă. Retipărirea pune persoana din nou în coadă.
 // Interfața: public/assets/js/print-station.js (fără script inline, CSP). Chrome pornit cu --kiosk-printing tipărește fără dialog.
-const PRINT_JS = "6";
+const PRINT_JS = "7";
 async function ensurePrintCol(env) {
   try { await env.DB.prepare("ALTER TABLE inscrieri ADD COLUMN ecuson_la TEXT").run(); } catch (e) { /* există deja */ }
 }
@@ -875,7 +890,7 @@ function printPage(s) {
 <input id="w-email" placeholder="E-mail (opțional)" inputmode="email" autocomplete="off">
 <p class="muted" id="w-msg"></p>
 <button class="btn b-green" id="w-go" type="button">Salvează și tipărește ecusonul</button></div>
-<div class="card"><p class="lab">CAUTĂ DUPĂ NUME (FĂRĂ QR SAU RETIPĂRIRE)</p><p class="muted">Pentru cei înscriși care nu au codul QR: caută numele și apasă „Check-in și tipărește”. Cei deja intrați pot fi retipăriți.</p><input id="q" placeholder="Nume, telefon sau e-mail" autocomplete="off"><div id="rez"></div></div>
+<div class="card"><p class="lab">CAUTĂ DUPĂ NUME (FĂRĂ QR SAU RETIPĂRIRE)</p><p class="muted">Pentru cei înscriși care nu au codul QR: caută numele și apasă „Check-in și tipărește”. Cei deja intrați pot fi retipăriți. „Schimbă numele” corectează numele (de exemplu „Invitat JCI Brașov”) și retipărește ecusonul.</p><input id="q" placeholder="Nume, telefon sau e-mail" autocomplete="off"><div id="rez"></div></div>
 <div class="card"><p class="lab">ULTIMELE ECUSOANE</p><div id="log"><p class="muted">Niciunul încă.</p></div></div>
 <div class="card"><p class="lab">PREVIZUALIZARE</p><div class="prev"><div id="lab-host"></div></div></div>
 <button class="btn b-ghost" id="skip" type="button">Golește coada (marchează ca tipărite)</button>

@@ -98,12 +98,30 @@
           else if (!x.prezent && x.status === "confirmat") btn = '<button type="button" data-c="' + esc(x.token) + '">Check-in și tipărește</button>';
           else if (x.status !== "confirmat") btn = '<span class="muted">' + esc(x.status === "asteptare" ? "listă de așteptare" : x.status) + "</span>";
           return '<div class="it"><span><b>' + esc(x.loc || (x.prezent ? "fără loc" : "neintrat")) + "</b> " + esc(x.nume) +
-            (x.telefon ? ' <span class="muted">' + esc(String(x.telefon).slice(-4)) + "</span>" : "") + "</span>" + btn + "</div>";
+            (x.telefon ? ' <span class="muted">' + esc(String(x.telefon).slice(-4)) + "</span>" : "") + "</span>" + btn +
+            (x.status === "confirmat" ? '<button type="button" data-n="' + esc(x.token) + '" data-v="' + esc(x.nume) + '">Schimbă numele</button>' : "") + "</div>";
         }).join("") || '<p class="muted">Niciun rezultat.</p>';
       });
     }, 250);
   });
   $("rez").addEventListener("click", function (e) {
+    var n = e.target.getAttribute && e.target.getAttribute("data-n");
+    if (n) {
+      var cur = e.target.getAttribute("data-v") || "";
+      var nou = prompt("Numele corect, așa cum apare pe ecuson:", /^invitat jci/i.test(cur) ? "" : cur);
+      if (nou == null) return;
+      nou = nou.trim();
+      if (nou.length < 3) { alert("Numele e prea scurt."); return; }
+      e.target.disabled = true; e.target.textContent = "Se salvează...";
+      post("/api/echipa/nume", { token: n, nume: nou }).then(function (d) {
+        if (!d.ok) { e.target.textContent = d.error || "Eroare"; e.target.disabled = false; return; }
+        e.target.textContent = d.retiparit ? "Salvat, se retipărește" : "Salvat";
+        var sp = e.target.parentNode.querySelector("span b");
+        if (sp && sp.nextSibling) sp.nextSibling.textContent = " " + d.nume;
+        tick();
+      }).catch(function () { e.target.textContent = "Fără legătură, apasă din nou"; e.target.disabled = false; });
+      return;
+    }
     var c = e.target.getAttribute && e.target.getAttribute("data-c");
     if (c) {
       // Participant înscris fără QR la el: check-in după nume, primește loc în bloc și ecusonul intră în coadă.
