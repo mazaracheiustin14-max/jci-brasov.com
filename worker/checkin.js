@@ -459,14 +459,15 @@ async function doCheckin(env, token, undo, s) {
   if (row.status !== "confirmat" && row.status !== "test") return json({ ok: false, error: "Persoana nu are loc confirmat" }, 409);
   try { await ensureBlitzCols(env); } catch (e) { console.warn("ensureBlitzCols", e && e.message); }
   await ensureLeaveCols(env);
+  await ensurePrintCol(env);
   if (undo) {
     // Anularea eliberează și locul din bloc, ca următoarea persoană să îl primească.
-    await env.DB.prepare("UPDATE inscrieri SET prezent_la=NULL, prezent_de=NULL, bloc=NULL, slot=NULL, mese=NULL, plecat_la=NULL, plecat_de=NULL WHERE id=?").bind(row.id).run();
+    await env.DB.prepare("UPDATE inscrieri SET prezent_la=NULL, prezent_de=NULL, bloc=NULL, slot=NULL, mese=NULL, plecat_la=NULL, plecat_de=NULL, ecuson_la=NULL WHERE id=?").bind(row.id).run();
     await env.DB.prepare("INSERT INTO checkin_log (inscriere_id,actiune,de) VALUES (?,?,?)").bind(row.id, "anulare", s.who).run();
     return json({ ok: true, undone: true });
   }
   if (row.prezent_la) return json({ ok: false, already: true, ora: oraRo(row.prezent_la), de: row.prezent_de, nume: row.nume });
-  const r = await env.DB.prepare("UPDATE inscrieri SET prezent_la=datetime('now'), prezent_de=? WHERE id=? AND prezent_la IS NULL").bind(s.who, row.id).run();
+  const r = await env.DB.prepare("UPDATE inscrieri SET prezent_la=datetime('now'), prezent_de=?, ecuson_la=NULL WHERE id=? AND prezent_la IS NULL").bind(s.who, row.id).run();
   if (!r.meta || r.meta.changes === 0) {
     const again = await findByToken(env, token);
     return json({ ok: false, already: true, ora: oraRo(again && again.prezent_la), de: again && again.prezent_de, nume: row.nume });
@@ -1016,4 +1017,4 @@ function plecariPage(s) {
 <a class="btn b-ghost mt" href="/checkin">Înapoi la check-in (${esc(s.who)})</a>`,
     `<script src="/assets/js/plecari.js?v=${PRINT_JS}"></script>`));
 }
-export const _test = { plecariList, plecareSet, mutaPersoana, printApi, walkIn };
+export const _test = { plecariList, plecareSet, mutaPersoana, printApi, walkIn, doCheckin };

@@ -39,3 +39,10 @@ assert.equal(d.existent, true); assert.equal(d.already, false); assert.ok(d.loc)
 assert.equal(db.prepare("SELECT COUNT(*) n FROM inscrieri").get().n, 2);
 assert.equal(db.prepare("SELECT sursa FROM inscrieri WHERE nume='Dan Pop'").get().sursa, "Facebook");
 console.log("walkin: ok");
+// anulare și check-in din nou: ecusonul reintră în coadă
+await next();
+const tkDan = "a".repeat(32);
+assert.equal((await next()).job, null);
+await _test.doCheckin(env, tkDan, true, S); await _test.doCheckin(env, tkDan, false, S);
+assert.equal((await next()).job.nume, "Dan Pop");
+console.log("recheckin: ok");
