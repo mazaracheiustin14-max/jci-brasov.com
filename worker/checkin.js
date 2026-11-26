@@ -769,7 +769,7 @@ async function confirmReceipt(request, env, token) {
 // printare: pagina cere următorul ecuson la 2 secunde și îl tipărește. Coloana inscrieri.ecuson_la = momentul în care
 // ecusonul a fost preluat de stație; NULL = în coadă. Retipărirea pune persoana din nou în coadă.
 // Interfața: public/assets/js/print-station.js (fără script inline, CSP). Chrome pornit cu --kiosk-printing tipărește fără dialog.
-const PRINT_JS = "5";
+const PRINT_JS = "6";
 async function ensurePrintCol(env) {
   try { await env.DB.prepare("ALTER TABLE inscrieri ADD COLUMN ecuson_la TEXT").run(); } catch (e) { /* există deja */ }
 }
@@ -875,7 +875,7 @@ function printPage(s) {
 <input id="w-email" placeholder="E-mail (opțional)" inputmode="email" autocomplete="off">
 <p class="muted" id="w-msg"></p>
 <button class="btn b-green" id="w-go" type="button">Salvează și tipărește ecusonul</button></div>
-<div class="card"><p class="lab">RETIPĂREȘTE UN ECUSON</p><input id="q" placeholder="Caută după nume" autocomplete="off"><div id="rez"></div></div>
+<div class="card"><p class="lab">CAUTĂ DUPĂ NUME (FĂRĂ QR SAU RETIPĂRIRE)</p><p class="muted">Pentru cei înscriși care nu au codul QR: caută numele și apasă „Check-in și tipărește”. Cei deja intrați pot fi retipăriți.</p><input id="q" placeholder="Nume, telefon sau e-mail" autocomplete="off"><div id="rez"></div></div>
 <div class="card"><p class="lab">ULTIMELE ECUSOANE</p><div id="log"><p class="muted">Niciunul încă.</p></div></div>
 <div class="card"><p class="lab">PREVIZUALIZARE</p><div class="prev"><div id="lab-host"></div></div></div>
 <button class="btn b-ghost" id="skip" type="button">Golește coada (marchează ca tipărite)</button>

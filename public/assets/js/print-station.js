@@ -93,13 +93,28 @@
         var list = d.rezultate || [];
         if (!Array.isArray(list)) list = [];
         $("rez").innerHTML = list.map(function (x) {
-          return '<div class="it"><span><b>' + esc(x.loc || "fără loc") + "</b> " + esc(x.nume) + "</span>" +
-            (x.loc ? '<button type="button" data-t="' + esc(x.token) + '">Pune în coadă</button>' : "") + "</div>";
+          var btn = "";
+          if (x.loc) btn = '<button type="button" data-t="' + esc(x.token) + '">Retipărește</button>';
+          else if (!x.prezent && x.status === "confirmat") btn = '<button type="button" data-c="' + esc(x.token) + '">Check-in și tipărește</button>';
+          else if (x.status !== "confirmat") btn = '<span class="muted">' + esc(x.status === "asteptare" ? "listă de așteptare" : x.status) + "</span>";
+          return '<div class="it"><span><b>' + esc(x.loc || (x.prezent ? "fără loc" : "neintrat")) + "</b> " + esc(x.nume) +
+            (x.telefon ? ' <span class="muted">' + esc(String(x.telefon).slice(-4)) + "</span>" : "") + "</span>" + btn + "</div>";
         }).join("") || '<p class="muted">Niciun rezultat.</p>';
       });
     }, 250);
   });
   $("rez").addEventListener("click", function (e) {
+    var c = e.target.getAttribute && e.target.getAttribute("data-c");
+    if (c) {
+      // Participant înscris fără QR la el: check-in după nume, primește loc în bloc și ecusonul intră în coadă.
+      e.target.disabled = true; e.target.textContent = "Se face check-in...";
+      post("/api/checkin", { token: c }).then(function (d) {
+        if (d.ok) { e.target.textContent = "Intrat" + (d.loc ? ", ecuson " + d.loc.bloc + d.loc.nr : "") + (on ? ", se tipărește" : ", pornește printarea"); tick(); }
+        else if (d.already) { e.target.textContent = "Era deja intrat"; }
+        else { e.target.textContent = d.error || "Eroare"; e.target.disabled = false; }
+      }).catch(function () { e.target.textContent = "Fără legătură, apasă din nou"; e.target.disabled = false; });
+      return;
+    }
     var t = e.target.getAttribute && e.target.getAttribute("data-t");
     if (!t) return;
     post("/api/echipa/print-again", { token: t }).then(function (d) {
