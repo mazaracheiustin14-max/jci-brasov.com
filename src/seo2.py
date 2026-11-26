@@ -7,7 +7,7 @@ S = '/home/claude/site/'
 SITE = 'https://jci-brasov.com/'
 TODAY = datetime.date.today().isoformat()
 
-PERF = [("Ioana Ceaușu", "Director operațional", "The Entrepreneurship Academy"),
+PERF = [("Mădălina Okur", "Fondatoare", "GreenBooks"),
         ("Rareș Zlătaru", "Fondator", "DBV Management & Training"),
         ("Bogdan Costaș", "Director general", "Aviația Utilitară București"),
         ("Ciprian Văcaru", "Secretar de stat", "Ministerul Muncii")]
