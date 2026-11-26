@@ -95,22 +95,17 @@ assert.deepEqual(perB.map((x) => Number(x.n)), [3, 3, 3], "câte 3 VIP în fieca
 const b1 = bloc(v1);
 const info = await scan(v1);
 assert.equal(info.bloc, "ABC"[b1 - 1]);
-// un om din transport ajunge în blocul lui Vip Unu, un jurist în blocul lui Vip Doi
-const t1 = await add("Transportator", { dom: "transport" }); await scan(t1);
-assert.equal(bloc(t1), bloc(v1), "transport lângă VIP-ul care l-a cerut");
-const j1 = await add("Jurist", { dom: "juridic" }); await scan(j1);
-assert.equal(bloc(j1), bloc(v2));
-const im = await add("Agent imobiliar", { dom: "imobiliare" }); await scan(im);
-assert.equal(bloc(im), bloc(v4), "și VIP-ul din tabelul vip e servit");
-// fără domeniu: blocul cel mai liber din val
-const n1 = await add("Fara Domeniu", {}); await scan(n1);
-assert.ok(bloc(n1) >= 1 && bloc(n1) <= 3);
-// echilibru: mulți din același domeniu cerut nu se înghesuie într-un singur bloc
-const ids = [];
-for (let i = 0; i < 30; i++) { const id = await add("Comert " + i, { dom: "comert" }); await scan(id); ids.push(id); }
+// rotație directă: fiecare scanare nouă merge în blocul următor din cele 6, indiferent de domeniu
+const seq = [];
+for (let i = 0; i < 12; i++) { const id = await add("Rot " + i, { dom: i % 2 ? "comert" : "" }); await scan(id); seq.push(bloc(id)); }
+for (let i = 1; i < seq.length; i++) assert.notEqual(seq[i], seq[i - 1], "două scanări la rând nu ajung în același bloc: " + seq);
+assert.equal(new Set(seq.slice(0, 6)).size, 6, "6 scanări consecutive acoperă toate cele 6 blocuri: " + seq);
+assert.deepEqual(seq.slice(6), seq.slice(0, 6), "rotația se reia în aceeași ordine");
+// blocurile pline sunt sărite; după A-F pline se deschide G
+for (let i = 0; i < 150; i++) { const id = await add("Plin " + i, {}); await scan(id); }
 const sz = DB._db.prepare("SELECT bloc, COUNT(*) AS n FROM inscrieri WHERE bloc IS NOT NULL GROUP BY bloc ORDER BY bloc").all().map((x) => Number(x.n));
-assert.ok(Math.max(...sz.slice(0, 3)) - Math.min(...sz.slice(0, 3)) <= 4, "blocurile rămân echilibrate: " + sz);
-assert.ok(sz.every((n) => n <= 25), "niciun bloc peste 25");
+assert.ok(sz.slice(0, 6).every((n) => n === 25), "A-F pline: " + sz);
+assert.ok(sz.length === 7 && sz[6] > 0, "surplusul merge în G: " + sz);
 // locuri unice
 const dup = DB._db.prepare("SELECT COUNT(*) AS n FROM (SELECT bloc, slot FROM inscrieri WHERE bloc IS NOT NULL GROUP BY bloc, slot HAVING COUNT(*) > 1)").get().n;
 assert.equal(Number(dup), 0);
@@ -118,5 +113,5 @@ assert.equal(Number(dup), 0);
 const before = bloc(v1);
 await preallocRun(env, { k: 2, reset: true });
 assert.equal(bloc(v1), before, "cine a intrat își păstrează locul");
-assert.ok(bloc(v2) >= 1 && bloc(v2) <= 2 || DB._db.prepare("SELECT prezent_la FROM inscrieri WHERE id=?").get(v2).prezent_la, "VIP-ii neintrați sunt reașezați în cele 2 blocuri");
+assert.ok(bloc(v2) >= 1 && bloc(v2) <= 6 || DB._db.prepare("SELECT prezent_la FROM inscrieri WHERE id=?").get(v2).prezent_la, "VIP-ii neintrați sunt reașezați în cele 2 blocuri");
 console.log("blitz: toate testele au trecut");

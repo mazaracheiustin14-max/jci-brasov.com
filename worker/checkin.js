@@ -7,7 +7,7 @@
 import { handleWaInvit } from "./wa-invit.js";
 import { handleApeluri, chestionarPage, chestionarSave } from "./apeluri.js";
 import { DOMENII, domClean, domLabel, parseTinte, ensureDomCols, syncVipDomenii, paidVipCond } from "./domenii.js";
-import { preallocVip, domainCandidates, suggestK } from "./blitz-match.js";
+import { preallocVip, suggestK } from "./blitz-match.js";
 
 const EVENT = "beyond-2026";
 const COOKIE = "jci_echipa";
@@ -84,14 +84,9 @@ async function vipNumber(env, row) {
 // Participanții sunt împărțiți în blocuri de câte 25 (litera A, B, C...), fiecare cu zona ei în sală. În bloc, fiecare
 // persoană ocupă un loc din grila 5x5 (numărul de pe ecuson, 1–25). Cele 6 runde (3 în Blitz #1, 3 în Blitz #2) sunt
 // cele 6 clase de drepte paralele din planul afin peste Z5: într-un bloc complet, fiecare pereche de persoane se
-// întâlnește exact o dată, adică 24 de contacte noi pentru fiecare. Locul se alocă la scanarea biletului: blocul cu cei
-// mai puțini oameni primește următoarea persoană, deci cei care sosesc împreună ajung în blocuri diferite.
-// Blocurile se umplu pe valuri: întâi primele 3 (A, B, C), apoi următoarele 2 (D, E), apoi F, apoi câte unul. În cadrul valului,
-// persoana nouă merge în blocul cu cei mai puțini oameni (la egalitate, alegere la întâmplare), deci cei care sosesc împreună
-// ajung în blocuri diferite, iar dacă nu vin toți, primele blocuri sunt cele pline și echipele sunt formate.
-// Când cineva e anulat și se eliberează un loc dintr-un val anterior, următoarea persoană îl ocupă.
+// întâlnește exact o dată, adică 24 de contacte noi pentru fiecare. Locul se alocă la scanarea biletului, prin rotație
+// directă prin cele 6 blocuri mari (vezi assignBlitz).
 const BLOC_SIZE = 25;
-const WAVES = [3, 2, 1]; // mărimile valurilor; după ele, câte un bloc pe rând
 const MAX_BLOCKS = 26;
 const BLOC_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 // Numele blocurilor (doar etichetă de anunțat în sală, codurile rămân litera și numerele): povestea grupului, de la idee la orizont.
@@ -137,75 +132,41 @@ async function blitzState(env, id) {
   const k = Math.min(MAX_BLOCKS, Number(await setting(env, "blitz_vip_blocuri")) || 0);
   return { used, k, size: (b) => (used[b] ? used[b].size : 0), rec: (b) => rec[b] || 0, members: (b) => members[b] || [] };
 }
-// Intervalele de blocuri ale valurilor: [1..3], [4..5], [6], apoi câte unul.
-// Dacă invitații VIP au fost așezați în mai mult de 3 blocuri (k), primul val cuprinde toate blocurile lor, apoi câte unul.
-function waveRanges(k) {
-  const out = []; let from = 1, w = 0;
-  if (k > WAVES[0]) { out.push([1, k]); from = k + 1; w = WAVES.length; }
-  while (from <= MAX_BLOCKS) { const len = w < WAVES.length ? WAVES[w] : 1; out.push([from, Math.min(MAX_BLOCKS, from + len - 1)]); from += len; w++; }
-  return out;
-}
-function openIn(st, [from, to]) {
-  const open = [];
-  for (let b = from; b <= to; b++) if (st.size(b) < BLOC_SIZE) open.push(b);
-  return open;
-}
-// Între blocurile deschise ale valului: cele cu cel mult un om peste minim, apoi cel cu cei mai puțini sosiți recent,
-// apoi cel mai puțin plin, apoi la întâmplare.
-function chooseBlock(open, st) {
-  const min = Math.min(...open.map(st.size));
-  const cand = open.filter((b) => st.size(b) <= min + 1);
-  const minRec = Math.min(...cand.map(st.rec));
-  const c2 = cand.filter((b) => st.rec(b) === minRec);
-  const minSize = Math.min(...c2.map(st.size));
-  const c3 = c2.filter((b) => st.size(b) === minSize);
-  return c3[Math.floor(Math.random() * c3.length)];
-}
 function firstFree(st, b) {
   const taken = st.used[b] || new Set();
   let slot = 0;
   while (taken.has(slot)) slot++;
   return slot;
 }
-// Două scanări în aceeași fracțiune de secundă citesc aceeași stare și pot alege același bloc. După alocare, persoana cu id-ul
-// mai mare verifică dacă a nimerit în același bloc cu cineva sosit chiar atunci și, dacă există alt bloc mai liber de sosiți recent, se mută.
-async function spreadFriends(env, id, pick) {
-  const near = await env.DB.prepare(
-    "SELECT COUNT(*) AS n FROM inscrieri WHERE eveniment=? AND bloc=? AND id<? AND prezent_la >= datetime('now','-20 seconds')"
-  ).bind(EVENT, pick, id).first();
-  if (!near || !near.n) return null;
-  const st = await blitzState(env, id);
-  const range = waveRanges(st.k).find(([f, t]) => pick >= f && pick <= t);
-  const open = openIn(st, range).filter((b) => b !== pick);
-  if (!open.length) return null;
-  const better = open.filter((b) => st.rec(b) < st.rec(pick) && st.size(b) <= st.size(pick) + 1);
-  if (!better.length) return null;
-  const alt = chooseBlock(better, st);
-  const slot = firstFree(st, alt);
-  const cur = await env.DB.prepare("SELECT slot FROM inscrieri WHERE id=? AND bloc=?").bind(id, pick).first();
-  if (!cur) return null;
-  const r = await env.DB.prepare("UPDATE inscrieri SET bloc=?, slot=? WHERE id=? AND bloc=? AND slot=?").bind(alt, slot, id, pick, cur.slot).run();
-  return r.meta && r.meta.changes ? blitzInfo(alt, slot) : null;
+// Regula din 26 nov 2026: rotație directă prin cele 6 blocuri mari. Fiecare scanare nouă merge în blocul următor
+// (A, B, C, D, E, F, apoi iar A), deci doi oameni scanați unul după altul nu ajung niciodată în același bloc.
+// Contorul e în `setari` (blitz_rotatie) și crește atomic, așa că și două scanări simultane primesc blocuri diferite.
+// Un bloc plin (25) e sărit; după ce toate 6 sunt pline, se deschid pe rând G, H...
+// Invitații VIP își păstrează locul rezervat din timp; ceilalți nu mai sunt potriviți pe domenii.
+const ROT_BLOCKS = 6;
+async function nextRotation(env) {
+  const r = await env.DB.prepare(
+    "INSERT INTO setari (cheie, valoare) VALUES ('blitz_rotatie', '1') ON CONFLICT(cheie) DO UPDATE SET valoare = CAST(valoare AS INTEGER) + 1 RETURNING valoare"
+  ).first();
+  return Number(r && r.valoare) || 1;
+}
+function rotationPick(st, n) {
+  for (let i = 0; i < ROT_BLOCKS; i++) {
+    const b = ((n - 1 + i) % ROT_BLOCKS) + 1;
+    if (st.size(b) < BLOC_SIZE) return b;
+  }
+  for (let b = ROT_BLOCKS + 1; b <= MAX_BLOCKS; b++) if (st.size(b) < BLOC_SIZE) return b;
+  return 0;
 }
 export async function assignBlitz(env, id) {
   await ensureBlitzCols(env);
   try { await maybePrealloc(env); } catch (e) { console.warn("maybePrealloc", e && e.message); }
-  const cur = await env.DB.prepare("SELECT bloc, slot, domeniu, tinte FROM inscrieri WHERE id=?").bind(id).first();
+  const cur = await env.DB.prepare("SELECT bloc, slot FROM inscrieri WHERE id=?").bind(id).first();
   if (cur && cur.bloc) return blitzInfo(cur.bloc, cur.slot); // inclusiv locul rezervat din timp al unui invitat VIP
-  const person = { dom: (cur && cur.domeniu) || "", tinte: parseTinte(cur && cur.tinte) };
+  const n = await nextRotation(env);
   for (let attempt = 0; attempt < 40; attempt++) {
     const st = await blitzState(env, id);
-    // primul val care nu e plin; în el, întâi potrivirea pe domenii, apoi regula de echilibru
-    let pick = 0, matched = false;
-    for (const range of waveRanges(st.k)) {
-      const open = openIn(st, range);
-      if (open.length) {
-        const cand = domainCandidates(open, st.size, st.members, person);
-        matched = cand.length > 0;
-        pick = chooseBlock(matched ? cand : open, st);
-        break;
-      }
-    }
+    const pick = rotationPick(st, n);
     if (!pick) return null;
     const slot = firstFree(st, pick);
     try {
@@ -215,8 +176,6 @@ export async function assignBlitz(env, id) {
         const c2 = await env.DB.prepare("SELECT bloc, slot FROM inscrieri WHERE id=?").bind(id).first();
         return c2 && c2.bloc ? blitzInfo(c2.bloc, c2.slot) : null;
       }
-      // Cine a fost așezat după domeniu rămâne acolo; ceilalți pot fi mutați dacă au nimerit lângă cineva sosit în aceeași clipă.
-      if (!matched) { try { const moved = await spreadFriends(env, id, pick); if (moved) return moved; } catch (e) { console.warn("spreadFriends", e && e.message); } }
       return blitzInfo(pick, slot);
     } catch (e) {
       if (!/UNIQUE/i.test(String((e && e.message) || e))) throw e; // doar conflictul de loc se reîncearcă

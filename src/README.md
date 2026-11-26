@@ -108,11 +108,12 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
   numărul de pe ecuson (1–25) și masa pentru fiecare dintre cele 6 runde (3 în Blitz #1, 3 în Blitz #2). Ecranul arată ce se scrie pe ecuson.
 - Blocuri de câte 25, grila 5x5 peste Z5, cele 6 clase de drepte paralele = cele 6 runde: într-un bloc complet fiecare pereche se întâlnește
   exact o dată (24 de contacte noi). În bloc incomplet nu există repetări, dar sunt mai puține contacte și grupe de 2–5 persoane.
-- Alocarea pe valuri (WAVES în worker: 3, 2, 1, apoi câte unul): întâi se umplu A, B, C, apoi D, E, apoi F. În val, persoana nouă merge în blocul cu cei
-  mai puțini oameni (la egalitate, la întâmplare), deci cei care sosesc împreună ajung în blocuri diferite, iar la prezență mică primele blocuri sunt pline.
-  Un loc eliberat prin anulare într-un val anterior se ocupă primul.
-  Cei care intră în aceeași perioadă (FRIEND_WINDOW_S, 3 minute) sunt împrăștiați în blocuri diferite; la scanări în aceeași fracțiune de secundă,
-  persoana cu id-ul mai mare se mută dacă a nimerit în același bloc (spreadFriends). Limită: în valul B-C cu 2 blocuri sau în F cu un singur bloc, trei prieteni nu pot fi separați.
+- Alocarea (regula din 26 nov 2026): rotație directă prin cele 6 blocuri mari. Fiecare scanare nouă merge în blocul următor
+  (A, B, C, D, E, F, apoi iar A), deci cei scanați unul după altul ajung mereu în blocuri diferite și blocurile cresc egal.
+  Contorul `blitz_rotatie` din `setari` crește atomic, așa că și scanările simultane primesc blocuri diferite. Blocul plin (25) e sărit;
+  după ce A-F sunt pline se deschid pe rând G, H... Invitații VIP își păstrează locul rezervat din timp (preallocRun);
+  ceilalți participanți nu mai sunt potriviți pe domenii (funcțiile din `blitz-match.js` rămân doar pentru prealocarea VIP).
+  Pentru a reporni rotația de la A: `DELETE FROM setari WHERE cheie='blitz_rotatie'`.
 - Coloane noi în `inscrieri`: `bloc`, `slot` (index unic pe eveniment, bloc, slot). Anularea intrării eliberează locul.
 - Blocurile au nume (BLOC_NAMES: Scânteia, Busola, Puntea, Urcușul, Vârful, Orizontul, Farul, Zorii), doar ca etichetă; codurile rămân litera și numerele (persoana C7, mesele C1 până la C5). Panoul echipei arată câți oameni are fiecare bloc; exportul CSV conține blocul, numărul și cele 6 mese.
 - `FILL_ORDER` din worker este ordinea de ocupare a grilei, aleasă ca grupele să rămână echilibrate la blocuri incomplete.
