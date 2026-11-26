@@ -10,6 +10,7 @@ import { paidVipCond } from "./domenii.js";
 const EVENT = "beyond-2026";
 const SITE = "https://jci-brasov.com";
 const BATCH = 15;
+const REM_BATCH = 40; // reamintiri pe rulare (scriptul rulează la 5 minute, cu limita de 6 minute)
 
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 function json(obj, status = 200) {
@@ -175,6 +176,47 @@ contact@jci-brasov.com | +40 790 827 426 | jci-brasov.com<br>${L.foot}</td></tr>
   return out;
 }
 
+// ---------- Reamintirea din ziua evenimentului (26 nov 2026) ----------
+// Se trimite prin același script Gmail: după ce nu mai sunt invitații de trimis și setarea invit_reamintire = 1,
+// /api/invitatii/de-trimis dă reamintirile, cu id negativ (-id), ca scriptul să le confirme fără modificări.
+export function buildReminder(row, cid = false) {
+  const t = row.token, bilet = `${SITE}/bilet/${t}`;
+  let nume = String(row.nume || "").replace(/[^\p{L}\p{M}\s.\-]/gu, "").replace(/\s+/g, " ").trim();
+  if (nume === nume.toUpperCase() || nume === nume.toLowerCase()) nume = nume.toLowerCase().replace(/(^|[\s\-])\p{L}/gu, (m) => m.toUpperCase());
+  const hi = nume ? `Bună ziua, ${esc(nume)},` : "Bună ziua,";
+  const subject = "Vă așteptăm diseară la Beyond the Initiative, ora 17:00";
+  const F = "font-family:'Plus Jakarta Sans',Segoe UI,Helvetica,Arial,sans-serif";
+  const html = `<!DOCTYPE html><html lang="ro"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><title>${esc(subject)}</title></head>
+<body style="margin:0;padding:0;background:#ECEFF5">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ECEFF5"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#FFFFFF;border-radius:18px;overflow:hidden">
+<tr><td style="background:#130F2D;padding:26px 32px">
+<img src="${cid ? "cid:logo" : SITE + "/assets/img/logo-jci-brasov-invers.png"}" width="120" alt="JCI Brașov" style="display:block;border:0;height:auto">
+<div style="${F};font-size:12px;font-weight:800;letter-spacing:3px;color:#57BCBC;margin-top:24px">DISEARĂ, DE LA ORA 17:00</div>
+<div style="${F};font-size:34px;line-height:1.05;font-weight:800;color:#FFFFFF;margin-top:8px">BEYOND<br>THE INITIATIVE</div></td></tr>
+<tr><td style="padding:28px 32px 8px;${F};font-size:16px;line-height:1.6;color:#2A2F45">
+<p style="margin:0 0 14px">${hi}</p>
+<p style="margin:0 0 14px">Vă reamintim că în această seară, de la ora 17:00, vă așteptăm la <b>Beyond the Initiative</b>, la <b>CATTIA Brașov, Strada Institutului 35</b>.</p>
+<p style="margin:0">Mai jos găsiți biletul dumneavoastră nominal, cu codul QR pentru check-in.</p></td></tr>
+<tr><td align="center" style="padding:14px 32px 4px">
+<img src="${cid ? "cid:qr" : `${SITE}/bilet/${t}/qr.png`}" width="200" height="200" alt="Codul check-in" style="display:block;margin:6px auto;border:0">
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px auto 0"><tr><td style="background:#0097D7;border-radius:12px">
+<a href="${bilet}" style="display:inline-block;padding:14px 28px;${F};font-size:16px;font-weight:800;color:#FFFFFF;text-decoration:none">Deschideți biletul</a></td></tr></table></td></tr>
+<tr><td style="padding:22px 32px 8px;${F};font-size:15px;line-height:1.6;color:#2A2F45">
+<p style="margin:0 0 18px">Vă recomandăm să ajungeți cu 10–15 minute mai devreme și să aveți la îndemână cărți de vizită.</p>
+<p style="margin:0">Vă așteptăm cu drag,<br><b>Iustin Mazarache</b><br>Președinte, JCI Brașov</p></td></tr>
+<tr><td style="padding:20px 32px 26px;${F};font-size:12px;line-height:1.6;color:#7A7F96;border-top:1px solid #E3E7EF">
+contact@jci-brasov.com | +40 790 827 426 | jci-brasov.com<br>Primiți acest email pentru că v-ați înscris la Beyond the Initiative pe jci-brasov.com.</td></tr>
+</table></td></tr></table></body></html>`;
+  const text = [hi.replace(/&[a-z#0-9]+;/g, ""), "", "Vă reamintim că în această seară, de la ora 17:00, vă așteptăm la Beyond the Initiative, la CATTIA Brașov, Strada Institutului 35.", "",
+    "Biletul dumneavoastră nominal, cu codul QR pentru check-in:", bilet, "",
+    "Vă recomandăm să ajungeți cu 10–15 minute mai devreme și să aveți la îndemână cărți de vizită.", "",
+    "Vă așteptăm cu drag,", "Iustin Mazarache", "Președinte, JCI Brașov"].join("\n");
+  const out = { subject, html, text };
+  if (cid) out.inline = { logo: `${SITE}/assets/img/logo-jci-brasov-invers.png`, qr: `${SITE}/bilet/${t}/qr.png` };
+  return out;
+}
+
 // ---------- rutare ----------
 export async function handleInvitatii(request, env, url) {
   const p = url.pathname;
@@ -209,6 +251,13 @@ export async function handleInvitatii(request, env, url) {
     if (mod !== "live") rows = rows.filter((x) => allowed.includes(String(x.email).toLowerCase()));
     else rows = rows.filter((x) => x.status === "confirmat" || allowed.includes(String(x.email).toLowerCase()));
     rows = rows.slice(0, BATCH);
+    if (!rows.length && mod === "live" && (await setting(env, "invit_reamintire")) === "1") {
+      try { await env.DB.prepare("ALTER TABLE inscrieri ADD COLUMN reamintire_trimisa TEXT").run(); } catch (e) { /* există */ }
+      const rr = (await env.DB.prepare(
+        "SELECT id, nume, email, token FROM inscrieri WHERE eveniment=? AND status='confirmat' AND prezent_la IS NULL AND reamintire_trimisa IS NULL AND invitatie_trimisa IS NOT NULL AND invitatie_trimisa NOT LIKE 'exclus%' AND invitatie_trimisa NOT LIKE 'eroare%' ORDER BY id LIMIT ?"
+      ).bind(EVENT, REM_BATCH).all()).results || [];
+      return json({ mod, items: rr.map((x) => ({ id: -x.id, email: x.email, nume: x.nume, ...buildReminder(x, url.searchParams.get("v") === "2") })) });
+    }
     return json({ mod, items: rows.map((x) => ({ id: x.id, email: x.email, nume: x.nume, ...buildEmail(x, url.searchParams.get("v") === "2") })) });
   }
 
@@ -218,6 +267,10 @@ export async function handleInvitatii(request, env, url) {
   const id = Number(b.id);
   if (!Number.isInteger(id)) return json({ error: "id" }, 400);
   const val = b.ok ? new Date().toISOString().slice(0, 19).replace("T", " ") : "eroare: " + String(b.eroare || "").slice(0, 200);
+  if (id < 0) {
+    await env.DB.prepare("UPDATE inscrieri SET reamintire_trimisa=? WHERE id=? AND reamintire_trimisa IS NULL").bind(val, -id).run();
+    return json({ ok: true });
+  }
   await env.DB.prepare("UPDATE inscrieri SET invitatie_trimisa=? WHERE id=? AND invitatie_trimisa IS NULL").bind(val, id).run();
   return json({ ok: true });
 }

@@ -229,3 +229,9 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - „Mută”: la rundele (de la cea aleasă) în care persoana ar rămâne în grupă de 1–2 oameni primește altă masă din același bloc (cea mai mică grupă cu cel puțin 3, cel mult 6 la masă).
   Mesele noi stau în `inscrieri.mese` („2,2,3,4,5,1”), iar ecusonul reintră în coada stației de printare. Lista „Rămași în grupe prea mici” arată cine trebuie mutat.
 - Cod: sfârșitul lui `worker/checkin.js`, interfața `public/assets/js/plecari.js`. Test: `node --no-warnings src/tests/plecari.test.mjs`.
+
+## Reamintirea din ziua evenimentului (26 nov 2026)
+- `buildReminder` din `worker/invitatii.js`: email scurt (ora 17:00, CATTIA, biletul cu QR). Pleacă prin același script Gmail (brasovjci@gmail.com):
+  când nu mai sunt invitații de trimis și `setari.invit_reamintire = '1'`, `/api/invitatii/de-trimis` dă câte 40 de reamintiri cu id negativ,
+  iar `/api/invitatii/trimis` cu id negativ completează `inscrieri.reamintire_trimisa`. Scriptul din Gmail nu s-a modificat.
+- Primele 36 de reamintiri au plecat manual din iustinhillden@gmail.com (marcate în `reamintire_trimisa`). Oprire: `invit_reamintire = '0'`.
