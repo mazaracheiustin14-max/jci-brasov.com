@@ -235,3 +235,6 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
   când nu mai sunt invitații de trimis și `setari.invit_reamintire = '1'`, `/api/invitatii/de-trimis` dă câte 40 de reamintiri cu id negativ,
   iar `/api/invitatii/trimis` cu id negativ completează `inscrieri.reamintire_trimisa`. Scriptul din Gmail nu s-a modificat.
 - Primele 36 de reamintiri au plecat manual din iustinhillden@gmail.com (marcate în `reamintire_trimisa`). Oprire: `invit_reamintire = '0'`.
+- Reamintirea pe WhatsApp: `/checkin/reamintire` (buton în panou), în `worker/wa-invit.js` (`handleReamintire`, `waReminder`). Lista: confirmați fără check-in,
+  fără cei cu „Nu participă” în Apeluri sau `nu_participa` în chestionar. Apăsarea se marchează în `wa_rem_trimis` / `wa_rem_de`.
+  Cei 7 care au spus că nu vin și nu primiseră încă emailul au `reamintire_trimisa = 'exclus: nu participă'`.

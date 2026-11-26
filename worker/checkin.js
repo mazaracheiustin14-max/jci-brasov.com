@@ -4,7 +4,7 @@
 //  - pentru oricine altcineva, se deschide biletul (/bilet/<token>), fără să confirme nimic.
 // PIN-ul (hash + sare) și secretul de semnare a sesiunii stau în D1, tabelul setari.
 
-import { handleWaInvit } from "./wa-invit.js";
+import { handleWaInvit, handleReamintire } from "./wa-invit.js";
 import { handleApeluri, chestionarPage, chestionarSave } from "./apeluri.js";
 import { DOMENII, domClean, domLabel, parseTinte, ensureDomCols, syncVipDomenii, paidVipCond } from "./domenii.js";
 import { preallocVip, suggestK } from "./blitz-match.js";
@@ -333,6 +333,11 @@ export async function handleCheckin(request, env, url, overLimit) {
     return s ? handleWaInvit(request, env, url, s, H) : Response.redirect(`${url.origin}/checkin`, 302);
   }
 
+  if (p === "/checkin/reamintire" || p === "/checkin/reamintire/") {
+    const s = await staffSession(request, env);
+    return s ? handleReamintire(request, env, url, s, H) : Response.redirect(`${url.origin}/checkin`, 302);
+  }
+
   if (p === "/checkin/blitz" || p === "/checkin/blitz/") {
     const s = await staffSession(request, env);
     return s ? blitzPage(env, s, url.searchParams.get("ok") === "1") : Response.redirect(`${url.origin}/checkin`, 302);
@@ -402,6 +407,8 @@ export async function handleCheckin(request, env, url, overLimit) {
     if (p === "/api/echipa/stats") return stats(env);
     if (p === "/api/echipa/cauta") return search(env, url.searchParams.get("q") || "");
     if (p === "/api/echipa/export.csv") return exportCsv(env);
+    const rem = await handleReamintire(request, env, url, s, H);
+    if (rem) return rem;
     const wa = await handleWaInvit(request, env, url, s, H);
     if (wa) return wa;
     const ap = await handleApeluri(request, env, url, s, H);
@@ -723,7 +730,8 @@ function dashboardPage(s) {
 <a class="btn b-red mt" href="/checkin/plecari">Plecări și mutări la Blitz Networking</a>
 <a class="btn b-blue mt" href="/checkin/print">Stația de printare ecusoane (laptop)</a>
 <a class="btn b-blue mt" href="/checkin/apeluri">Apeluri și contacte</a>
-<a class="btn b-green mt" href="/checkin/neconfirmate">Invitații pe WhatsApp</a>
+<a class="btn b-green mt" href="/checkin/reamintire">Reamintire pe WhatsApp (azi)</a>
+<a class="btn b-ghost mt" href="/checkin/neconfirmate">Invitații pe WhatsApp</a>
 <a class="btn b-ghost mt" href="/checkin/blitz">Blitz Networking pe domenii</a>
 <a class="btn b-ghost mt" href="/api/echipa/export.csv">Descarcă lista de prezență (Excel)</a>
 <form method="POST" action="/api/echipa/logout"><button class="btn b-ghost mt" type="submit">Deconectare (${esc(s.who)})</button></form>`,

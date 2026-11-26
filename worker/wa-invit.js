@@ -5,10 +5,10 @@
 // Interfața: public/assets/js/wa-invit.js (fără script inline, CSP).
 const EVENT = "beyond-2026";
 const SITE = "https://jci-brasov.com";
-const JS_VERSION = "2";
+const JS_VERSION = "3";
 
 async function ensureCols(env) {
-  for (const col of ["wa_invit_trimis TEXT", "wa_invit_de TEXT", "confirmat_prin TEXT", "wa_spam_trimis TEXT", "wa_spam_de TEXT"]) {
+  for (const col of ["wa_invit_trimis TEXT", "wa_invit_de TEXT", "confirmat_prin TEXT", "wa_spam_trimis TEXT", "wa_spam_de TEXT", "wa_rem_trimis TEXT", "wa_rem_de TEXT"]) {
     try { await env.DB.prepare(`ALTER TABLE inscrieri ADD COLUMN ${col}`).run(); } catch (e) {}
   }
 }
@@ -137,4 +137,65 @@ ${sel.map((x) => card(x, H.esc, f)).join("") || '<div class="card mt"><p class="
     return Response.redirect(`${url.origin}/checkin/neconfirmate?ok=1`, 303);
   }
   return null;
+}
+
+// ---------- Reamintirea pe WhatsApp din ziua evenimentului (26 nov 2026) ----------
+// Pagina /checkin/reamintire: toți înscrișii confirmați care nu au intrat încă, în afară de cei care au spus că nu vin
+// (bifa „Nu participă” din Apeluri sau statusul „nu participă” din chestionar). Butonul deschide WhatsApp cu mesajul
+// nominal și biletul; apăsarea se marchează în `inscrieri.wa_rem_trimis`.
+function prenume(n) {
+  let s = String(n || "").replace(/[^\p{L}\p{M}\s.\-]/gu, "").replace(/\s+/g, " ").trim();
+  if (!s || /^invitat jci/i.test(s) || s.length < 3) return "";
+  if (s === s.toUpperCase() || s === s.toLowerCase()) s = s.toLowerCase().replace(/(^|[\s\-])\p{L}/gu, (m) => m.toUpperCase());
+  return s;
+}
+export function waReminder(row) {
+  const n = prenume(row.nume);
+  return [
+    n ? `Bună ziua, ${n}!` : "Bună ziua!",
+    "Vă reamintim că vă așteptăm în această seară, de la ora 17:00, la Beyond the Initiative, la CATTIA Brașov, Strada Institutului 35.",
+    "Biletul dumneavoastră, cu codul QR pentru check-in:",
+    `${SITE}/bilet/${row.token}`,
+    "Vă așteptăm cu drag!",
+    "Iustin Mazarache, JCI Brașov",
+  ].join("\n");
+}
+async function listaReamintire(env) {
+  await ensureCols(env);
+  const r = await env.DB.prepare(
+    "SELECT i.id, i.nume, i.telefon, i.email, i.token, i.sursa, i.wa_rem_trimis, i.wa_rem_de FROM inscrieri i WHERE i.eveniment=? AND i.status='confirmat' AND i.prezent_la IS NULL " +
+    "AND NOT EXISTS (SELECT 1 FROM contacte c WHERE c.inscriere_id=i.id AND c.participa='nu') " +
+    "AND NOT EXISTS (SELECT 1 FROM call_logs l LEFT JOIN contacte c ON c.id=l.contact_id WHERE (l.inscriere_id=i.id OR c.inscriere_id=i.id) AND l.status_final='nu_participa') " +
+    "ORDER BY i.nume COLLATE NOCASE"
+  ).bind(EVENT).all();
+  return r.results || [];
+}
+export async function handleReamintire(request, env, url, s, H) {
+  const p = url.pathname;
+  if (p === "/api/echipa/wa-rem-trimis") {
+    if (request.method !== "POST" || !H.sameOrigin(request)) return H.json({ error: "method" }, 405);
+    const b = await request.json().catch(() => ({}));
+    await ensureCols(env);
+    await env.DB.prepare("UPDATE inscrieri SET wa_rem_trimis=datetime('now'), wa_rem_de=? WHERE id=? AND eveniment=?").bind(String(s.who || "").slice(0, 40), Number(b.id) || 0, EVENT).run();
+    return H.json({ ok: true });
+  }
+  if (p !== "/checkin/reamintire" && p !== "/checkin/reamintire/") return null;
+  const rows = await listaReamintire(env);
+  const sel = [...rows.filter((x) => !x.wa_rem_trimis), ...rows.filter((x) => x.wa_rem_trimis)];
+  const net = rows.filter((x) => !x.wa_rem_trimis).length;
+  const esc = H.esc;
+  const card = (x) => {
+    const nr = waNumber(x.telefon);
+    const btn = nr
+      ? `<div class="acts"><a class="btn ${x.wa_rem_trimis ? "b-ghost" : "b-green"}" data-wa="${x.id}" data-api="/api/echipa/wa-rem-trimis" href="https://wa.me/${nr}?text=${encodeURIComponent(waReminder(x))}" target="_blank" rel="noopener">${x.wa_rem_trimis ? "Retrimite pe WhatsApp" : "Trimite reamintirea pe WhatsApp"}</a></div>`
+      : `<p class="muted mt">Număr de telefon lipsă sau incomplet.</p>`;
+    return `<div class="card mt" id="p${x.id}"><p class="val" style="color:#fff">${esc(x.nume)}${(x.sursa || "").includes("VIP") ? ' <span class="vip">VIP</span>' : ""}</p>
+<p class="muted">${esc(x.telefon || "fără telefon")}</p><p class="muted mt" data-st="${x.id}">${x.wa_rem_trimis ? `Trimis: ${esc(oraRo(x.wa_rem_trimis))}${x.wa_rem_de ? ", de " + esc(x.wa_rem_de) : ""}` : ""}</p>${btn}</div>`;
+  };
+  const inner = `<p class="k">Panoul echipei</p><h1>Reamintire pe WhatsApp</h1>
+<div class="card mt"><p class="lab">DE TRIMIS AZI</p><p class="big">${net}<span style="font-size:18px;color:#B9BBD6"> din ${rows.length}</span></p>
+<p class="muted mt">Toți înscrișii care nu au intrat încă, fără cei care au spus că nu vin. Butonul verde deschide WhatsApp cu mesajul și biletul; apăsați Trimite în WhatsApp. Cei care intră la eveniment dispar din listă.</p></div>
+${sel.map(card).join("") || '<div class="card mt"><p class="val" style="color:#fff">Nicio persoană în listă.</p></div>'}
+<a class="btn b-ghost mt" href="/checkin">Înapoi la panou</a>`;
+  return H.html(H.shell("Reamintire pe WhatsApp", inner, `<script src="/assets/js/wa-invit.js?v=${JS_VERSION}"></script>`));
 }
