@@ -374,8 +374,8 @@ const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const CHAT_PER_HOUR = 20;   // mesaje pe vizitator pe oră
 const CHAT_PER_DAY = 600;   // plafon zilnic pe tot site-ul, ca să nu apară costuri neprevăzute
 const FALLBACK = {
-  ro: "Momentan nu pot răspunde. Ne poți scrie la contact@jci-brasov.com sau ne poți suna la +40 790 827 426. Pentru eveniment, înscrierea este pe /eveniment#rezerva.",
-  en: "I can't answer right now. Please email contact@jci-brasov.com or call +40 790 827 426. To register for the event, go to /en/eveniment#rezerva.",
+  ro: "Momentan nu pot răspunde. Ne poți scrie la contact@jci-brasov.com sau ne poți suna la +40 790 827 426.",
+  en: "I can't answer right now. Please email contact@jci-brasov.com or call +40 790 827 426.",
 };
 
 function json(obj, status = 200) {

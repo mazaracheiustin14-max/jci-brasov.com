@@ -100,7 +100,7 @@ fbq('track', 'PageView', {}, {eventID: window.jciPv});
   <div class="wrap nav">
     <a class="logo" href="./" aria-label="JCI Brașov, prima pagină"><img src="assets/img/logo-jci-brasov-invers.png" alt="JCI Brașov" width="640" height="312"></a>
     <ul>
-      <li><a href="despre" aria-current="page">Despre</a></li><li><a href="eveniment">Eveniment</a></li><li><a href="proiecte">Proiecte</a></li><li><a href="echipa">Echipa</a></li><li><a href="contact">Contact</a></li>
+      <li><a href="despre" aria-current="page">Despre</a></li><li><a href="cozonaci">Cozonaci</a></li><li><a href="eveniment">Evenimente</a></li><li><a href="proiecte">Proiecte</a></li><li><a href="echipa">Echipa</a></li><li><a href="contact">Contact</a></li>
     </ul>
     <div class="nav-actions"><a class="lang" href="en/despre" hreflang="en" aria-label="EN, English version">EN</a>
     <a class="btn btn-blue" href="implica-te">Devino membru</a></div>
@@ -108,7 +108,7 @@ fbq('track', 'PageView', {}, {eventID: window.jciPv});
   </div>
   <nav class="mobile-menu" aria-label="Meniu mobil">
     <ul>
-      <li><a href="./">Acasă</a></li><li><a href="despre" aria-current="page">Despre</a></li><li><a href="eveniment">Eveniment</a></li><li><a href="proiecte">Proiecte</a></li><li><a href="echipa">Echipa</a></li><li><a href="implica-te">Devino membru</a></li><li><a href="contact">Contact</a></li>
+      <li><a href="./">Acasă</a></li><li><a href="despre" aria-current="page">Despre</a></li><li><a href="cozonaci">Cozonaci</a></li><li><a href="eveniment">Evenimente</a></li><li><a href="proiecte">Proiecte</a></li><li><a href="echipa">Echipa</a></li><li><a href="implica-te">Devino membru</a></li><li><a href="contact">Contact</a></li>
       <li><a href="en/despre" hreflang="en">English version</a></li>
     </ul>
   </nav>
@@ -161,7 +161,8 @@ fbq('track', 'PageView', {}, {eventID: window.jciPv});
       <ul>
         <li><a href="despre">Despre</a></li>
         <li><a href="despre#istoric">Istoric</a></li>
-        <li><a href="eveniment">Evenimentul din 26 noiembrie</a></li>
+        <li><a href="cozonaci">Cozonaci de casă</a></li>
+        <li><a href="eveniment">Evenimente încheiate</a></li>
         <li><a href="eveniment#parteneri">Parteneri</a></li>
       </ul>
       <ul>
@@ -182,14 +183,14 @@ fbq('track', 'PageView', {}, {eventID: window.jciPv});
     a.addEventListener('click',function(){document.getElementById('menu-toggle').checked=false;});
   });
 </script>
-<div id="jchat" data-hello="Bună! Te pot ajuta cu informații despre evenimentul din 26 noiembrie, sponsorizare, proiecte sau cum devii membru. Ce vrei să afli?" data-typing="Scrie…" data-err="Nu am putut trimite mesajul. Verifică conexiunea sau scrie-ne la contact@jci-brasov.com.">
+<div id="jchat" data-hello="Bună! Te pot ajuta cu informații despre campania de cozonaci Dar din Dar, proiecte, evenimente sau cum devii membru. Ce vrei să afli?" data-typing="Scrie…" data-err="Nu am putut trimite mesajul. Verifică conexiunea sau scrie-ne la contact@jci-brasov.com.">
 <button type="button" class="jc-fab" aria-haspopup="dialog" aria-controls="jc-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 10.5h7M8.5 14h4.5"/></svg><span>Întreabă-ne</span></button>
 <section class="jc-panel" id="jc-panel" role="dialog" aria-modal="false" aria-labelledby="jc-title">
 <div class="jc-head"><div class="jc-t"><b id="jc-title">Asistent JCI Brașov</b><small>Răspunde din informațiile de pe site</small></div>
 <button type="button" class="jc-ico jc-reset" aria-label="Conversație nouă" title="Conversație nouă"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
 <button type="button" class="jc-ico jc-close" aria-label="Închide asistentul" title="Închide asistentul"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 <div class="jc-log" aria-live="polite"></div>
-<div class="jc-sug"><button type="button">Cât costă participarea pe 26 noiembrie?</button><button type="button">Cum devin membru JCI Brașov?</button><button type="button">Ce pachete de sponsorizare aveți?</button><button type="button">Unde are loc evenimentul?</button></div>
+<div class="jc-sug"><button type="button">Cât costă cozonacii?</button><button type="button">Când pot comanda cozonaci?</button><button type="button">Cum devin membru JCI Brașov?</button><button type="button">Ce proiecte are JCI Brașov?</button></div>
 <form><label for="jc-in" class="sr-only">Scrie întrebarea ta…</label><textarea id="jc-in" rows="1" maxlength="500" placeholder="Scrie întrebarea ta…"></textarea>
 <button type="submit" class="jc-send" aria-label="Trimite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button></form>
 <div class="jc-note">Asistent automat. Pentru confirmări scrie la contact@jci-brasov.com. Întrebările se păstrează anonim, ca să îmbunătățim răspunsurile.</div>

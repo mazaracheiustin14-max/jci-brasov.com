@@ -242,3 +242,14 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - Reamintirea pe WhatsApp: `/checkin/reamintire` (buton în panou), în `worker/wa-invit.js` (`handleReamintire`, `waReminder`). Lista: confirmați fără check-in,
   fără cei cu „Nu participă” în Apeluri sau `nu_participa` în chestionar. Apăsarea se marchează în `wa_rem_trimis` / `wa_rem_de`.
   Cei 7 care au spus că nu vin și nu primiseră încă emailul au `reamintire_trimisa = 'exclus: nu participă'`.
+
+## Campania „Dar din Dar” și arhivarea evenimentului din 26 noiembrie (27 nov 2026)
+- `cozonaci.py` (ULTIMUL înainte de `security.py`; idempotent; căi relative la depozit): generează `/cozonaci` și `/en/cozonaci` pe scheletul paginii Proiecte,
+  cu `assets/css/cozonaci.css` și `assets/js/cozonaci.js` (cronometru până la 3 decembrie 2026, ora 00:00, și butonul de pauză al clipului; fără script inline).
+  Prețuri: cozonac simplu 75 lei, babka 90 lei. Toate textele (RO/EN) sunt în dicționarul `T` din script.
+- Imagini și clip: doar poze și filmări reale din bucătărie (`public/assets/img/cozonaci/`, `public/assets/video/babka.mp4|webm`). Varianta 3D modelată pe calculator a fost respinsă de Iustin (nu arăta realist) și nu se folosește.
+- Prima pagină: butonul principal, cardul din hero, cronometrul și primul card din „Descoperă” duc la campanie; cronometrul inline al evenimentului e scos.
+- Pagina Eveniment e arhivă („Eveniment încheiat”): rămân descrierea, invitații, programul și partenerii; scoase înscrierea, biletul VIP, cronometrul, întrebările frecvente,
+  pachetele și formularul de sponsorizare. Meniul are „Cozonaci” și „Evenimente”. `worker/kb.js` și `llms.txt` sunt actualizate manual.
+- Atenție: `toplive.py`, `vip.py`, `signup.py`, `countdown.py`, `parteneri*.py` ar readuce elementele evenimentului dacă lanțul vechi e rulat din nou; după ele se rulează mereu `cozonaci.py`.
+- Când se deschid comenzile: se completează în `T` modalitatea de comandă (pasul 2 și secțiunea finală) și se rulează `python3 src/cozonaci.py && python3 src/security.py`.
