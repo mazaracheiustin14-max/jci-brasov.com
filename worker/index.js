@@ -173,12 +173,31 @@ async function handleForm(request, env) {
   if (fields.length > 40) return new Response("Bad Request", { status: 400 });
   const body = fields.map(([k, v]) => `${k}: ${v}`).join("\n") + `\n\n--\nTrimis de pe ${SITE}${next.includes("/en/") ? "/en/" : "/"}`;
 
+  // 0) Cererea se salvează întâi în baza de date (tabelul formulare), ca să nu se piardă dacă emailul nu pleacă.
+  let savedId = 0;
+  if (env.DB) {
+    try {
+      await env.DB.prepare("CREATE TABLE IF NOT EXISTS formulare (id INTEGER PRIMARY KEY AUTOINCREMENT, creat TEXT NOT NULL DEFAULT (datetime('now')), subiect TEXT, email TEXT, date TEXT, trimis INTEGER NOT NULL DEFAULT 0)").run();
+      const ins = await env.DB.prepare("INSERT INTO formulare (subiect, email, date) VALUES (?, ?, ?)").bind(subject, email, JSON.stringify(Object.fromEntries(fields))).run();
+      savedId = (ins.meta && ins.meta.last_row_id) || 0;
+    } catch (e) { console.log("formulare save:", e && e.message); }
+  }
+  const sent = async () => {
+    if (savedId) { try { await env.DB.prepare("UPDATE formulare SET trimis=1 WHERE id=?").bind(savedId).run(); } catch (e) {} }
+    return redirect();
+  };
+  // Adresa de destinație: variabila DEST din Cloudflare sau setarea form_dest din D1 (tabelul setari).
+  let dest = env.DEST || "";
+  if (!dest && env.DB) {
+    try { const r = await env.DB.prepare("SELECT valoare FROM setari WHERE cheie='form_dest'").first(); dest = (r && r.valoare) || ""; } catch (e) {}
+  }
+
   // 1) Cloudflare Email Routing
-  if (env.MAIL && env.DEST) {
+  if (env.MAIL && dest) {
     try {
       const raw = [
         `From: "Formular JCI Brasov" <${FROM}>`,
-        `To: <${env.DEST}>`,
+        `To: <${dest}>`,
         `Reply-To: <${email}>`,
         `Subject: =?UTF-8?B?${btoa(String.fromCharCode(...new TextEncoder().encode(subject)))}?=`,
         `Message-ID: <${crypto.randomUUID()}@jci-brasov.com>`,
@@ -189,8 +208,8 @@ async function handleForm(request, env) {
         "",
         b64(body),
       ].join("\r\n");
-      await env.MAIL.send(new EmailMessage(FROM, env.DEST, raw));
-      return redirect();
+      await env.MAIL.send(new EmailMessage(FROM, dest, raw));
+      return sent();
     } catch (e) {
       console.log("email routing failed, falling back:", e && e.message);
     }
@@ -209,11 +228,13 @@ async function handleForm(request, env) {
       body: JSON.stringify(payload),
     });
     const j = await r.json().catch(() => ({}));
-    if (r.ok && String(j.success) === "true") return redirect();
+    if (r.ok && String(j.success) === "true") return sent();
     console.log("formsubmit:", r.status, JSON.stringify(j));
   } catch (e) {
     console.log("formsubmit error:", e && e.message);
   }
+  // Emailul nu a plecat, dar cererea e salvată (trimis=0): vizitatorul primește confirmarea.
+  if (savedId) return redirect();
   return new Response(
     "Mesajul nu a putut fi trimis acum. Vă rugăm să ne scrieți la contact@jci-brasov.com sau să ne sunați la +40 790 827 426.",
     { status: 502, headers: { "Content-Type": "text/plain; charset=utf-8" } }
@@ -325,7 +346,7 @@ async function notify(env, subject, lines, replyTo) {
   if (env.MAIL && env.DEST) {
     try {
       const raw = [
-        `From: "Formular JCI Brasov" <${FROM}>`, `To: <${env.DEST}>`, `Reply-To: <${replyTo}>`,
+        `From: "Formular JCI Brasov" <${FROM}>`, `To: <${dest}>`, `Reply-To: <${replyTo}>`,
         `Subject: =?UTF-8?B?${btoa(String.fromCharCode(...new TextEncoder().encode(subject)))}?=`,
         `Message-ID: <${crypto.randomUUID()}@jci-brasov.com>`, `Date: ${new Date().toUTCString()}`,
         "MIME-Version: 1.0", "Content-Type: text/plain; charset=UTF-8", "Content-Transfer-Encoding: base64", "", b64(body),

@@ -23,6 +23,8 @@ Nu se publică: cursa de bărcuțe (2028), proiectul de depozitare bagaje, acți
 3. Fișierele fixe din public/: `_headers` (antete de securitate), `robots.txt`, `sitemap.xml`, `site.webmanifest`, `.well-known/security.txt`, `favicon.ico`
 4. Formularele trimit la `/api/form`, tratat de `worker/index.js` (același domeniu). Trimite prin Email Routing dacă variabila `DEST`
    e setată în Cloudflare (Worker → Settings → Variables), altfel prin FormSubmit, de pe server.
+   Din 27 nov 2026, fiecare cerere se salvează întâi în D1 (tabelul `formulare`; `trimis`=1 dacă a plecat și emailul), deci vizitatorul
+   primește confirmarea chiar dacă emailul eșuează. Adresa de destinație poate fi pusă și în D1: `setari.form_dest`.
 
 
 security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune în CSP din public/_headers. Orice script inline nou sau modificat cere rularea lui după deploy.py.
