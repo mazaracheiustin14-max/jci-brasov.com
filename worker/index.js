@@ -12,7 +12,14 @@ import { domClean, domLabel, parseTinte, ensureDomCols, syncVipDomenii, paidVipC
 
 const SITE = "https://jci-brasov.com";
 const FROM = "formular@jci-brasov.com";
-const FORMSUBMIT = "https://formsubmit.co/ajax/contact@jci-brasov.com";
+const FORMSUBMIT = "https://formsubmit.co/ajax/brasovjci@gmail.com";
+
+// Adresa la care ajung toate formularele: variabila DEST din Cloudflare sau setarea form_dest din D1 (tabelul setari).
+async function formDest(env) {
+  if (env.DEST) return env.DEST;
+  if (!env.DB) return "";
+  try { const r = await env.DB.prepare("SELECT valoare FROM setari WHERE cheie='form_dest'").first(); return (r && r.valoare) || ""; } catch (e) { return ""; }
+}
 
 export default {
   async fetch(request, env, ctx) {
@@ -186,11 +193,7 @@ async function handleForm(request, env) {
     if (savedId) { try { await env.DB.prepare("UPDATE formulare SET trimis=1 WHERE id=?").bind(savedId).run(); } catch (e) {} }
     return redirect();
   };
-  // Adresa de destinație: variabila DEST din Cloudflare sau setarea form_dest din D1 (tabelul setari).
-  let dest = env.DEST || "";
-  if (!dest && env.DB) {
-    try { const r = await env.DB.prepare("SELECT valoare FROM setari WHERE cheie='form_dest'").first(); dest = (r && r.valoare) || ""; } catch (e) {}
-  }
+  const dest = await formDest(env);
 
   // 1) Cloudflare Email Routing
   if (env.MAIL && dest) {
@@ -343,7 +346,8 @@ async function handleEventSignup(request, env, ctx) {
 
 async function notify(env, subject, lines, replyTo) {
   const body = lines.map(([k, v]) => `${k}: ${v}`).join("\n") + `\n\n--\n${SITE}`;
-  if (env.MAIL && env.DEST) {
+  const dest = await formDest(env);
+  if (env.MAIL && dest) {
     try {
       const raw = [
         `From: "Formular JCI Brasov" <${FROM}>`, `To: <${dest}>`, `Reply-To: <${replyTo}>`,
@@ -351,7 +355,7 @@ async function notify(env, subject, lines, replyTo) {
         `Message-ID: <${crypto.randomUUID()}@jci-brasov.com>`, `Date: ${new Date().toUTCString()}`,
         "MIME-Version: 1.0", "Content-Type: text/plain; charset=UTF-8", "Content-Transfer-Encoding: base64", "", b64(body),
       ].join("\r\n");
-      await env.MAIL.send(new EmailMessage(FROM, env.DEST, raw));
+      await env.MAIL.send(new EmailMessage(FROM, dest, raw));
       return true;
     } catch (e) { console.log("notify email routing:", e && e.message); }
   }
