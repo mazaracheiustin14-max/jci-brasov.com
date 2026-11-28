@@ -253,3 +253,9 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
   pachetele și formularul de sponsorizare. Meniul are „Cozonaci” și „Evenimente”. `worker/kb.js` și `llms.txt` sunt actualizate manual.
 - Atenție: `toplive.py`, `vip.py`, `signup.py`, `countdown.py`, `parteneri*.py` ar readuce elementele evenimentului dacă lanțul vechi e rulat din nou; după ele se rulează mereu `cozonaci.py`.
 - Când se deschid comenzile: se completează în `T` modalitatea de comandă (pasul 2 și secțiunea finală) și se rulează `python3 src/cozonaci.py && python3 src/security.py`.
+
+## Pozele de la Beyond the Initiative (28 nov 2026)
+- `galerie.py` (după `cozonaci.py`, înainte de `security.py`; idempotent): galerie pe pagina Eveniment (`#galerie`, înaintea partenerilor) și poza echipei pe prima pagină
+  (`#echipa-foto`, imediat după cronometru), RO și EN. Originalele sunt în `src/galerie/`, variantele publicate în `public/assets/img/eveniment/` (webp, netăiate).
+- Bara fixă de pe telefon de pe prima pagină duce acum la `/cozonaci` (înainte trimitea la înscrierea la eveniment).
+- Poze noi: se adaugă în `src/galerie/`, în lista `PH` și în ordinea din `run()`, apoi `python3 src/galerie.py && python3 src/security.py`.
