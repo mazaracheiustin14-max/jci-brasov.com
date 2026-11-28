@@ -14,8 +14,8 @@ ECHIPA
 
 CAMPANIA DAR DIN DAR (COZONACI DE CASĂ)
 - Campanie caritabilă JCI Brașov: cozonaci de casă, făcuți într-o bucătărie profesională, cu ingrediente de calitate. O parte din fiecare cozonac comandat devine cadou pentru copii din familii defavorizate.
-- Prețuri: cozonac simplu 75 lei; babka (împletită, cu umplutură de cacao) 90 lei. Prețul este per bucată.
-- Primele comenzi: din joi, 3 decembrie 2026. Modalitatea de comandă se anunță pe pagina /cozonaci și în comunitatea de WhatsApp JCI Brașov. Pentru detalii: +40 790 827 426 sau contact@jci-brasov.com.
+- Prețuri: cozonac simplu 75 lei; babka (împletită, cu umplutură de nucă și cacao) 90 lei. Prețul este per bucată.
+- Primele comenzi: din joi, 3 decembrie 2026. Comenzile se fac pe WhatsApp. Pentru detalii: +40 790 827 426 sau contact@jci-brasov.com.
 - Nu există alte detalii publicate (gramaj, livrare, termen-limită): pentru acestea, îndrumă către telefon sau email.
 
 EVENIMENTUL BEYOND THE INITIATIVE (ÎNCHEIAT)
