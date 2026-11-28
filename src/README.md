@@ -261,3 +261,4 @@ security.py: calculează amprentele SHA-256 ale scripturilor inline și le pune 
 - Poze noi: se adaugă în `src/galerie/`, în lista `PH` și în ordinea din `run()`, apoi `python3 src/galerie.py && python3 src/security.py`.
 - După eveniment (28 nov 2026), tot în `galerie.py`: Ciprian Văcaru nu a participat și e scos de pe pagină (card și date structurate); Rareș Zlătaru apare cu „Panelul I și II”;
   „opt invitați” devine „șapte invitați”. Linkul înregistrării Panelului I (`YT1`) apare în program și deasupra galeriei. `spk.py`, `build*.py`, `seo2.py` l-ar readuce pe Văcaru; după ele se rulează `galerie.py`.
+- Hero pe prima pagină (28 nov 2026, în `galerie.py`): titlul „Lideri tineri, impact real.” înlocuiește „JCI revine în Brașov.”; text actualizat (organizație cu drepturi depline din noiembrie 2026); titlu mai mic și cu interlinie 1.12, ca diacriticele să nu atingă rândul de sus. Poza echipei: `echipa-jci-brasov` (cadrul fără mâna mișcată).
