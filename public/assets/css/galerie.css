@@ -4,4 +4,5 @@
 .team-shot{display:grid;grid-template-columns:minmax(0,440px) 1fr;gap:56px;align-items:center}
 .team-shot figure{margin:0}
 .team-shot .lead{margin-bottom:28px}
+.yt-link{display:inline-block;margin-top:8px;color:#0097D7;font-weight:700;font-size:14px;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:900px){.ev-gal{columns:2;column-gap:12px}.ev-gal figure{margin-bottom:12px}.team-shot{grid-template-columns:1fr;gap:28px}}

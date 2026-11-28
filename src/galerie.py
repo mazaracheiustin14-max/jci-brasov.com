@@ -8,6 +8,7 @@ R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 P = R + '/public/'
 SRC = R + '/src/galerie/'
 OUT = 'assets/img/eveniment/'
+YT1 = 'https://youtu.be/vVvcE72qQ74'  # Panelul I, Puterea comunității
 
 PH = [  # fișier, lățime maximă, alt RO, alt EN
     ('echipa', 1200, 'Echipa JCI Brașov cu steagul organizației, la Beyond the Initiative', 'The JCI Brașov team holding the chapter flag at Beyond the Initiative'),
@@ -23,6 +24,7 @@ CSS = """.ev-gal{columns:3;column-gap:18px;margin-top:36px}
 .team-shot{display:grid;grid-template-columns:minmax(0,440px) 1fr;gap:56px;align-items:center}
 .team-shot figure{margin:0}
 .team-shot .lead{margin-bottom:28px}
+.yt-link{display:inline-block;margin-top:8px;color:#0097D7;font-weight:700;font-size:14px;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:900px){.ev-gal{columns:2;column-gap:12px}.ev-gal figure{margin-bottom:12px}.team-shot{grid-template-columns:1fr;gap:28px}}
 """
 
@@ -30,11 +32,11 @@ T = {
     'ro': dict(tag='Galerie', h='Imagini de la eveniment', lead='Câteva cadre din seara de 26 noiembrie 2026, de la CATTIA Brașov.',
                ttag='Echipa', th='Oamenii din spatele JCI Brașov',
                tlead='Pe 26 noiembrie 2026, la Beyond the Initiative, JCI Brașov a devenit organizație locală cu drepturi depline în JCI România. Aceasta este echipa care a făcut pasul.',
-               b1='Cunoaște echipa', b2='Vezi evenimentul'),
+               both='Panelul I și II', yt='Urmărește Panelul I pe YouTube', b1='Cunoaște echipa', b2='Vezi evenimentul'),
     'en': dict(tag='Gallery', h='Photos from the event', lead='A few moments from the evening of 26 November 2026 at CATTIA Brașov.',
                ttag='The team', th='The people behind JCI Brașov',
                tlead='On 26 November 2026, at Beyond the Initiative, JCI Brașov became a full local organisation within JCI Romania. This is the team that made it happen.',
-               b1='Meet the team', b2='See the event'),
+               both='Panels I and II', yt='Watch Panel I on YouTube', b1='Meet the team', b2='See the event'),
 }
 
 
@@ -83,8 +85,18 @@ def run():
         t = T[lang]
         # pagina Eveniment: galerie înaintea partenerilor
         s = BLOCK.sub('', rd(d + 'eveniment.html'))
-        gal = ('<!--galerie--><section class="section" id="galerie">\n  <div class="wrap">\n    <span class="tag">%s</span>\n    <h2>%s</h2>\n    <p class="lead">%s</p>\n    <div class="ev-gal">%s</div>\n  </div>\n</section><!--/galerie-->\n'
-               % (t['tag'], t['h'], t['lead'], ''.join(img(n, lang, dims) for n in ('deschidere', 'lobby', 'panel-2', 'echipa', 'panel-2-sala'))))
+        gal = ('<!--galerie--><section class="section" id="galerie">\n  <div class="wrap">\n    <span class="tag">%s</span>\n    <h2>%s</h2>\n    <p class="lead">%s</p>\n    <div class="cta-row"><a class="btn btn-blue" href="%s" target="_blank" rel="noopener">%s</a></div>\n    <div class="ev-gal">%s</div>\n  </div>\n</section><!--/galerie-->\n'
+               % (t['tag'], t['h'], t['lead'], YT1, t['yt'], ''.join(img(n, lang, dims) for n in ('deschidere', 'lobby', 'panel-2', 'echipa', 'panel-2-sala'))))
+        # după eveniment: Ciprian Văcaru nu a participat; Rareș Zlătaru a fost în ambele paneluri
+        s = re.sub(r'\s*<div class="speaker"><img[^>]*ciprian-vacaru\.jpg.*?</div>', '', s)
+        s = re.sub(r'(rares-zlataru\.jpg"[^>]*><small>)[^<]*', r'\g<1>' + t['both'], s)
+        s = re.sub(r',?\s*\{"@type": "Person", "name": "Ciprian Văcaru".*?\}\}', '', s)
+        s = s.replace('opt invitați', 'șapte invitați').replace('eight speakers', 'seven speakers').replace('eight guests', 'seven guests')
+        # înregistrarea Panelului I, în program
+        s = re.sub(r'<a class="yt-link".*?</a>', '', s)
+        s, n = re.subn(r'(<li class="key"><time>17:45</time><div><b>[^<]*</b><span>[^<]*</span>)', r'\g<1><a class="yt-link" href="%s" target="_blank" rel="noopener">%s</a>' % (YT1, t['yt']), s)
+        assert n == 1
+        assert 'Văcaru' not in s
         a = '<section class="section mist" id="parteneri">'
         assert a in s
         wr(d + 'eveniment.html', link(s.replace(a, gal + a, 1), v))
